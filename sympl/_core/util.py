@@ -1,4 +1,4 @@
-from .exceptions import SharedKeyException, InvalidStateException
+from .exceptions import SharedKeyException
 from .constants import default_constants
 from six import string_types
 try:
@@ -14,7 +14,7 @@ except ImportError:
 dim_names = {'x': [], 'y': [], 'z': []}
 
 
-def set_dim_names(x=None, y=None, z=None):
+def set_dimension_names(x=None, y=None, z=None):
     for key, value in [('x', x), ('y', y), ('z', z)]:
         if isinstance(value, string_types):
             dim_names[key] = [key, value]
@@ -139,7 +139,8 @@ def ensure_no_shared_keys(dict1, dict2):
 def get_numpy_array(data_array, out_dims=('x', 'y', 'z')):
     """
     Retrieve a numpy array with the desired dimensions and dimension order
-    from the given DataArray.
+    from the given DataArray, using transpose and creating length 1 dimensions
+    as necessary.
 
     Args:
         data_array (DataArray): The object from which to retrieve data.
