@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from ._core.base_components import (
+from sympl._core.base_components import (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite
 )
