@@ -1,5 +1,5 @@
-from .monitors.plot import PlotFunctionMonitor
-from .monitors.netcdf import NetCDFMonitor
+from .netcdf import NetCDFMonitor
+from .plot import PlotFunctionMonitor
 from .basic import ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic
 
 __all__ = (
