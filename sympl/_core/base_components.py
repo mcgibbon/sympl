@@ -184,7 +184,7 @@ class PrognosticComposite(ComponentComposite):
             tendencies (dict): A dictionary whose keys are strings indicating
                 state quantities and values are the time derivative of those
                 quantities in units/second at the time of the input state.
-            diagnostics (dict): A dicitonary whose keys are strings indicating
+            diagnostics (dict): A dictionary whose keys are strings indicating
                 state quantities and values are the value of those quantities
                 at the time of the input state.
 

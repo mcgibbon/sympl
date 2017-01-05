@@ -22,7 +22,7 @@ def set_dimension_names(x=None, y=None, z=None):
             dim_names[key] = [key] + list(value)
 
 
-def combine_dimensions(*args, out_dims=('x', 'y', 'z')):
+def combine_dimensions(arrays, out_dims=('x', 'y', 'z')):
     """
     Returns a tuple of dimension names corresponding to
     dimension names from the DataArray objects given by *args when present.
@@ -30,7 +30,8 @@ def combine_dimensions(*args, out_dims=('x', 'y', 'z')):
     is raised if there are multiple names for one direction.
 
     Args:
-        *args (DataArray): objects for which to combine dimension names
+        arrays (iterable of DataArray): Objects for which to combine
+            dimension names.
         out_dims (iterable of str): The desired output directions. Should
             contain only 'x', 'y', or 'z'.
 
@@ -39,7 +40,7 @@ def combine_dimensions(*args, out_dims=('x', 'y', 'z')):
             given by out_dims.
     """
     dims = [None for _ in range(len(out_dims))]
-    for value in args:
+    for value in arrays:
         for dim in value.dims:
             for i, dim_list in enumerate(
                     [dim_names[name] for name in out_dims]):
