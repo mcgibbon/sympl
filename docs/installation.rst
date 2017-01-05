@@ -4,7 +4,7 @@
 Installation
 ============
 
-Stable release
+Latest release
 --------------
 
 To install Sympl, run this command in your terminal:
@@ -13,7 +13,8 @@ To install Sympl, run this command in your terminal:
 
     $ pip install sympl
 
-This is the preferred method to install Sympl, as it will always install the most recent stable release.
+This is the preferred method to install Sympl, as it will always install the
+most recent release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -45,6 +46,15 @@ Once you have a copy of the source, you can install it with:
 
     $ python setup.py install
 
+If you are looking to modify the code, you can install it with:
+
+.. code-block:: console
+
+    $ python setup.py develop
+
+This configures the package so that Python points to the current directory
+instead of copying files. Then when you make modifications to the source code
+in that directory, they are automatically used by any new Python sessions.
 
 .. _Github repo: https://github.com/mcgibbon/sympl
 .. _tarball: https://github.com/mcgibbon/sympl/tarball/master
