@@ -1,0 +1,14 @@
+name: sympl-docs
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.5
+  - numpy=1.11.2
+  - sphinx=1.5
+  - netCDF4=1.2.5
+  - xarray==0.8.2
+  - six
+  - pint==0.7.0
+  - scipy
+  - numpy==0.10
