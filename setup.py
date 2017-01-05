@@ -22,21 +22,17 @@ test_requirements = [
 
 setup(
     name='sympl',
-    version='0.1.0',
+    version='0.1.1',
     description='Sympl is a Toolkit for building Earth system models in Python.',
     long_description=readme + '\n\n' + history,
     author="Jeremy McGibbon",
     author_email='mcgibbon@uw.edu',
     url='https://github.com/mcgibbon/sympl',
-    packages=[
-        'sympl',
-    ],
-    package_dir={'sympl':
-                 'sympl'},
+    packages=['sympl'],
     include_package_data=True,
     install_requires=requirements,
     license="BSD license",
-    zip_safe=False,
+    zip_safe=True,
     keywords='sympl',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

@@ -7,6 +7,8 @@ include LICENSE
 include README.rst
 
 recursive-include tests *
+recursive-include sympl *.py
+recursive-include examples *.py *.ipynb
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 

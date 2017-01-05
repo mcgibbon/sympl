@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from . import _core
+from . import _components
 from ._core.base_components import (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite
@@ -16,7 +18,7 @@ from ._components import (
     PlotFunctionMonitor, NetCDFMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite,
