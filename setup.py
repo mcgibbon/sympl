@@ -12,8 +12,7 @@ requirements = [
     'numpy>=1.10',
     'pint>=0.7.0',
     'xarray>=0.8.0',
-    'matplotlib',
-    'six'
+    'six',
 ]
 
 test_requirements = [
@@ -23,7 +22,7 @@ test_requirements = [
 
 setup(
     name='sympl',
-    version='1.0.0',
+    version='0.1.0',
     description='Sympl is a Toolkit for building Earth system models in Python.',
     long_description=readme + '\n\n' + history,
     author="Jeremy McGibbon",

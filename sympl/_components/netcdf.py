@@ -1,8 +1,8 @@
-from sympl._core.base_components import Monitor
-from sympl._core.exceptions import (
+from .._core.base_components import Monitor
+from .._core.exceptions import (
     DependencyException, InvalidStateException, IOException)
-from sympl._core.units import from_unit_to_another
-from sympl._core.array import DataArray
+from .._core.units import from_unit_to_another
+from .._core.array import DataArray
 import xarray as xr
 import os
 import numpy as np

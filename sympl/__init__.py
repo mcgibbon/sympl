@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from sympl._core.base_components import (
+from ._core.base_components import (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite
 )
@@ -16,7 +16,7 @@ from ._components import (
     PlotFunctionMonitor, NetCDFMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
 
-__version__ = '1.0.0'
+__version__ = '0.1.0'
 __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite,
