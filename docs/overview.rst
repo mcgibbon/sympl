@@ -24,7 +24,7 @@ model. This has a number of benefits:
 Sympl is also a toolkit which contains a number of commonly used objects, such
 as time steppers and NetCDF output objects.
 
-Sympl as a community
+So is Sympl a model?
 --------------------
 
 Sympl is *not* a model itself. In particular, physical parameterizations and
@@ -35,5 +35,42 @@ Sympl is meant to be a community ecosystem that allows researchers and other
 users to use and combine components from a number of different sources.
 By keeping model physics/dynamics code outside of Sympl itself, researchers
 can own and maintain their own models. The framework API ensures that models
-using Sympl are clear and accessible, and that components from different models
-and packages are compatible with one another.
+using Sympl are clear and accessible, and allows components from different models
+and packages to be used alongside one another.
+
+The API
+-------
+
+In a Sympl model, the model
+state is contained within a "state dictionary". This is a Python dictionary
+whose keys are strings indicating a quantity, and values are DataArrays with
+the values of those quantities. The one exception is "time", which is stored
+as a timedelta or datetime-like object, not as a DataArray. The DataArrays
+also contain information about the units of the quantity, and the grid it is
+located on. At the start of a model script, the state dictionary should be
+set to initial values. Code to do this may be present in other packages, or you
+can write this code yourself.
+
+The state dictionary is evolved by :py:class:`sympl.TimeStepper` and
+:py:class:`sympl.Implicit` objects. These types of objects take in the state
+and a timedelta object that indicates the time step, and return the next
+model state. :py:class:`sympl.TimeStepper` objects do this by wrapping
+:py:class:`sympl.Prognostic` objects, which calculate tendencies using the
+state dictionary. We should note that the meaning of "Implicit" in Sympl is
+slightly different than its traditional definition. Here an "Implicit" object is
+one that calculates the new state directly from the current state, or any
+object that requires the timestep to calculate the new state, while
+"Prognostic" objects are ones that calculate tendencies without using the
+timestep. If a :py:class:`sympl.TimeStepper` or :py:class:`sympl.Implicit`
+object needs to use multiple time steps in its calculation, it does so by
+storing states it was previously given until they are no longer needed.
+
+The state is also calculated using :py:class:`sympl.Diagnostic` objects which
+determine diagnostic quantities at the current time from the current state,
+returning them in a new dictionary. This type of object is particularly useful
+if you want to write your own online diagnostics.
+
+The state can be stored or viewed using :py:class:`sympl.Monitor` objects.
+These take in the model state and do something with it, such as storing it in
+a NetCDF file, or updating an interactive plot that is being shown to the user.
+

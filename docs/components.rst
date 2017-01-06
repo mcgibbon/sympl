@@ -9,7 +9,7 @@ additional components from other packages, or that you write yourself.
 ConstantDiagnostic
 ------------------
 
-.. autoclass:: climt.ConstantDiagnostic
+.. autoclass:: sympl.ConstantDiagnostic
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
@@ -17,7 +17,7 @@ ConstantDiagnostic
 ConstantPrognostic
 ------------------
 
-.. autoclass:: climt.ConstantPrognostic
+.. autoclass:: sympl.ConstantPrognostic
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
@@ -25,7 +25,7 @@ ConstantPrognostic
 RelaxationPrognostic
 --------------------
 
-.. autoclass:: climt.RelaxationPrognostic
+.. autoclass:: sympl.RelaxationPrognostic
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
