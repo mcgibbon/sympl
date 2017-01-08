@@ -1,5 +1,5 @@
 import abc
-from .util import ensure_no_shared_keys, add_dicts_inplace
+from .util import ensure_no_shared_keys, update_dict_by_adding_another
 from .exceptions import SharedKeyException
 
 
@@ -199,7 +199,7 @@ class PrognosticComposite(ComponentComposite):
         return_diagnostics = {}
         for prognostic in self._components:
             tendencies, diagnostics = prognostic(state)
-            add_dicts_inplace(return_tendencies, tendencies)
+            update_dict_by_adding_another(return_tendencies, tendencies)
             return_diagnostics.update(diagnostics)
         return return_tendencies, return_diagnostics
 

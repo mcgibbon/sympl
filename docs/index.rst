@@ -25,3 +25,10 @@ Documentation
    memory_management
    contributing
    authors
+
+License
+-------
+
+**sympl** is available under the open source `BSD License`__.
+
+__ https://github.com/mcgibbon/sympl/blob/master/LICENSE

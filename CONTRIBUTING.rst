@@ -5,9 +5,7 @@ Contributing
 ============
 
 Contributions are welcome, and they are greatly appreciated! Every
-little bit helps, and credit will always be given.
-
-You can contribute in many ways:
+little bit helps. You can contribute in many ways:
 
 Types of Contributions
 ----------------------
@@ -20,10 +18,18 @@ for others looking to learn the ways they can leverage Sympl's capabilities.
 If you have used Sympl in a publication, please let us know so we can add it to
 the list.
 
+Working on projects that use Sympl
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sympl is only as useful as the components it has available. You can make
+Sympl more useful for others by contributing to model projects which
+use Sympl, or by writing/wrapping model components and deploying them in your
+own Python packages.
+
 Presenting Sympl to Others
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Sympl is meant to be an accessible, community-driven model. You can help the
+Sympl is meant to be an accessible, community-driven tool. You can help the
 community of users grow and be more effective in many ways, such as:
 
 * Running a workshop
@@ -90,9 +96,8 @@ Ready to contribute? Here's how to set up `sympl` for local development.
 
     $ git clone git@github.com:your_name_here/sympl.git
 
-3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
+3. Install your local copy in development mode::
 
-    $ mkvirtualenv sympl
     $ cd sympl/
     $ python setup.py develop
 
@@ -108,7 +113,7 @@ Ready to contribute? Here's how to set up `sympl` for local development.
     $ python setup.py test or py.test
     $ tox
 
-   To get flake8 and tox, just pip install them into your virtualenv.
+   To get flake8 and tox, just pip install them.
 
 6. Commit your changes and push your branch to GitHub::
 

@@ -101,17 +101,19 @@ def set_prognostic_update_frequency(prognostic_class, update_timedelta):
 
 def replace_none_with_default(constant_name, value):
     """If value is None, returns the default constant for the constant name.
-    Otherwise, returns value."""
+    Otherwise, returns value. If the default constant is not defined, raises
+    KeyError."""
     if value is None:
         return default_constants[constant_name]
     else:
         return value
 
 
-def add_dicts_inplace(dict1, dict2):
+def update_dict_by_adding_another(dict1, dict2):
     """
-    Takes two dictionaries. For any keys in both dictionary, it adds the value
-    in dict2 to the value in dict1. This is done in-place if the values are
+    Takes two dictionaries. Add values in dict2 to the values in dict1, if
+    present. If not present, create a new value in dict1 equal to the value in
+    dict2. Addition is done in-place if the values are
     array-like, to avoid data copying.
     """
     for key in dict2.keys():
