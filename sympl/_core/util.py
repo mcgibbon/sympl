@@ -22,38 +22,53 @@ def set_dimension_names(x=None, y=None, z=None):
             dim_names[key] = [key] + list(value)
 
 
-def combine_dimensions(arrays, out_dims=('x', 'y', 'z')):
+def combine_dimensions(arrays, out_dims):
     """
     Returns a tuple of dimension names corresponding to
     dimension names from the DataArray objects given by *args when present.
-    The names returned correspond to the directions in out_dims. ValueError
-    is raised if there are multiple names for one direction.
+    The names returned correspond to the directions in out_dims.
 
     Args:
         arrays (iterable of DataArray): Objects for which to combine
             dimension names.
         out_dims (iterable of str): The desired output directions. Should
-            contain only 'x', 'y', or 'z'.
+            contain only 'x', 'y', or 'z'. For example, ('y', 'x') is valid.
+
+    Raises:
+        ValueError: If there are multiple names for a single direction, or if
+            an array has a dimension along a direction not present in out_dims.
 
     Returns:
         dimensions (list of str): The combined dimension names, in the order
             given by out_dims.
     """
-    dims = [None for _ in range(len(out_dims))]
+    _ensure_no_invalid_directions(out_dims)
+    out_names = [None for _ in range(len(out_dims))]
+    all_names = set()
     for value in arrays:
-        for dim in value.dims:
-            for i, dim_list in enumerate(
-                    [dim_names[name] for name in out_dims]):
-                if (dim in dim_list) and (dim not in ('x', 'y', 'z')):
-                    if dims[i] is None:
-                        dims[i] = dim
-                    elif dims[i] != dim:
-                        raise ValueError(
-                            'Multiple dimensions along same x/y/z coordinate')
-    for i, default in enumerate(out_dims):
-        if dims[i] is None:
-            dims[i] = default
-    return dims
+        all_names.update(value.dims)
+    for direction, dir_names in dim_names.items():
+        if direction in out_dims:
+            names = all_names.intersection(dir_names)
+            if len(names) > 1:
+                raise ValueError(
+                    'Multiple dimensions along {} direction'.format(direction))
+            elif len(names) == 1:
+                out_names[out_dims.index(direction)] = names.pop()
+            else:
+                out_names[out_dims.index(direction)] = direction
+        elif len(all_names.intersection(dir_names)) > 0:
+            raise ValueError(
+                'Arrays have dimensions along {} direction, which is '
+                'not included in output'.format(direction))
+    return out_names
+
+
+def _ensure_no_invalid_directions(out_dims):
+    invalid_dims = set(out_dims).difference(['x', 'y', 'z'])
+    if len(invalid_dims) != 0:
+        raise ValueError(
+            'Invalid direction(s) in out_dims: {}'.format(invalid_dims))
 
 
 def set_prognostic_update_frequency(prognostic_class, update_timedelta):
@@ -80,23 +95,51 @@ def set_prognostic_update_frequency(prognostic_class, update_timedelta):
         update_timedelta (timedelta): The amount that state['time'] must differ
             from when output was cached before new output is
             computed.
-
-    Returns:
-        prognostic (Prognostic): The input Prognostic, altered in-place
     """
-    prognostic_class._update_timedelta = update_timedelta
-    prognostic_class._last_update_time = None
+    prognostic_class._spuf_update_timedelta = update_timedelta
+    prognostic_class._spuf_last_update_time = None
     original_call = prognostic_class.__call__
 
     def __call__(self, state):
-        if (self._last_update_time is None or
-                state['time'] >= self._last_update_time + self._update_timedelta):
-            self._cached_output = original_call(self, state)
-            self._last_update_time = state['time']
-        return self._cached_output
+        if (self._spuf_last_update_time is None or
+                state['time'] >= self._spuf_last_update_time + self._spuf_update_timedelta):
+            self._spuf_cached_output = original_call(self, state)
+            self._spuf_last_update_time = state['time']
+        return self._spuf_cached_output
 
     prognostic_class.__call__ = __call__
-    return prognostic_class
+
+
+def put_prognostic_tendency_in_diagnostics(prognostic_class, label):
+    """
+    Modifies the class prognostic_class so that when it is called, its
+    tendencies are all put in its diagnostics as
+    "tendency_of_{quantity}_due_to_{label}", where label is passed in to this
+    function.
+
+    Example:
+        This how the function should be used on a Prognostic class RRTMRadiation.
+
+        >>> put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
+        >>> prognostic = RRTMRadiation()
+
+    Args:
+        prognostic_class (type): A Prognostic class (not an instance).
+        label (str): Label describing what the tendencies are due to, to be
+            put in the diagnostic quantity names.
+    """
+    prognostic_class._pptid_tendency_label = label
+    original_call = prognostic_class.__call__
+
+    def __call__(self, state):
+        tendencies, diagnostics = original_call(self, state)
+        for quantity_name in tendencies.keys():
+            diagnostic_name = 'tendency_of_{}_due_to_{}'.format(
+                quantity_name, self._pptid_tendency_label)
+            diagnostics[diagnostic_name] = tendencies[quantity_name]
+        return tendencies, diagnostics
+
+    prognostic_class.__call__ = __call__
 
 
 def replace_none_with_default(constant_name, value):
