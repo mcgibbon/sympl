@@ -2,7 +2,8 @@ import pytest
 from sympl import (
     set_prognostic_update_frequency, Prognostic, replace_none_with_default,
     default_constants, ensure_no_shared_keys, SharedKeyException, DataArray,
-    combine_dimensions, set_dimension_names)
+    combine_dimensions, set_dimension_names,
+    put_prognostic_tendency_in_diagnostics)
 from sympl._core.util import update_dict_by_adding_another
 from datetime import datetime, timedelta
 import numpy as np
@@ -25,55 +26,55 @@ class MockPrognostic(Prognostic):
 
 
 def test_set_prognostic_update_frequency_calls_initially():
-    set_prognostic_update_frequency(MockPrognostic, timedelta(hours=1))
-    prognostic = MockPrognostic()
+    MyPrognostic = set_prognostic_update_frequency(
+        MockPrognostic, timedelta(hours=1))
+    prognostic = MyPrognostic()
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic(state)
-    assert len(tendencies) == 0
     assert len(diagnostics) == 1
     assert diagnostics['num_updates'] == 1
 
 
 def test_set_prognostic_update_frequency_caches_result():
-    set_prognostic_update_frequency(MockPrognostic, timedelta(hours=1))
-    prognostic = MockPrognostic()
+    MyPrognostic = set_prognostic_update_frequency(
+        MockPrognostic, timedelta(hours=1))
+    prognostic = MyPrognostic()
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic(state)
     tendencies, diagnostics = prognostic(state)
-    assert len(tendencies) == 0
     assert len(diagnostics) == 1
     assert diagnostics['num_updates'] == 1
 
 
 def test_set_prognostic_update_frequency_caches_result_with_datetime():
-    set_prognostic_update_frequency(MockPrognostic, timedelta(hours=1))
-    prognostic = MockPrognostic()
+    MyPrognostic = set_prognostic_update_frequency(
+        MockPrognostic, timedelta(hours=1))
+    prognostic = MyPrognostic()
     state = {'time': datetime(2000, 1, 1)}
     tendencies, diagnostics = prognostic(state)
     tendencies, diagnostics = prognostic(state)
-    assert len(tendencies) == 0
     assert len(diagnostics) == 1
     assert diagnostics['num_updates'] == 1
 
 
 def test_set_prognostic_update_frequency_updates_result_when_equal():
-    set_prognostic_update_frequency(MockPrognostic, timedelta(hours=1))
-    prognostic = MockPrognostic()
+    MyPrognostic = set_prognostic_update_frequency(
+        MockPrognostic, timedelta(hours=1))
+    prognostic = MyPrognostic()
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic({'time': timedelta(hours=0)})
     tendencies, diagnostics = prognostic({'time': timedelta(hours=1)})
-    assert len(tendencies) == 0
     assert len(diagnostics) == 1
     assert diagnostics['num_updates'] == 2
 
 
 def test_set_prognostic_update_frequency_updates_result_when_greater():
-    set_prognostic_update_frequency(MockPrognostic, timedelta(hours=1))
-    prognostic = MockPrognostic()
+    MyPrognostic = set_prognostic_update_frequency(
+        MockPrognostic, timedelta(hours=1))
+    prognostic = MyPrognostic()
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic({'time': timedelta(hours=0)})
     tendencies, diagnostics = prognostic({'time': timedelta(hours=2)})
-    assert len(tendencies) == 0
     assert len(diagnostics) == 1
     assert diagnostics['num_updates'] == 2
 
@@ -228,6 +229,35 @@ class CombineDimensionsTests(unittest.TestCase):
             raise err
         else:
             raise AssertionError('No exception raised but expected ValueError.')
+
+
+def test_put_prognostic_tendency_in_diagnostics_no_tendencies():
+    class MockPrognostic(Prognostic):
+        def __call__(self, state):
+            return {}, {}
+    MyPrognostic = put_prognostic_tendency_in_diagnostics(
+        MockPrognostic, 'scheme')
+
+    prognostic = MyPrognostic()
+    tendencies, diagnostics = prognostic({})
+    assert len(tendencies) == 0
+    assert len(diagnostics) == 0
+
+
+def test_put_prognostic_tendency_in_diagnostics_one_tendency():
+    class MockPrognostic(Prognostic):
+        tendencies = ('quantity',)
+        def __call__(self, state):
+            return {'quantity': 1.}, {}
+
+    MyPrognostic = put_prognostic_tendency_in_diagnostics(
+        MockPrognostic, 'scheme')
+
+    prognostic = MyPrognostic()
+    assert 'tendency_of_quantity_due_to_scheme' in prognostic.diagnostics
+    tendencies, diagnostics = prognostic({})
+    assert 'tendency_of_quantity_due_to_scheme' in diagnostics.keys()
+    assert len(diagnostics) == 1
 
 if __name__ == '__main__':
     pytest.main([__file__])

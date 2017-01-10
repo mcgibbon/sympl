@@ -20,6 +20,10 @@ model. This has a number of benefits:
 * Code can be re-used between different types of models. For instance, an
   atmospheric general circulation model, numerical weather prediction model,
   and large-eddy simulation could all use the same RRTM radiation object.
+* Already-existing documentation for Sympl can tell your users how to configure
+  and run your model. You will likely spend less time writing documentation,
+  but end up with a better documented model. As long as you write docstrings,
+  you're good to go!
 
 Sympl is also a toolkit which contains a number of commonly used objects, such
 as time steppers and NetCDF output objects.

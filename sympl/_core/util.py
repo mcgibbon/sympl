@@ -73,12 +73,13 @@ def _ensure_no_invalid_directions(out_dims):
 
 def set_prognostic_update_frequency(prognostic_class, update_timedelta):
     """
-    Alters a prognostic class so that when it is called, it only computes its
+    Wraps a prognostic class so that when it is called, it only computes its
     output once for every period of length update_timedelta. In between these
     calls, the cached output from the last computation will be returned.
 
-    Note that the *class* itself must be updated, not an *instance* of that
-    class.
+    Note that the *class* itself must be given as input and a class is
+    returned. That class must afterwards be instantiated if you want to use
+    it.
 
     Once modified, the class requires that the 'time' quantity is set on
     states it receives, and that it is a datetime or timedelta object.
@@ -87,7 +88,7 @@ def set_prognostic_update_frequency(prognostic_class, update_timedelta):
         This how the function should be used on a Prognostic class MyPrognostic.
 
         >>> from datetime import timedelta
-        >>> set_prognostic_update_frequency(MyPrognostic, timedelta(hours=1))
+        >>> MyPrognostic = set_prognostic_update_frequency(MyPrognostic, timedelta(hours=1))
         >>> prognostic = MyPrognostic()
 
     Args:
@@ -95,51 +96,76 @@ def set_prognostic_update_frequency(prognostic_class, update_timedelta):
         update_timedelta (timedelta): The amount that state['time'] must differ
             from when output was cached before new output is
             computed.
+
+    Returns:
+        WrappedPrognostic (Type): A new Prognostic class that only computes
+            its output with the defined frequency, as described above.
     """
-    prognostic_class._spuf_update_timedelta = update_timedelta
-    prognostic_class._spuf_last_update_time = None
-    original_call = prognostic_class.__call__
+    class WrappedPrognostic(prognostic_class):
+        _spuf_update_timedelta = update_timedelta
 
-    def __call__(self, state):
-        if (self._spuf_last_update_time is None or
-                state['time'] >= self._spuf_last_update_time + self._spuf_update_timedelta):
-            self._spuf_cached_output = original_call(self, state)
-            self._spuf_last_update_time = state['time']
-        return self._spuf_cached_output
+        def __init__(self, *args, **kwargs):
+            super(WrappedPrognostic, self).__init__(*args, **kwargs)
+            self._spuf_last_update_time = None
 
-    prognostic_class.__call__ = __call__
+        def __call__(self, state, **kwargs):
+            if (self._spuf_last_update_time is None or
+                    state['time'] >= self._spuf_last_update_time +
+                    self._spuf_update_timedelta):
+                self._spuf_cached_output = super(
+                    WrappedPrognostic, self).__call__(state, **kwargs)
+                self._spuf_last_update_time = state['time']
+            return self._spuf_cached_output
+
+    return WrappedPrognostic
 
 
 def put_prognostic_tendency_in_diagnostics(prognostic_class, label):
     """
-    Modifies the class prognostic_class so that when it is called, its
-    tendencies are all put in its diagnostics as
+    Wraps the class prognostic_class so that when it is called, its
+    tendencies are all put in its diagnostics dictionary as
     "tendency_of_{quantity}_due_to_{label}", where label is passed in to this
     function.
+
+    Note that a *class* is wrapped and returned. You must afterwards
+    instantiate that class if you want to use it.
 
     Example:
         This how the function should be used on a Prognostic class RRTMRadiation.
 
-        >>> put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
+        >>> RRTMRadiation = put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
         >>> prognostic = RRTMRadiation()
 
     Args:
         prognostic_class (type): A Prognostic class (not an instance).
         label (str): Label describing what the tendencies are due to, to be
             put in the diagnostic quantity names.
+
+    Returns:
+        WrappedPrognostic (type): The Prognostic class wrapped as described
+            above.
     """
-    prognostic_class._pptid_tendency_label = label
-    original_call = prognostic_class.__call__
+    class WrappedPrognostic(prognostic_class):
+        _pptid_tendency_label = label
 
-    def __call__(self, state):
-        tendencies, diagnostics = original_call(self, state)
-        for quantity_name in tendencies.keys():
-            diagnostic_name = 'tendency_of_{}_due_to_{}'.format(
-                quantity_name, self._pptid_tendency_label)
-            diagnostics[diagnostic_name] = tendencies[quantity_name]
-        return tendencies, diagnostics
+        def __init__(self, *args, **kwargs):
+            super(WrappedPrognostic, self).__init__(*args, **kwargs)
+            diagnostic_names = list(self.diagnostics)
+            for quantity_name in self.tendencies:
+                diagnostic_names.append('tendency_of_{}_due_to_{}'.format(
+                    quantity_name, self._pptid_tendency_label))
+            self.diagnostics = tuple(diagnostic_names)
 
-    prognostic_class.__call__ = __call__
+        def __call__(self, state, **kwargs):
+            tendencies, diagnostics = super(WrappedPrognostic, self).__call__(
+                state, **kwargs)
+            for quantity_name in tendencies.keys():
+                diagnostic_name = 'tendency_of_{}_due_to_{}'.format(
+                    quantity_name, self._pptid_tendency_label)
+                diagnostics[diagnostic_name] = tendencies[quantity_name]
+            return tendencies, diagnostics
+
+    return WrappedPrognostic
 
 
 def replace_none_with_default(constant_name, value):
