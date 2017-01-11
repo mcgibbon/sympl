@@ -6,7 +6,7 @@ Traditional atmospheric and Earth system models can be difficult to understand
 and modify for a number of reasons. Sympl aims to learn from the past
 experience of these models to accelerate research and improve accessibility.
 
-Sympl defines a set of Python object APIs that can be combined to create a
+Sympl defines a framework of Python object APIs that can be combined to create a
 model. This has a number of benefits:
 
 * Objects can use code written in any language that can be called from Python,
@@ -25,7 +25,7 @@ model. This has a number of benefits:
   but end up with a better documented model. As long as you write docstrings,
   you're good to go!
 
-Sympl is also a toolkit which contains a number of commonly used objects, such
+Sympl also contains a number of commonly used objects, such
 as time steppers and NetCDF output objects.
 
 So is Sympl a model?
@@ -42,6 +42,21 @@ can own and maintain their own models. The framework API ensures that models
 using Sympl are clear and accessible, and allows components from different models
 and packages to be used alongside one another.
 
+So where's the model?
+---------------------
+
+Models created with Sympl can work differently from traditional Fortran models.
+A model developer makes the components of their model available. Using these
+components, you can write a script which acts as the model executable, but also
+configures the model, and calls any online analysis you want to run. Model
+developers may make example model scripts available which you can modify.
+
+In a way, when you configure the model you are writing the model itself. This
+is reasonable in Sympl because the model run script should be accessible and
+readable by users with basic knowledge of programming (even users who don't
+know Python). By being readable, the model run script tells others clearly and
+precisely how you configured and ran your model.
+
 The API
 -------
 
@@ -53,7 +68,8 @@ as a timedelta or datetime-like object, not as a DataArray. The DataArrays
 also contain information about the units of the quantity, and the grid it is
 located on. At the start of a model script, the state dictionary should be
 set to initial values. Code to do this may be present in other packages, or you
-can write this code yourself.
+can write this code yourself. The state and its initialization is discussed
+further in :ref:`State and Initialization`.
 
 The state dictionary is evolved by :py:class:`sympl.TimeStepper` and
 :py:class:`sympl.Implicit` objects. These types of objects take in the state

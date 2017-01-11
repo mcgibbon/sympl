@@ -2,51 +2,20 @@
 Component Types
 ===============
 
-In Sympl, "components" is a loose term to refer to :py:class:`sympl.Prognostic`,
-:py:class:`sympl.Diagnostic`, :py:class:`sympl.Implicit`, and
-:py:class:`sympl.Monitor` objects. These are not objects of their own
-(you can't run ``prog = Prognostic()``). They define interfaces for subclasses
-to follow.
-
-Each of them, once initialized, can be passed in a current model state.
+In Sympl, computation is mainly performed using :py:class:`sympl.Prognostic`,
+:py:class:`sympl.Diagnostic`, and :py:class:`sympl.Implicit` objects.
+Each of these types, once initialized, can be passed in a current model state.
 :py:class:`sympl.Prognostic` objects use the state to return tendencies and
 diagnostics at the current time. :py:class:`sympl.Diagnostic` objects
 return only diagnostics from the current time. :py:class:`sympl.Implicit`
 objects will take in a timestep along with the state, and then return the
 next state as well as modifying the current state to include more diagnostics
 (it is similar to a :py:class:`sympl.TimeStepper` in how it is called).
-And :py:class:`sympl.Monitor` objects will store the current state in
-some way, whether it is by displaying the new state on a plot that is
-shown to the user, updating information on a web server, or saving the state
-to a file.
 
 These classes themselves (listed in the previous paragraph) are not ones you
-can initialize (e.g. there is no one 'prognostic' scheme), but they each have
-subclasses defined in Sympl, which can all be used in the ways described in
-this section.
-
-Initializing a Component
-------------------------
-
-You can create a component object, such as ``RRTMRadiation`` like so:
-
-.. code-block:: python
-
-    radiation = RRTMRadiation()
-
-All component objects (:py:class:`sympl.Prognostic`,
-:py:class:`sympl.Diagnostic`, :py:class:`sympl.Implicit`, and
-:py:class:`sympl.Monitor`) should have sensible defaults that are used when
-no options are passed in on initialization. Each object can have its own
-options, however. For example, to compute only longwave radiation you might
-write:
-
-.. code-block:: python
-
-    radiation = RRTMRadiation(do_shortwave=False, do_longwave=True)
-
-The options available ('keyword arguments' or 'kwargs') will depend on the
-particular object being initialized.
+can initialize (e.g. there is no one 'prognostic' scheme), but instead should
+be subclassed to contain computational code relevant to the model you're
+running.
 
 Prognostic
 ----------
@@ -74,6 +43,16 @@ Usually, you will call a Prognostic object through a
 timestep.
 
 .. autoclass:: sympl.Prognostic
+    :members:
+    :special-members:
+    :exclude-members: __weakref__,__metaclass__
+
+.. autoclass:: sympl.ConstantPrognostic
+    :members:
+    :special-members:
+    :exclude-members: __weakref__,__metaclass__
+
+.. autoclass:: sympl.RelaxationPrognostic
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
@@ -110,6 +89,11 @@ one overwriting the other.
     :special-members:
     :exclude-members: __weakref__,__metaclass__
 
+.. autoclass:: sympl.ConstantDiagnostic
+    :members:
+    :special-members:
+    :exclude-members: __weakref__,__metaclass__
+
 Implicit
 --------
 
@@ -132,29 +116,6 @@ This is important, so we'll repeat it:
 **the input state can be modified by the call to the ``Implicit`` object**.
 
 .. autoclass:: sympl.Implicit
-    :members:
-    :special-members:
-    :exclude-members: __weakref__,__metaclass__
-
-Monitor
--------
-
-:py:class:`sympl.Monitor` objects can store states in some way, whether it is by
-displaying the new state on a plot that is shown to the user, updating
-information on a web server, or saving the state to a file. They are called
-like so:
-
-.. code-block:: python
-
-    monitor = MyMonitor()
-    monitor.store(state)
-
-The :py:class:`sympl.Monitor` will take advantage of the 'time' key in the
-``state`` dictionary in order to determine the model time of the state. This is
-particularly important for a :py:class:`sympl.Monitor` which outputs a series
-of states to disk.
-
-.. autoclass:: sympl.Monitor
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__

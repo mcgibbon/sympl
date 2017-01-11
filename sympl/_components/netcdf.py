@@ -30,7 +30,8 @@ else:
         NetCDF file when requested."""
 
         def __init__(
-                self, filename, time_units='seconds', write_on_store=False):
+                self, filename, time_units='seconds', store_names=None,
+                write_on_store=False):
             """
             Args:
                 filename (str): The file to which the NetCDF file will be
@@ -38,6 +39,8 @@ else:
                 time_units (str, optional): The units in which time will be
                     stored in the NetCDF file. Time is stored as an integer
                     number of these units. Default is seconds.
+                store_names (iterable of str, optional): Names of quantities
+                    to store. If not given, all quantities are stored.
                 write_on_store (bool, optional): If True, stored changes are
                     immediately written to file. This can result in many file
                     open/close operations. Default is to write only when
@@ -47,6 +50,7 @@ else:
             self._filename = filename
             self._time_units = time_units
             self._write_on_store = write_on_store
+            self._store_names = ['time'] + list(store_names)
 
         def store(self, state):
             """
@@ -61,12 +65,15 @@ else:
                 InvalidStateException: if state is not a valid input for the
                     Diagnostic instance.
             """
-            if state['time'] in self._cached_states:
-                self._cached_states[state['time']].update(state)
+            if self._store_names is not None:
+                name_list = set(state.keys()).intersection(self._store_names)
+                cache_state = {name: state[name] for name in name_list}
             else:
-                # This only copies the dictionary, not the arrays it contains
-                state = state.copy()
-                self._cached_states[state.pop('time')] = state
+                cache_state = state.copy()
+            if cache_state['time'] in self._cached_states:
+                self._cached_states[state['time']].update(cache_state)
+            else:
+                self._cached_states[state.pop('time')] = cache_state
             if self._write_on_store:
                 self.write()
 

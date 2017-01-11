@@ -54,8 +54,6 @@ class AdamsBashforth(TimeStepper):
         Args:
             prognostic_list (iterable of Prognostic): Objects used to get
                 tendencies for time stepping.
-            diagnostic_list (iterable of Diagnostic): Objects used to get
-                diagnostics before time stepping.
             order (int, optional): The order of accuracy to use. Must be between
                 1 and 4. 1 is the same as the Euler method. Default is 3.
         """
@@ -142,8 +140,6 @@ class Leapfrog(TimeStepper):
         Args:
             prognostic_list (iterable of Prognostic): Objects used to get
                 tendencies for time stepping.
-            diagnostic_list (iterable of Diagnostic): Objects used to get
-                diagnostics before time stepping.
             asselin_strength (float, optional): The filter parameter used to
                 determine the strength of the Asselin filter. Default is 0.05.
             alpha (float, optional): Constant from Williams (2009), where the

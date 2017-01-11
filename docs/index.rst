@@ -17,10 +17,11 @@ Documentation
    overview
    faq
    installation
-   component_types
-   components
-   composites
+   initialization
    timestepping
+   computation
+   monitors
+   composites
    naming
    memory_management
    contributing
