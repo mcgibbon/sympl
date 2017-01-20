@@ -15,6 +15,7 @@ Documentation
 
    history
    overview
+   quickstart
    faq
    installation
    initialization
