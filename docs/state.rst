@@ -1,6 +1,6 @@
-========================
-State and Initialization
-========================
+===========
+Model State
+===========
 
 In a Sympl model, physical quantities are stored in a state dictionary. This is
 a Python **dict** with keys that are strings, indicating the quantity name, and

@@ -18,7 +18,7 @@ Documentation
    quickstart
    faq
    installation
-   initialization
+   state
    timestepping
    computation
    monitors
