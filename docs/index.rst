@@ -5,7 +5,10 @@ Sympl: A System for Modelling Planets
 **sympl** is an open source project aims to enable researchers and other
 users to write understandable, modular, accessible Earth system and planetary
 models in Python. It is meant to be used in combination with other packages
-that provide model components in order to write model scripts.
+that provide model components in order to write model scripts. Its source
+code can be found on GitHub_.
+
+.. _GitHub: https://github.com/mcgibbon/sympl
 
 Documentation
 -------------
@@ -31,6 +34,6 @@ Documentation
 License
 -------
 
-**sympl** is available under the open source `BSD License`__.
+**sympl** is available under the open source `BSD License`_.
 
-__ https://github.com/mcgibbon/sympl/blob/master/LICENSE
+.. _BSD License: https://github.com/mcgibbon/sympl/blob/master/LICENSE

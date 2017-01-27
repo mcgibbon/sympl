@@ -74,7 +74,7 @@ Modifying Classes
 The following line modifies the Radiation class so that it will only compute
 tendencies every 2 hours.
 
-.. code-block::python
+.. code-block:: python
 
     set_prognostic_update_frequency(Radiation, timedelta(hours=2))
 
@@ -91,7 +91,7 @@ Defining a PlotFunctionMonitor
 Here we define a plotting function, and use it to create a
 :py:class:`sympl.Monitor` using :py:class:`sympl.PlotFunctionMonitor`:
 
-.. code-block::python
+.. code-block:: python
 
     def my_plot_function(fig, state):
         ax = fig.add_subplot(1, 1, 1)
@@ -118,7 +118,7 @@ To initialize the model, we need to create a dictionary which contains the
 model state. The way this is done is model-dependent. Here we assume there is
 a function that was defined by the `model_package` package which does so:
 
-.. code-block::python
+.. code-block:: python
 
     state = get_initial_state(nx=256, ny=128, nz=64)
     state['time'] = datetime(2000, 1, 1)
@@ -135,7 +135,7 @@ Initialize Components
 Now we need the objects that will process the state to move it forward in time.
 Those are the "components":
 
-.. code-block::python
+.. code-block:: python
 
     physics_stepper = AdamsBashforth(
         Radiation(),
@@ -162,7 +162,7 @@ The Main Loop
 With everything initialized, we have the part of the code where the real
 computation is done -- the main loop:
 
-.. code-block::python
+.. code-block:: python
 
     timestep = timedelta(minutes=30)
     while state['time'] < datetime(2010, 1, 1):
@@ -173,3 +173,7 @@ computation is done -- the main loop:
         plot_monitor.store(state_after_physics)
         next_state['time'] = state['time'] + timestep
         state = next_state
+
+In the main loop, a series of component calls update the state, and the figure
+presented by `plot_monitor` is updated. The code is meant to be as
+self-explanatory as possible.
