@@ -26,7 +26,6 @@ Documentation
    computation
    monitors
    composites
-   naming
    memory_management
    contributing
    authors
