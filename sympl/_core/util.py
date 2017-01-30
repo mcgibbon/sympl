@@ -14,6 +14,13 @@ except ImportError:
 dim_names = {'x': [], 'y': [], 'z': []}
 
 
+def same_list(list1, list2):
+    """Returns a boolean indicating whether the items in list1 are the same
+    items present in list2 (ignoring order)."""
+    return (len(list1) == len(list2) and all(
+        [item in list2 for item in list1] + [item in list1 for item in list2]))
+
+
 def set_dimension_names(x=None, y=None, z=None):
     for key, value in [('x', x), ('y', y), ('z', z)]:
         if isinstance(value, string_types):

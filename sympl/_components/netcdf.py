@@ -3,6 +3,7 @@ from .._core.exceptions import (
     DependencyException, InvalidStateException, IOException)
 from .._core.units import from_unit_to_another
 from .._core.array import DataArray
+from .._core.util import same_list
 import xarray as xr
 import os
 import numpy as np
@@ -88,26 +89,55 @@ else:
             else:
                 return 'a'
 
-        def _ensure_cached_states_have_same_keys(self):
-            """Ensures all states in self._cached_state_dict have the same keys."""
+        def _ensure_cached_state_keys_compatible_with_dataset(self, dataset):
+            file_keys = list(dataset.variables.keys())
+            if 'time' in file_keys:
+                file_keys.remove('time')
+            if len(file_keys) > 0:
+                self._ensure_cached_states_have_same_keys(file_keys)
+            else:
+                self._ensure_cached_states_have_same_keys()
+
+        def _ensure_cached_states_have_same_keys(self, desired_keys=None):
+            """
+            Ensures all states in self._cached_state_dict have the same keys.
+            If desired_keys is given, also ensure the keys are the same as
+            the ones in desired_keys.
+
+            Raises:
+                InvalidStateException: If the cached states do not meet the
+                    requirements.
+            """
             if len(self._cached_state_dict) == 0:
                 return  # trivially true
-            reference_state = tuple(self._cached_state_dict.values())[0]
+            if desired_keys is not None:
+                reference_keys = desired_keys
+            else:
+                reference_state = tuple(self._cached_state_dict.values())[0]
+                reference_keys = reference_state.keys()
             for state in self._cached_state_dict.values():
-                if state.keys() != reference_state.keys():
+                if not same_list(list(state.keys()), list(reference_keys)):
                     raise InvalidStateException(
                         'NetCDFMonitor was passed a different set of '
-                        'quantities for different times')
+                        'quantities for different times: {} vs. {}'.format(
+                            list(reference_keys), list(state.keys())))
 
         def _get_ordered_times_and_states(self):
             """Returns the items in self._cached_state_dict, sorted by time."""
             return zip(*sorted(self._cached_state_dict.items(), key=lambda x: x[0]))
 
         def write(self):
-            """Write all cached states to the NetCDF file, and clear the cache.
-            This will append to any existing NetCDF file."""
-            self._ensure_cached_states_have_same_keys()
+            """
+            Write all cached states to the NetCDF file, and clear the cache.
+            This will append to any existing NetCDF file.
+
+            Raises:
+                InvalidStateException: If cached states do not all have
+                    the same quantities as every other cached and written
+                    state.
+            """
             with nc4.Dataset(self._filename, self._write_mode) as dataset:
+                self._ensure_cached_state_keys_compatible_with_dataset(dataset)
                 time_list, state_list = self._get_ordered_times_and_states()
                 self._ensure_time_exists(dataset, time_list[0])
                 it_start = dataset.dimensions['time'].size
@@ -147,7 +177,7 @@ def append_times_to_dataset(times, dataset, time_units):
         for time in times:
             times_list.append(time.total_seconds())
         time_array = from_unit_to_another(
-            np.array(times_list, 'seconds', time_units))
+            np.array(times_list), 'seconds', time_units)
         dataset.variables['time'][it_start:it_end] = time_array[:]
     else:  # assume datetime
         dataset.variables['time'][it_start:it_end] = nc4.date2num(
