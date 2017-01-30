@@ -17,3 +17,4 @@ pint==0.7.0
 scipy
 numpy>=0.10
 coveralls
+netcdf4-python
