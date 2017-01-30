@@ -10,6 +10,7 @@ Latest
 * Expanded tests
 * Added function to put prognostic tendencies in diagnostic output
 * Class wrapping now works by inheritance, instead of by monkey patching methods
+* NetCDFMonitor is actually working now, and has tests
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
