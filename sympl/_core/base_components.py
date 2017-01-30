@@ -247,20 +247,6 @@ class DiagnosticComposite(ComponentComposite):
             return_diagnostics.update(diagnostics)
         return return_diagnostics
 
-    def update_state(self, state):
-        """
-        Gets diagnostics from the passed model state and updates the state with those
-        diagnostics (in place).
-
-        Args:
-            state (dict): A model state dictionary.
-
-        Raises:
-            InvalidStateException: if state already includes any diagnostics being output.
-        """
-        for diagnostic_component in self._components:
-            diagnostic_component.update_state(state)
-
     @property
     def inputs(self):
         return self._combine_attribute('inputs')
