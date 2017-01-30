@@ -46,11 +46,14 @@ else:
                     open/close operations. Default is to write only when
                     the write() method is called directly.
             """
-            self._cached_states = {}
+            self._cached_state_dict = {}
             self._filename = filename
             self._time_units = time_units
             self._write_on_store = write_on_store
-            self._store_names = ['time'] + list(store_names)
+            if store_names is None:
+                self._store_names = None
+            else:
+                self._store_names = ['time'] + list(store_names)
 
         def store(self, state):
             """
@@ -70,10 +73,11 @@ else:
                 cache_state = {name: state[name] for name in name_list}
             else:
                 cache_state = state.copy()
-            if cache_state['time'] in self._cached_states:
-                self._cached_states[state['time']].update(cache_state)
+            cache_state.pop('time')  # stored as key, not needed in state dict
+            if state['time'] in self._cached_state_dict.keys():
+                self._cached_state_dict[state['time']].update(cache_state)
             else:
-                self._cached_states[state.pop('time')] = cache_state
+                self._cached_state_dict[state['time']] = cache_state
             if self._write_on_store:
                 self.write()
 
@@ -85,36 +89,36 @@ else:
                 return 'a'
 
         def _ensure_cached_states_have_same_keys(self):
-            """Ensures all states in self._cached_states have the same keys."""
-            if len(self._cached_states) == 0:
+            """Ensures all states in self._cached_state_dict have the same keys."""
+            if len(self._cached_state_dict) == 0:
                 return  # trivially true
-            reference_state = tuple(self._cached_states.values())[0]
-            for state in self._cached_states.values():
+            reference_state = tuple(self._cached_state_dict.values())[0]
+            for state in self._cached_state_dict.values():
                 if state.keys() != reference_state.keys():
                     raise InvalidStateException(
                         'NetCDFMonitor was passed a different set of '
                         'quantities for different times')
 
         def _get_ordered_times_and_states(self):
-            """Returns the items in self._cached_states, sorted by time."""
-            return zip(*sorted(self._cached_states.items(), key=lambda x: x[0]))
+            """Returns the items in self._cached_state_dict, sorted by time."""
+            return zip(*sorted(self._cached_state_dict.items(), key=lambda x: x[0]))
 
         def write(self):
             """Write all cached states to the NetCDF file, and clear the cache.
             This will append to any existing NetCDF file."""
             self._ensure_cached_states_have_same_keys()
             with nc4.Dataset(self._filename, self._write_mode) as dataset:
-                times, states = self._get_ordered_times_and_states()
-                self._ensure_time_exists(dataset, times[0])
+                time_list, state_list = self._get_ordered_times_and_states()
+                self._ensure_time_exists(dataset, time_list[0])
                 it_start = dataset.dimensions['time'].size
-                it_end = it_start + len(times)
-                append_times_to_dataset(times, dataset, self._time_units)
-                all_states = combine_states(states)
+                it_end = it_start + len(time_list)
+                append_times_to_dataset(time_list, dataset, self._time_units)
+                all_states = combine_states(state_list)
                 for name, value in all_states.items():
                     ensure_variable_exists(dataset, name, value)
                     dataset.variables[name][
                         it_start:it_end, :] = value.values[:, :]
-            self._cached_states = {}
+            self._cached_state_dict = {}
 
         def _ensure_time_exists(self, dataset, possible_reference_time):
             """Ensure an unlimited time dimension relevant to this monitor
