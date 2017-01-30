@@ -1,6 +1,6 @@
-========================
-State and Initialization
-========================
+===========
+Model State
+===========
 
 In a Sympl model, physical quantities are stored in a state dictionary. This is
 a Python **dict** with keys that are strings, indicating the quantity name, and
@@ -55,7 +55,7 @@ model).
             attrs=('units': 'Pa')),
         }
 
-The call to :py:function:`sympl.set_dimension_names` tells the framework
+The call to :py:func:`sympl.set_dimension_names` tells the framework
 what dimension names correspond to what directions. This information is used
 by components to make sure the axes are in the right order.
 

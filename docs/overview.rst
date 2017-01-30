@@ -69,7 +69,7 @@ also contain information about the units of the quantity, and the grid it is
 located on. At the start of a model script, the state dictionary should be
 set to initial values. Code to do this may be present in other packages, or you
 can write this code yourself. The state and its initialization is discussed
-further in :ref:`State and Initialization`.
+further in :ref:`Model State`.
 
 The state dictionary is evolved by :py:class:`sympl.TimeStepper` and
 :py:class:`sympl.Implicit` objects. These types of objects take in the state
