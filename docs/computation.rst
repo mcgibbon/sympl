@@ -2,15 +2,15 @@
 Component Types
 ===============
 
-In Sympl, computation is mainly performed using :py:class:`sympl.Prognostic`,
-:py:class:`sympl.Diagnostic`, and :py:class:`sympl.Implicit` objects.
+In Sympl, computation is mainly performed using :py:class:`~sympl.Prognostic`,
+:py:class:`~sympl.Diagnostic`, and :py:class:`~sympl.Implicit` objects.
 Each of these types, once initialized, can be passed in a current model state.
-:py:class:`sympl.Prognostic` objects use the state to return tendencies and
-diagnostics at the current time. :py:class:`sympl.Diagnostic` objects
-return only diagnostics from the current time. :py:class:`sympl.Implicit`
+:py:class:`~sympl.Prognostic` objects use the state to return tendencies and
+diagnostics at the current time. :py:class:`~sympl.Diagnostic` objects
+return only diagnostics from the current time. :py:class:`~sympl.Implicit`
 objects will take in a timestep along with the state, and then return the
 next state as well as modifying the current state to include more diagnostics
-(it is similar to a :py:class:`sympl.TimeStepper` in how it is called).
+(it is similar to a :py:class:`~sympl.TimeStepper` in how it is called).
 
 These classes themselves (listed in the previous paragraph) are not ones you
 can initialize (e.g. there is no one 'prognostic' scheme), but instead should
@@ -20,12 +20,12 @@ running.
 Prognostic
 ----------
 
-As stated above, :py:class:`sympl.Prognostic` objects use the state to return
+As stated above, :py:class:`~sympl.Prognostic` objects use the state to return
 tendencies and diagnostics at the current time. In a full model, the tendencies
-are used by a time stepping scheme (in Sympl, a :py:class:`sympl.TimeStepper`)
+are used by a time stepping scheme (in Sympl, a :py:class:`~sympl.TimeStepper`)
 to determine the values of quantities at the next time.
 
-You can call a :py:class:`sympl.Prognostic` directly to get diagnostics and
+You can call a :py:class:`~sympl.Prognostic` directly to get diagnostics and
 tendencies like so:
 
 .. code-block:: python
@@ -34,12 +34,12 @@ tendencies like so:
     diagnostics, tendencies = radiation(state)
 
 ``diagnostics`` and ``tendencies`` in this case will both be dictionaries,
-similar to ``state``. Even if the :py:class:`sympl.Prognostic` being called
+similar to ``state``. Even if the :py:class:`~sympl.Prognostic` being called
 does not compute any diagnostics, it will still return an empty
 diagnostics dictionary.
 
 Usually, you will call a Prognostic object through a
-:py:class:`sympl.TimeStepper` that uses it to determine values at the next
+:py:class:`~sympl.TimeStepper` that uses it to determine values at the next
 timestep.
 
 .. autoclass:: sympl.Prognostic
@@ -60,9 +60,9 @@ timestep.
 Diagnostic
 ----------
 
-:py:class:`sympl.Diagnostic` objects use the state to return quantities
+:py:class:`~sympl.Diagnostic` objects use the state to return quantities
 ('diagnostics') from the same timestep as the input state. You can call a
-:py:class:`sympl.Diagnostic` directly to get diagnostic quantities like so:
+:py:class:`~sympl.Diagnostic` directly to get diagnostic quantities like so:
 
 .. code-block:: python
 
@@ -70,7 +70,7 @@ Diagnostic
     diagnostics = diagnostic_component(state)
 
 Instead of returning a new dictionary with the additional diagnostic quantities,
-a :py:class:``Diagnostic`` can update the state dictionary in-place with the new
+a :py:class:`~sympl.Diagnostic` can update the state dictionary in-place with the new
 quantities. You do this like so:
 
 .. code-block:: python
@@ -80,7 +80,7 @@ quantities. You do this like so:
 
 The ``update_state`` call has the advantage that it will automatically check to
 see if it is overwriting any quantities already present in state, and will
-raise a :py:class:`sympl.SharedKeyException` before doing so. This ensures you
+raise a :py:class:`~sympl.SharedKeyException` before doing so. This ensures you
 don't have multiple pieces of code trying to output the same diagnostic, with
 one overwriting the other.
 
@@ -97,7 +97,7 @@ one overwriting the other.
 Implicit
 --------
 
-:py:class:`sympl.Implicit` objects use a state and a timestep to return the next
+:py:class:`~sympl.Implicit` objects use a state and a timestep to return the next
 state, and update the input state with any relevant diagnostic quantities. You
 can call an Implicit object like so:
 
@@ -109,7 +109,7 @@ can call an Implicit object like so:
     next_state = implicit(state, timestep)
 
 Following the ``implicit`` call, ``state`` will have been modified in-place to
-include any diagnostics produced by the :py:class:`sympl.Implicit` component
+include any diagnostics produced by the :py:class:`~sympl.Implicit` component
 for the timestep of the input state.
 
 This is important, so we'll repeat it:

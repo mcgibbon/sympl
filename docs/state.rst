@@ -4,7 +4,7 @@ Model State
 
 In a Sympl model, physical quantities are stored in a state dictionary. This is
 a Python **dict** with keys that are strings, indicating the quantity name, and
-values are :py:class:`sympl.DataArray` objects. The :py:class:`sympl.DataArray`
+values are :py:class:`~sympl.DataArray` objects. The :py:class:`~sympl.DataArray`
 is a slight modification of the ``DataArray`` object from xarray_. It
 maintains attributes when it is on the left hand side of addition or
 subtraction, and contains a helpful method for converting units. Any
@@ -19,7 +19,7 @@ these attributes (if any) is up to the component developers.
     :special-members:
     :exclude-members: __weakref__,__metaclass__
 
-There is one quantity which is not stored as a :py:class:`sympl.DataArray`, and
+There is one quantity which is not stored as a :py:class:`~sympl.DataArray`, and
 that is "time". Time is stored as a datetime or timedelta-like object.
 
 Code to initialize the state is not present in Sympl, by design, since this
@@ -55,7 +55,7 @@ model).
             attrs=('units': 'Pa')),
         }
 
-The call to :py:func:`sympl.set_dimension_names` tells the framework
+The call to :py:func:`~sympl.set_dimension_names` tells the framework
 what dimension names correspond to what directions. This information is used
 by components to make sure the axes are in the right order.
 

@@ -78,9 +78,9 @@ tendencies every 2 hours.
 
     set_prognostic_update_frequency(Radiation, timedelta(hours=2))
 
-Radiation is a :py:class:`sympl.Prognostic` class, which means it takes in a
+Radiation is a :py:class:`~sympl.Prognostic` class, which means it takes in a
 model state and returns tendencies from that state. The
-:py:function:`sympl.set_prognostic_update_frequency` function modifies the
+:py:func:`~sympl.set_prognostic_update_frequency` function modifies the
 class so that when it is given a state, it checks whether its given amount of
 (model) time has passed since the last time it computed tendencies, and if
 not it returns the cached tendencies which it last computed.
@@ -89,7 +89,7 @@ Defining a PlotFunctionMonitor
 ------------------------------
 
 Here we define a plotting function, and use it to create a
-:py:class:`sympl.Monitor` using :py:class:`sympl.PlotFunctionMonitor`:
+:py:class:`~sympl.Monitor` using :py:class:`~sympl.PlotFunctionMonitor`:
 
 .. code-block:: python
 
@@ -106,7 +106,7 @@ Here we define a plotting function, and use it to create a
 
     plot_monitor = PlotFunctionMonitor(my_plot_function)
 
-That `Monitor` will be used to produce an animated plot of the lowest model
+That :py:class:`~sympl.Monitor` will be used to produce an animated plot of the lowest model
 level air temperature as the model runs. Here we assume that the first axis
 is the vertical axis, and that the lowest level is at the lowest index, but
 this might be different for different models.
@@ -124,7 +124,7 @@ a function that was defined by the `model_package` package which does so:
     state['time'] = datetime(2000, 1, 1)
 
 An initialized `state` is a dictionary whose keys are strings (like
-'air_temperature') and values are :py:class:`sympl.DataArray` objects, which
+'air_temperature') and values are :py:class:`~sympl.DataArray` objects, which
 store not only the data but also metadata like units. The one exception
 is the "time" quantity which is either a `datetime`-like or `timedelta`-like
 object. You can read more about the `state` in :ref:`Model State`.
@@ -144,17 +144,18 @@ Those are the "components":
     )
     implicit_dynamics = ImplicitDynamics()
 
-:py:class:`sympl.AdamsBashforth` is a :py:class:`sympl.TimeStepper`, which is
-created with a set of :py:class:`sympl.Prognostic` components. The `Prognostic`
-components we have here are `Radiation`, `BoundaryLayer`, and
-`DeepConvection`. Each of these carries information about what it takes
-as inputs and provides as outputs, and can be called with a model state
-to return tendencies for a set of quantities. The `TimeStepper` uses
-this information to step the model state forward in time.
+:py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.TimeStepper`, which is
+created with a set of :py:class:`~sympl.Prognostic` components.
+The :py:class:`~sympl.Prognostic` components we have here are `Radiation`,
+`BoundaryLayer`, and `DeepConvection`. Each of these carries information about
+what it takes as inputs and provides as outputs, and can be called with a model
+state to return tendencies for a set of quantities. The
+:py:class:`~sympl.TimeStepper` uses this information to step the model state
+forward in time.
 
-The `ImplicitDynamics` class is a :py:class:`sympl.Implicit` object, which
-steps the model state forward in time in the same way that a `TimeStepper`
-would, but doesn't use `Prognostic` objects in doing so.
+The `ImplicitDynamics` class is a :py:class:`~sympl.Implicit` object, which
+steps the model state forward in time in the same way that a :py:class:`~sympl.TimeStepper`
+would, but doesn't use :py:class:`~sympl.Prognostic` objects in doing so.
 
 The Main Loop
 -------------

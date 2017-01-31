@@ -5,20 +5,21 @@ What's New
 Latest
 ------
 
-* Added readthedocs support
-* Overhaul of documentation
-* Expanded tests
-* Added function to put prognostic tendencies in diagnostic output
-* Class wrapping now works by inheritance, instead of by monkey patching methods
-* NetCDFMonitor is actually working now, and has tests
+* Added readthedocs support.
+* Overhaul of documentation.
+* Docstrings now use numpy style instead of Google style.
+* Expanded tests.
+* Added function to put prognostic tendencies in diagnostic output.
+* Class wrapping now works by inheritance, instead of by monkey patching methods.
+* NetCDFMonitor is actually working now, and has tests.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-* Removed add_dicts_inplace from public API
+* Removed add_dicts_inplace from public APIm
 * combine_dimensions will raise exceptions in a few more cases where it should
   do so. Particularly, if there is an extra dimension in the arrays.
-* default out_dims is removed from combine_dimensions
+* Default out_dims is removed from combine_dimensions.
 
 0.1.1 (2017-01-05)
 ------------------
