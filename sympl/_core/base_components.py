@@ -5,13 +5,16 @@ from .exceptions import SharedKeyException
 
 class Implicit(object):
     """
-    Attributes:
-        inputs (tuple of str): The quantities required in the state when the
-            object is called.
-        outputs (tuple of str): The quantities for which values for the new
-            state are returned when the object is called.
-        diagnostics (tuple of str): The diagnostic quantities that are inserted
-            into the old state when the object is called.
+    Attributes
+    ----------
+        inputs : tuple of str
+            The quantities required in the state when the object is called.
+        outputs: tuple of str
+            The quantities for which values for the new state are returned
+            when the object is called.
+        diagnostics: tuple of str
+            The diagnostic quantities that are inserted into the old state
+            when the object is called.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -25,32 +28,41 @@ class Implicit(object):
         Gets diagnostics from the current model state and steps the state
         forward in time according to the timestep.
 
-        Args:
-            state (dict): A model state dictionary. Will be updated with any
+        Args
+        ----
+            state : dict
+                A model state dictionary. Will be updated with any
                 diagnostic quantities produced by this object for the time of
                 the input state.
 
-        Returns:
-            next_state (dict): A dicitonary whose keys are strings indicating
+        Returns
+        -------
+            next_state : dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the value of those quantities
                 at the timestep after input state.
 
-        Raises:
-            KeyError: If a required quantity is missing from the state.
-            InvalidStateException: If state is not a valid input for the
-                Implicit instance for other reasons.
+        Raises
+        ------
+            KeyError
+                If a required quantity is missing from the state.
+            InvalidStateException
+                If state is not a valid input for the Implicit instance
+                for other reasons.
         """
 
 
 class Prognostic(object):
     """
-    Attributes:
-        inputs (tuple of str): The quantities required in the state when the
-            object is called.
-        tendencies (tuple of str): The quantities for which tendencies are
-            returned when the object is called.
-        diagnostics (tuple of str): The diagnostic quantities returned when
+    Attributes
+    ----------
+        inputs : tuple of str
+            The quantities required in the state when the object is called.
+        tendencies : tuple of str
+            The quantities for which tendencies are returned when
             the object is called.
+        diagnostics : tuple of str
+            The diagnostic quantities returned when the object is called.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -63,31 +75,40 @@ class Prognostic(object):
         """
         Gets tendencies and diagnostics from the passed model state.
 
-        Args:
-            state (dict): A model state dictionary.
+        Args
+        ----
+            state : dict
+                A model state dictionary.
 
-        Returns:
-            tendencies (dict): A dictionary whose keys are strings indicating
+        Returns
+        -------
+            tendencies : dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the time derivative of those
                 quantities in units/second at the time of the input state.
-            diagnostics (dict): A dictionary whose keys are strings indicating
+
+            diagnostics : dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the value of those quantities
                 at the time of the input state.
 
-        Raises:
-            KeyError: If a required quantity is missing from the state.
-            InvalidStateException: If state is not a valid input for the
-                Prognostic instance.
+        Raises
+        ------
+            KeyError
+                If a required quantity is missing from the state.
+            InvalidStateException
+                If state is not a valid input for the Prognostic instance.
         """
 
 
 class Diagnostic(object):
     """
-    Attributes:
-        inputs (tuple of str): The quantities required in the state when the
-            object is called.
-        diagnostics (tuple of str): The diagnostic quantities returned when
-            the object is called.
+    Attributes
+    ----------
+        inputs : tuple of str
+            The quantities required in the state when the object is called.
+        diagnostics : tuple of str
+            The diagnostic quantities returned when the object is called.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -99,18 +120,24 @@ class Diagnostic(object):
         """
         Gets diagnostics from the passed model state.
 
-        Args:
-            state (dict): A model state dictionary.
+        Args
+        ----
+            state : dict
+                A model state dictionary.
 
-        Returns:
-            diagnostics (dict): A dictionary whose keys are strings indicating
+        Returns
+        -------
+            diagnostics : dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the value of those quantities
                 at the time of the input state.
 
-        Raises:
-            KeyError: If a required quantity is missing from the state.
-            InvalidStateException: If state is not a valid input for the
-                Prognostic instance.
+        Raises
+        ------
+            KeyError
+                If a required quantity is missing from the state.
+            InvalidStateException
+                If state is not a valid input for the Prognostic instance.
         """
 
 
@@ -123,12 +150,15 @@ class Monitor(object):
         Stores the given state in the Monitor and performs class-specific
         actions.
 
-        Args:
-            state (dict): A model state dictionary.
+        Args
+        ----
+            state: dict
+                A model state dictionary.
 
-        Raises:
-            InvalidStateException: if state is not a valid input for the
-                Diagnostic instance.
+        Raises
+        ------
+            InvalidStateException
+                If state is not a valid input for the Diagnostic instance.
         """
 
 
@@ -138,12 +168,15 @@ class ComponentComposite(object):
 
     def __init__(self, *args):
         """
-        Args:
-            *args: The components that should be wrapped by this object.
+        Args
+        ----
+            *args
+                The components that should be wrapped by this object.
 
-        Raises:
-            SharedKeyException: If two components compute the same diagnostic
-                quantity.
+        Raises
+        ------
+            SharedKeyException
+                If two components compute the same diagnostic quantity.
         """
         if self.component_class is not None:
             ensure_components_have_class(args, self.component_class)
@@ -177,23 +210,31 @@ class PrognosticComposite(ComponentComposite):
         """
         Gets tendencies and diagnostics from the passed model state.
 
-        Args:
-            state (dict): A model state dictionary.
+        Args
+        ----
+            state : dict
+                A model state dictionary.
 
-        Returns:
-            tendencies (dict): A dictionary whose keys are strings indicating
+        Returns
+        -------
+            tendencies : dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the time derivative of those
                 quantities in units/second at the time of the input state.
-            diagnostics (dict): A dictionary whose keys are strings indicating
+            diagnostics : dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the value of those quantities
                 at the time of the input state.
 
-        Raises:
-            SharedKeyException: if multiple Prognostic objects contained in the
+        Raises
+        ------
+            SharedKeyException
+                If multiple Prognostic objects contained in the
                 collection return the same diagnostic quantity.
-            KeyError: If a required quantity is missing from the state.
-            InvalidStateException: If state is not a valid input for a
-                Prognostic instance.
+            KeyError
+                If a required quantity is missing from the state.
+            InvalidStateException
+                If state is not a valid input for a Prognostic instance.
         """
         return_tendencies = {}
         return_diagnostics = {}
@@ -224,20 +265,27 @@ class DiagnosticComposite(ComponentComposite):
         """
         Gets diagnostics from the passed model state.
 
-        Args:
-            state (dict): A model state dictionary.
+        Args
+        ----
+            state : dict
+                A model state dictionary.
 
-        Returns:
-            diagnostics (dict): A dicitonary whose keys are strings indicating
+        Returns
+        -------
+            diagnostics: dict
+                A dictionary whose keys are strings indicating
                 state quantities and values are the value of those quantities
                 at the time of the input state.
 
-        Raises:
-            SharedKeyException: if multiple Diagnostic objects contained in the
+        Raises
+        ------
+            SharedKeyException
+                If multiple Diagnostic objects contained in the
                 collection return the same diagnostic quantity.
-            KeyError: If a required quantity is missing from the state.
-            InvalidStateException: If state is not a valid input for a
-                Diagnostic instance.
+            KeyError
+                If a required quantity is missing from the state.
+            InvalidStateException
+                If state is not a valid input for a Diagnostic instance.
         """
         return_diagnostics = {}
         for diagnostic_component in self._components:
@@ -265,13 +313,17 @@ class MonitorComposite(ComponentComposite):
         Stores the given state in the Monitor and performs class-specific
         actions.
 
-        Args:
-            state (dict): A model state dictionary.
+        Args
+        ----
+            state : dict
+                A model state dictionary.
 
-        Raises:
-            KeyError: If a required quantity is missing from the state.
-            InvalidStateException: If state is not a valid input for a
-                Monitor instance.
+        Raises
+        ------
+            KeyError
+                If a required quantity is missing from the state.
+            InvalidStateException
+                If state is not a valid input for a Monitor instance.
         """
         for monitor in self._components:
             monitor.store(state)

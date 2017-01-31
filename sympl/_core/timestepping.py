@@ -20,14 +20,19 @@ class TimeStepper(object):
         Retrieves any diagnostics and returns a new state corresponding
         to the next timestep.
 
-        Args:
-            state (dict): The current model state.
-            timestep (timedelta): The amount of time to step forward.
+        Args
+        ----
+            state : dict
+                The current model state.
+            timestep : timedelta
+                The amount of time to step forward.
 
-        Returns:
-            diagnostics (dict): Diagnostics from the timestep of the input
-                state.
-            new_state (dict): The model state at the next timestep.
+        Returns
+        -------
+            diagnostics : dict
+                Diagnostics from the timestep of the input state.
+            new_state : dict
+                The model state at the next timestep.
         """
 
     def _copy_untouched_quantities(self, old_state, new_state):
@@ -51,10 +56,12 @@ class AdamsBashforth(TimeStepper):
         """
         Initialize an Adams-Bashforth time stepper.
 
-        Args:
-            prognostic_list (iterable of Prognostic): Objects used to get
-                tendencies for time stepping.
-            order (int, optional): The order of accuracy to use. Must be between
+        Args
+        ----
+            prognostic_list : iterable of Prognostic
+                Objects used to get tendencies for time stepping.
+            order : int, optional
+                The order of accuracy to use. Must be between
                 1 and 4. 1 is the same as the Euler method. Default is 3.
         """
         if isinstance(order, float) and order.is_integer():
@@ -73,16 +80,23 @@ class AdamsBashforth(TimeStepper):
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
 
-        Args:
-            state (dict): The current model state. Will be updated in-place by
+        Args
+        ----
+            state : dict
+                The current model state. Will be updated in-place by
                 the call with any diagnostics from the current timestep.
-            timestep (timedelta): The amount of time to step forward.
+            timestep : timedelta
+                The amount of time to step forward.
 
-        Returns:
-            new_state (dict): The model state at the next timestep.
+        Returns
+        -------
+            new_state : dict
+                The model state at the next timestep.
 
-        Raises:
-            ValueError: If the timestep is not the same as the last time
+        Raises
+        ------
+            ValueError
+                If the timestep is not the same as the last time
                 step() was called on this instance of this object.
         """
         self._ensure_constant_timestep(timestep)
@@ -137,22 +151,26 @@ class Leapfrog(TimeStepper):
         """
         Initialize a Leapfrog time stepper.
 
-        Args:
-            prognostic_list (iterable of Prognostic): Objects used to get
-                tendencies for time stepping.
-            asselin_strength (float, optional): The filter parameter used to
-                determine the strength of the Asselin filter. Default is 0.05.
-            alpha (float, optional): Constant from Williams (2009), where the
-                midpoint is shifted by alpha*influence, and the right point is
-                shifted by (1-alpha)*influence. If alpha is 1 then the behavior
+        Args
+        ----
+            prognostic_list : iterable of Prognostic
+                Objects used to get tendencies for time stepping.
+            asselin_strength : float, optional
+                The filter parameter used to determine the strength
+                of the Asselin filter. Default is 0.05.
+            alpha : float, optional
+                Constant from Williams (2009), where the midpoint is shifted
+                by alpha*influence, and the right point is shifted
+                by (1-alpha)*influence. If alpha is 1 then the behavior
                 is that of the classic Robert-Asselin time filter, while if it
                 is 0.5 the filter will conserve the three-point mean.
                 Default is 0.5.
 
-        References:
+        References
+        ----------
             Williams, P., 2009: A Proposed Modification to the Robert-Asselin
-                Time Filter. Mon. Wea. Rev., 137, 2538--2546,
-                doi: 10.1175/2009MWR2724.1.
+            Time Filter. Mon. Wea. Rev., 137, 2538--2546,
+            doi: 10.1175/2009MWR2724.1.
         """
         self._old_state = None
         self._asselin_strength = asselin_strength
@@ -165,18 +183,26 @@ class Leapfrog(TimeStepper):
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
 
-        Args:
-            state (dict): The current model state. Will be updated in-place by
+        Args
+        ----
+            state : dict
+                The current model state. Will be updated in-place by
                 the call due to the Robert-Asselin-Williams filter.
-            timestep (timedelta): The amount of time to step forward.
+            timestep : timedelta
+                The amount of time to step forward.
 
-        Returns:
-            new_state (dict): The model state at the next timestep.
+        Returns
+        -------
+            new_state : dict
+                The model state at the next timestep.
 
-        Raises:
-            SharedKeyException: If a Diagnostic object has an output that is
+        Raises
+        ------
+            SharedKeyException
+                If a Diagnostic object has an output that is
                 already in the state at the start of the timestep.
-            ValueError: If the timestep is not the same as the last time
+            ValueError
+                If the timestep is not the same as the last time
                 step() was called on this instance of this object.
         """
         original_state = state
@@ -210,25 +236,34 @@ def step_leapfrog(
     Steps the model state forward in time using the given tendencies and the
     leapfrog time scheme, with a Robert-Asselin time filter.
 
-    Args:
-        old_state (dict): Model state at the last timestep.
-        state (dict): Model state at the current timestep. May be modified by
+    Args
+    ----
+        old_state : dict
+            Model state at the last timestep.
+        state : dict
+            Model state at the current timestep. May be modified by
             this function call, specifically by the Asselin filter.
-        tendencies (dict): Time derivatives at the current timestep in
+        tendencies : dict
+            Time derivatives at the current timestep in
             units/second.
-        timestep (timedelta): The amount of time to step forward.
-        asselin_strength (float, optional): Asselin filter strength.
-            Default is 0.05.
-        alpha (float, optional): Constant from Williams (2009), where the
+        timestep : timedelta
+            The amount of time to step forward.
+        asselin_strength : float, optional
+            Asselin filter strength. Default is 0.05.
+        alpha : float, optional
+            Constant from Williams (2009), where the
             midpoint is shifted by alpha*influence, and the right point is
             shifted by (alpha-1)*influence. If alpha is 1 then the behavior
             is that of the classic Robert-Asselin time filter, while if it
             is 0.5 the filter will conserve the three-point mean.
             Default is 1.
 
-    Returns:
-        state (dict): The input state, modified in place.
-        new_state (dict): Model state at the next timestep.
+    Returns
+    -------
+        state : dict
+            The input state, modified in place.
+        new_state : dict
+            Model state at the next timestep.
     """
     new_state = {}
     for key in tendencies.keys():

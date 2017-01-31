@@ -26,21 +26,27 @@ class DataArray(xr.DataArray):
         The units of this DataArray are determined from the "units" attribute in
         attrs.
 
-        Args:
-            units (str): The desired units.
+        Args
+        ----
+            units : str
+                The desired units.
 
-        Raises:
-            ValueError: If the units are invalid for this object.
-            KeyError: If this object does not have units information in its
-                attrs.
+        Raises
+        ------
+            ValueError
+                If the units are invalid for this object.
+            KeyError
+                If this object does not have units information in its attrs.
 
-        Returns:
-            converted_data (DataArray): A DataArray containing the data from
-                this object in the desired units, if possible.
+        Returns
+        -------
+            converted_data : DataArray
+                A DataArray containing the data from this object in the
+                desired units, if possible.
         """
+        if 'units' not in self.attrs:
+            raise KeyError('"units" not present in attrs')
         try:
             return to_units_function(self, units)
         except DimensionalityError as err:
             raise ValueError(str(err))
-        except TypeError:
-            raise KeyError('"units" not present in attrs')

@@ -35,19 +35,24 @@ def combine_dimensions(arrays, out_dims):
     dimension names from the DataArray objects given by *args when present.
     The names returned correspond to the directions in out_dims.
 
-    Args:
-        arrays (iterable of DataArray): Objects for which to combine
-            dimension names.
-        out_dims (iterable of str): The desired output directions. Should
-            contain only 'x', 'y', or 'z'. For example, ('y', 'x') is valid.
+    Args
+    ----
+        arrays : iterable of DataArray
+            Objects from which to deduce dimension names.
+        out_dims : {'x', 'y', 'z'}
+            The desired output directions. Should contain only 'x', 'y', or 'z'.
+            For example, ('y', 'x') is valid.
 
-    Raises:
-        ValueError: If there are multiple names for a single direction, or if
+    Raises
+    ------
+        ValueError
+            If there are multiple names for a single direction, or if
             an array has a dimension along a direction not present in out_dims.
 
-    Returns:
-        dimensions (list of str): The combined dimension names, in the order
-            given by out_dims.
+    Returns
+    -------
+        dimensions : list of str
+            The deduced dimension names, in the order given by out_dims.
     """
     _ensure_no_invalid_directions(out_dims)
     out_names = [None for _ in range(len(out_dims))]
@@ -91,22 +96,27 @@ def set_prognostic_update_frequency(prognostic_class, update_timedelta):
     Once modified, the class requires that the 'time' quantity is set on
     states it receives, and that it is a datetime or timedelta object.
 
-    Example:
+    Example
+    -------
         This how the function should be used on a Prognostic class MyPrognostic.
 
         >>> from datetime import timedelta
         >>> MyPrognostic = set_prognostic_update_frequency(MyPrognostic, timedelta(hours=1))
         >>> prognostic = MyPrognostic()
 
-    Args:
-        prognostic_class (type): A Prognostic class (not an instance).
-        update_timedelta (timedelta): The amount that state['time'] must differ
-            from when output was cached before new output is
-            computed.
+    Args
+    ----
+        prognostic_class : type
+            A subclass of Prognostic (not an instance of that class).
+        update_timedelta : timedelta
+            The amount that state['time'] must differ from when output
+            was cached before new output is computed.
 
-    Returns:
-        WrappedPrognostic (Type): A new Prognostic class that only computes
-            its output with the defined frequency, as described above.
+    Returns
+    -------
+        WrappedPrognostic : type
+            A new subclass of Prognostic that only computes its output
+            with the defined frequency, as described above.
     """
     class WrappedPrognostic(prognostic_class):
         _spuf_update_timedelta = update_timedelta
@@ -137,20 +147,25 @@ def put_prognostic_tendency_in_diagnostics(prognostic_class, label):
     Note that a *class* is wrapped and returned. You must afterwards
     instantiate that class if you want to use it.
 
-    Example:
+    Example
+    -------
         This how the function should be used on a Prognostic class RRTMRadiation.
 
         >>> RRTMRadiation = put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
         >>> prognostic = RRTMRadiation()
 
-    Args:
-        prognostic_class (type): A Prognostic class (not an instance).
-        label (str): Label describing what the tendencies are due to, to be
+    Args
+    ----
+        prognostic_class : type
+            A subclass of Prognostic (not an instance of that class).
+        label : str
+            Label describing what the tendencies are due to, to be
             put in the diagnostic quantity names.
 
-    Returns:
-        WrappedPrognostic (type): The Prognostic class wrapped as described
-            above.
+    Returns
+    -------
+        WrappedPrognostic : type
+            The subclass of Prognostic wrapped as described above.
     """
     class WrappedPrognostic(prognostic_class):
         _pptid_tendency_label = label
@@ -215,21 +230,26 @@ def ensure_no_shared_keys(dict1, dict2):
             'unexpected shared keys: {}'.format(shared_keys))
 
 
-def get_numpy_array(data_array, out_dims=('x', 'y', 'z')):
+def get_numpy_array(data_array, out_dims):
     """
     Retrieve a numpy array with the desired dimensions and dimension order
     from the given DataArray, using transpose and creating length 1 dimensions
     as necessary.
 
-    Args:
-        data_array (DataArray): The object from which to retrieve data.
-        out_dims (iterable of str): The desired dimensions of the output and
-            their order. Length 1 dimensions will be created if the dimension
+    Args
+    ----
+        data_array : DataArray
+            The object from which to retrieve data.
+        out_dims : {'x', 'y', 'z'}
+            The desired dimensions of the output and their order.
+            Length 1 dimensions will be created if the dimension
             does not exist in data_array. Values in the iterable should be 'x',
             'y', or 'z'.
 
-    Returns:
-        numpy_array (ndarray): The desired array, with dimensions in the
+    Returns
+    -------
+        numpy_array : ndarray
+            The desired array, with dimensions in the
             correct order and length 1 dimensions created as needed.
     """
     indices = [None for _ in range(len(out_dims))]

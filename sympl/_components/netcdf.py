@@ -34,18 +34,22 @@ else:
                 self, filename, time_units='seconds', store_names=None,
                 write_on_store=False):
             """
-            Args:
-                filename (str): The file to which the NetCDF file will be
-                    written.
-                time_units (str, optional): The units in which time will be
+            Args
+            ----
+                filename : str
+                    The file to which the NetCDF file will be written.
+                time_units : str, optional
+                    The units in which time will be
                     stored in the NetCDF file. Time is stored as an integer
                     number of these units. Default is seconds.
-                store_names (iterable of str, optional): Names of quantities
-                    to store. If not given, all quantities are stored.
-                write_on_store (bool, optional): If True, stored changes are
-                    immediately written to file. This can result in many file
-                    open/close operations. Default is to write only when
-                    the write() method is called directly.
+                store_names : iterable of str, optional
+                    Names of quantities to store. If not given,
+                    all quantities are stored.
+                write_on_store : bool, optional
+                    If True, stored changes are immediately written to file.
+                    This can result in many file open/close operations.
+                    Default is to write only when the write() method is
+                    called directly.
             """
             self._cached_state_dict = {}
             self._filename = filename
@@ -62,12 +66,15 @@ else:
             initialization, also writes to file. Normally a call to the
             write() method is required to write to file.
 
-            Args:
-                state (dict): A model state dictionary.
+            Args
+            ----
+                state : dict
+                    A model state dictionary.
 
-            Raises:
-                InvalidStateException: if state is not a valid input for the
-                    Diagnostic instance.
+            Raises
+            ------
+                InvalidStateException
+                    If state is not a valid input for the Diagnostic instance.
             """
             if self._store_names is not None:
                 name_list = set(state.keys()).intersection(self._store_names)
@@ -104,9 +111,10 @@ else:
             If desired_keys is given, also ensure the keys are the same as
             the ones in desired_keys.
 
-            Raises:
-                InvalidStateException: If the cached states do not meet the
-                    requirements.
+            Raises
+            ------
+                InvalidStateException
+                    If the cached states do not meet the requirements.
             """
             if len(self._cached_state_dict) == 0:
                 return  # trivially true
@@ -131,10 +139,11 @@ else:
             Write all cached states to the NetCDF file, and clear the cache.
             This will append to any existing NetCDF file.
 
-            Raises:
-                InvalidStateException: If cached states do not all have
-                    the same quantities as every other cached and written
-                    state.
+            Raises
+            ------
+                InvalidStateException
+                    If cached states do not all have the same quantities
+                    as every other cached and written state.
             """
             with nc4.Dataset(self._filename, self._write_mode) as dataset:
                 self._ensure_cached_state_keys_compatible_with_dataset(dataset)
