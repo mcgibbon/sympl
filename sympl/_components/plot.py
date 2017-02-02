@@ -28,12 +28,14 @@ else:
             """
             Initialize a PlotFunctionMonitor.
 
-            Args:
-                plot_function (func): A function plot_function(fig, state) that
-                    draws the given state onto the given (initially clear) figure.
-                interactive (bool, optional): If true, matplotlib's interactive
-                    mode will be enabled, allowing plot animation while other
-                    computation is running.
+            Args
+            ----
+            plot_function : func
+                A function plot_function(fig, state) that
+                draws the given state onto the given (initially clear) figure.
+            interactive: bool, optional
+                If true, matplotlib's interactive mode will be enabled,
+                allowing plot animation while other computation is running.
             """
             if interactive:
                 plt.ion()
@@ -44,8 +46,10 @@ else:
             """
             Updates the plot using the given state.
 
-            Args:
-                state (dict): A model state dictionary.
+            Args
+            ----
+            state : dict
+                A model state dictionary.
             """
             self._fig.clear()
             self._plot_function(self._fig, state)

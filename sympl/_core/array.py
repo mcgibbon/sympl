@@ -28,21 +28,21 @@ class DataArray(xr.DataArray):
 
         Args
         ----
-            units : str
-                The desired units.
+        units : str
+            The desired units.
 
         Raises
         ------
-            ValueError
-                If the units are invalid for this object.
-            KeyError
-                If this object does not have units information in its attrs.
+        ValueError
+            If the units are invalid for this object.
+        KeyError
+            If this object does not have units information in its attrs.
 
         Returns
         -------
-            converted_data : DataArray
-                A DataArray containing the data from this object in the
-                desired units, if possible.
+        converted_data : DataArray
+            A DataArray containing the data from this object in the
+            desired units, if possible.
         """
         if 'units' not in self.attrs:
             raise KeyError('"units" not present in attrs')

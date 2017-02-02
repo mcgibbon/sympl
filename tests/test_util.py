@@ -3,7 +3,7 @@ from sympl import (
     set_prognostic_update_frequency, Prognostic, replace_none_with_default,
     default_constants, ensure_no_shared_keys, SharedKeyException, DataArray,
     combine_dimensions, set_dimension_names,
-    put_prognostic_tendency_in_diagnostics)
+    put_prognostic_tendency_in_diagnostics, get_numpy_array)
 from sympl._core.util import update_dict_by_adding_another
 from datetime import datetime, timedelta
 import numpy as np
@@ -23,6 +23,151 @@ class MockPrognostic(Prognostic):
     def __call__(self, state):
         self._num_updates += 1
         return {}, {'num_updates': self._num_updates}
+
+
+def test_get_numpy_array_3d_no_change():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['x', 'y', 'z'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['x', 'y', 'z'])
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert np.all(numpy_array == array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_3d_reverse():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['x', 'y', 'z'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['z', 'y', 'x'])
+    assert numpy_array.shape == (4, 3, 2)
+    assert np.all(np.transpose(numpy_array, (2, 1, 0)) == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_2d_reverse():
+    array = DataArray(
+        np.random.randn(2, 3),
+        dims=['y', 'z'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['z', 'y'])
+    assert numpy_array.shape == (3, 2)
+    assert np.all(np.transpose(numpy_array, (1, 0)) == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_1d():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['y'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['y'])
+    assert numpy_array.shape == (2,)
+    assert np.all(numpy_array == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_creates_new_dim():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['x'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['x', 'y'])
+    assert numpy_array.shape == (2, 1)
+    assert np.all(numpy_array[:, 0] == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_creates_new_dim_in_front():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['x'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['y', 'x'])
+    assert numpy_array.shape == (1, 2)
+    assert np.all(numpy_array[0, :] == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_invalid_dimension_raises_value_error():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['sheep'],
+        attrs={'units': ''},
+    )
+    try:
+        numpy_array = get_numpy_array(array, ['y'])
+    except ValueError:
+        pass
+    except Exception as err:
+        raise err
+    else:
+        raise AssertionError('Expected ValueError but no error was raised')
+
+
+def test_get_numpy_array_nonexistant_dimension_raises_value_error():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['z'],
+        attrs={'units': ''},
+    )
+    try:
+        numpy_array = get_numpy_array(array, ['y'])
+    except ValueError:
+        pass
+    except Exception as err:
+        raise err
+    else:
+        raise AssertionError('Expected ValueError but no error was raised')
+
+
+def test_get_numpy_array_multiple_dims_on_same_direction():
+    try:
+        set_dimension_names(x=['lon'])
+        array = DataArray(
+            np.random.randn(2, 3),
+            dims=['x', 'lon'],
+            attrs={'units': ''},
+        )
+        try:
+            numpy_array = get_numpy_array(array, ['x', 'y'])
+        except ValueError:
+            pass
+        except Exception as err:
+            raise err
+        else:
+            raise AssertionError('Expected ValueError but no error was raised')
+    finally:
+        set_dimension_names(x=[], y=[], z=[])
+
+
+def test_get_numpy_array_not_enough_out_dims():
+    array = DataArray(
+        np.random.randn(2, 3),
+        dims=['x', 'y'],
+        attrs={'units': ''},
+    )
+    try:
+        numpy_array = get_numpy_array(array, ['x'])
+    except ValueError:
+        pass
+    except Exception as err:
+        raise err
+    else:
+        raise AssertionError('Expected ValueError but no error was raised')
 
 
 def test_set_prognostic_update_frequency_calls_initially():

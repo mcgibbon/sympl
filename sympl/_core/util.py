@@ -11,7 +11,7 @@ except ImportError:
         else:
             return signature_or_function
 
-dim_names = {'x': [], 'y': [], 'z': []}
+dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
 
 
 def same_list(list1, list2):
@@ -25,7 +25,7 @@ def set_dimension_names(x=None, y=None, z=None):
     for key, value in [('x', x), ('y', y), ('z', z)]:
         if isinstance(value, string_types):
             dim_names[key] = [key, value]
-        else:
+        elif value is not None:
             dim_names[key] = [key] + list(value)
 
 
@@ -37,22 +37,22 @@ def combine_dimensions(arrays, out_dims):
 
     Args
     ----
-        arrays : iterable of DataArray
-            Objects from which to deduce dimension names.
-        out_dims : {'x', 'y', 'z'}
-            The desired output directions. Should contain only 'x', 'y', or 'z'.
-            For example, ('y', 'x') is valid.
+    arrays : iterable of DataArray
+        Objects from which to deduce dimension names.
+    out_dims : {'x', 'y', 'z'}
+        The desired output directions. Should contain only 'x', 'y', or 'z'.
+        For example, ('y', 'x') is valid.
 
     Raises
     ------
-        ValueError
-            If there are multiple names for a single direction, or if
-            an array has a dimension along a direction not present in out_dims.
+    ValueError
+        If there are multiple names for a single direction, or if
+        an array has a dimension along a direction not present in out_dims.
 
     Returns
     -------
-        dimensions : list of str
-            The deduced dimension names, in the order given by out_dims.
+    dimensions : list of str
+        The deduced dimension names, in the order given by out_dims.
     """
     _ensure_no_invalid_directions(out_dims)
     out_names = [None for _ in range(len(out_dims))]
@@ -98,25 +98,25 @@ def set_prognostic_update_frequency(prognostic_class, update_timedelta):
 
     Example
     -------
-        This how the function should be used on a Prognostic class MyPrognostic.
+    This how the function should be used on a Prognostic class MyPrognostic.
 
-        >>> from datetime import timedelta
-        >>> MyPrognostic = set_prognostic_update_frequency(MyPrognostic, timedelta(hours=1))
-        >>> prognostic = MyPrognostic()
+    >>> from datetime import timedelta
+    >>> MyPrognostic = set_prognostic_update_frequency(MyPrognostic, timedelta(hours=1))
+    >>> prognostic = MyPrognostic()
 
     Args
     ----
-        prognostic_class : type
-            A subclass of Prognostic (not an instance of that class).
-        update_timedelta : timedelta
-            The amount that state['time'] must differ from when output
-            was cached before new output is computed.
+    prognostic_class : type
+        A subclass of Prognostic (not an instance of that class).
+    update_timedelta : timedelta
+        The amount that state['time'] must differ from when output
+        was cached before new output is computed.
 
     Returns
     -------
-        WrappedPrognostic : type
-            A new subclass of Prognostic that only computes its output
-            with the defined frequency, as described above.
+    WrappedPrognostic : type
+        A new subclass of Prognostic that only computes its output
+        with the defined frequency, as described above.
     """
     class WrappedPrognostic(prognostic_class):
         _spuf_update_timedelta = update_timedelta
@@ -149,23 +149,23 @@ def put_prognostic_tendency_in_diagnostics(prognostic_class, label):
 
     Example
     -------
-        This how the function should be used on a Prognostic class RRTMRadiation.
+    This how the function should be used on a Prognostic class RRTMRadiation.
 
-        >>> RRTMRadiation = put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
-        >>> prognostic = RRTMRadiation()
+    >>> RRTMRadiation = put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
+    >>> prognostic = RRTMRadiation()
 
     Args
     ----
-        prognostic_class : type
-            A subclass of Prognostic (not an instance of that class).
-        label : str
-            Label describing what the tendencies are due to, to be
-            put in the diagnostic quantity names.
+    prognostic_class : type
+        A subclass of Prognostic (not an instance of that class).
+    label : str
+        Label describing what the tendencies are due to, to be
+        put in the diagnostic quantity names.
 
     Returns
     -------
-        WrappedPrognostic : type
-            The subclass of Prognostic wrapped as described above.
+    WrappedPrognostic : type
+        The subclass of Prognostic wrapped as described above.
     """
     class WrappedPrognostic(prognostic_class):
         _pptid_tendency_label = label
@@ -238,19 +238,26 @@ def get_numpy_array(data_array, out_dims):
 
     Args
     ----
-        data_array : DataArray
-            The object from which to retrieve data.
-        out_dims : {'x', 'y', 'z'}
-            The desired dimensions of the output and their order.
-            Length 1 dimensions will be created if the dimension
-            does not exist in data_array. Values in the iterable should be 'x',
-            'y', or 'z'.
+    data_array : DataArray
+        The object from which to retrieve data.
+    out_dims : {'x', 'y', 'z'}
+        The desired dimensions of the output and their order.
+        Length 1 dimensions will be created if the dimension
+        does not exist in data_array. Values in the iterable should be 'x',
+        'y', or 'z'.
 
     Returns
     -------
-        numpy_array : ndarray
-            The desired array, with dimensions in the
-            correct order and length 1 dimensions created as needed.
+    numpy_array : ndarray
+        The desired array, with dimensions in the
+        correct order and length 1 dimensions created as needed.
+
+    Raises
+    ------
+    ValueError
+        If out_dims has values that are incompatible with the dimensions
+        in data_array, or data_array's dimensions are invalid in some way.
+
     """
     indices = [None for _ in range(len(out_dims))]
     dimensions = []

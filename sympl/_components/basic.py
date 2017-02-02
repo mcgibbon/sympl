@@ -16,14 +16,14 @@ class ConstantPrognostic(Prognostic):
         """
         Args
         ----
-            tendencies : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the time derivative of those
-                quantities in units/second to be returned by this Prognostic.
-            diagnostics : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the value of those quantities
-                to be returned by this Prognostic.
+        tendencies : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the time derivative of those
+            quantities in units/second to be returned by this Prognostic.
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            to be returned by this Prognostic.
         """
         self._tendencies = tendencies.copy()
         if diagnostics is not None:
@@ -39,18 +39,18 @@ class ConstantPrognostic(Prognostic):
 
         Args
         ----
-            state : dict
-                A model state dictionary.
+        state : dict
+            A model state dictionary.
 
         Returns
         -------
-            tendencies : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the time derivative of those
-                quantities in units/second.
-            diagnostics : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the value of those quantities.
+        tendencies : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the time derivative of those
+            quantities in units/second.
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities.
         """
         return self._tendencies.copy(), self._diagnostics.copy()
 
@@ -61,20 +61,20 @@ class ConstantDiagnostic(Diagnostic):
 
     Note
     ----
-        Any arrays in the passed dictionaries are not copied, so that
-        if you were to modify them after passing them into this object,
-        it would also modify the values inside this object.
+    Any arrays in the passed dictionaries are not copied, so that
+    if you were to modify them after passing them into this object,
+    it would also modify the values inside this object.
     """
 
     def __init__(self, diagnostics):
         """
         Args
         ----
-            diagnostics : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the value of those quantities.
-                The values in the dictionary will be returned when this
-                Diagnostic is called.
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities.
+            The values in the dictionary will be returned when this
+            Diagnostic is called.
         """
         self._diagnostics = diagnostics.copy()
 
@@ -84,17 +84,17 @@ class ConstantDiagnostic(Diagnostic):
 
         Args
         ----
-            state : dict
-                A model state dictionary. Is not used, and is only
-                taken in to keep an API consistent with a Diagnostic.
+        state : dict
+            A model state dictionary. Is not used, and is only
+            taken in to keep an API consistent with a Diagnostic.
 
         Returns
         -------
-            diagnostics : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the value of those quantities.
-                The values in the returned dictionary are the same as were
-                passed into this object at initialization.
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities.
+            The values in the returned dictionary are the same as were
+            passed into this object at initialization.
         """
         return self._diagnostics.copy()
 
@@ -114,17 +114,17 @@ class RelaxationPrognostic(Prognostic):
         """
         Args
         ----
-            quantity_name : str
-                The name of the quantity to which Newtonian
-                relaxation should be applied
-            equilibrium_value : DataArray, optional
-                The equilibrium value to which the quantity is relaxed. If
-                not given, it should be provided in the state when
-                the object is called.
-            relaxation_timescale : DataArray, optional
-                The timescale tau with which the Newtonian relaxation occurs.
-                If not given, it should be provided in the state when
-                the object is called.
+        quantity_name : str
+            The name of the quantity to which Newtonian
+            relaxation should be applied
+        equilibrium_value : DataArray, optional
+            The equilibrium value to which the quantity is relaxed. If
+            not given, it should be provided in the state when
+            the object is called.
+        relaxation_timescale : DataArray, optional
+            The timescale tau with which the Newtonian relaxation occurs.
+            If not given, it should be provided in the state when
+            the object is called.
         """
         self._quantity_name = quantity_name
         self._equilibrium_value = equilibrium_value
@@ -136,27 +136,27 @@ class RelaxationPrognostic(Prognostic):
 
         Args
         ----
-            state : dict
-                A model state dictionary. Below, (quantity_name)
-                refers to the quantity_name passed at initialization. The state
-                must contain:
+        state : dict
+            A model state dictionary. Below, (quantity_name)
+            refers to the quantity_name passed at initialization. The state
+            must contain:
 
-                * (quantity_name)
-                * equilibrium_(quantity_name), unless this was passed at
-                  initialisation time in which case that value is used
-                * (quantity_name)_relaxation_timescale, unless this was passed
-                  at initialisation time in which case that value is used
+            * (quantity_name)
+            * equilibrium_(quantity_name), unless this was passed at
+              initialisation time in which case that value is used
+            * (quantity_name)_relaxation_timescale, unless this was passed
+              at initialisation time in which case that value is used
 
         Returns
         -------
-            tendencies : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the time derivative of those
-                quantities in units/second at the time of the input state.
-            diagnostics : dict
-                A dictionary whose keys are strings indicating
-                state quantities and values are the value of those quantities
-                at the time of the input state.
+        tendencies : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the time derivative of those
+            quantities in units/second at the time of the input state.
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            at the time of the input state.
         """
         value = state[self._quantity_name]
         if self._equilibrium_value is None:
