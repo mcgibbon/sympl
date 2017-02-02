@@ -90,6 +90,8 @@ class AdamsBashforth(TimeStepper):
 
         Returns
         -------
+        diagnostics : dict
+            Diagnostics from the timestep of the input state.
         new_state : dict
             The model state at the next timestep.
 
@@ -193,6 +195,8 @@ class Leapfrog(TimeStepper):
 
         Returns
         -------
+        diagnostics : dict
+            Diagnostics from the timestep of the input state.
         new_state : dict
             The model state at the next timestep.
 
