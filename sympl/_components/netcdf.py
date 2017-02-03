@@ -3,7 +3,7 @@ from .._core.exceptions import (
     DependencyException, InvalidStateException, IOException)
 from .._core.units import from_unit_to_another
 from .._core.array import DataArray
-from .._core.util import same_list
+from .._core.util import same_list, datetime64_to_datetime
 import xarray as xr
 import os
 import numpy as np
@@ -174,6 +174,34 @@ else:
                             self._time_units, possible_reference_time))
                     dataset.variables['time'].setncattr(
                         'calendar', 'proleptic_gregorian')
+
+
+class RestartMonitor(Monitor):
+
+    def __init__(self, filename):
+        self._filename = filename
+
+    def store(self, state):
+        new_filename = self._filename + '.new'
+        if os.path.isfile(new_filename):
+            raise IOException('Filename {} already exists'.format(new_filename))
+        netcdf_monitor = NetCDFMonitor(new_filename)
+        netcdf_monitor.store(state)
+        netcdf_monitor.write()
+
+        if os.path.isfile(self._filename):
+            os.rename(self._filename, self._filename + '.old')
+        os.rename(new_filename, self._filename)
+        if os.path.isfile(self._filename + '.old'):
+            os.remove(self._filename + '.old')
+
+    def load(self):
+        dataset = xr.open_dataset(self._filename)
+        state = {}
+        for name, value in dataset.data_vars.items():
+            state[name] = DataArray(value[0, :])  # remove time axis
+        state['time'] = datetime64_to_datetime(dataset['time'][0])
+        return state
 
 
 def append_times_to_dataset(times, dataset, time_units):

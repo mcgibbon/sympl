@@ -13,7 +13,7 @@ from ._core.util import (
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, put_prognostic_tendency_in_diagnostics)
 from ._components import (
-    PlotFunctionMonitor, NetCDFMonitor,
+    PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
 
 __version__ = '0.1.1'
@@ -27,6 +27,6 @@ __all__ = (
     set_prognostic_update_frequency, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, put_prognostic_tendency_in_diagnostics,
-    PlotFunctionMonitor, NetCDFMonitor,
+    PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
 )

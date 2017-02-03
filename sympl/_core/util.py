@@ -1,6 +1,8 @@
 from .exceptions import SharedKeyException
 from .constants import default_constants
 from six import string_types
+import numpy as np
+from datetime import datetime
 try:
     from numba import jit
 except ImportError:
@@ -12,6 +14,11 @@ except ImportError:
             return signature_or_function
 
 dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
+
+
+def datetime64_to_datetime(dt64):
+    ts = (dt64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
+    return datetime.utcfromtimestamp(ts)
 
 
 def same_list(list1, list2):
