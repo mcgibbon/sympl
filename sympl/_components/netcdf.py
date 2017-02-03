@@ -177,11 +177,24 @@ else:
 
 
 class RestartMonitor(Monitor):
+    """
+    A :py:class:`~sympl.Monitor` which stores model state in a NetCDF file,
+    and can load that file back into the form of a model state.
+    """
 
     def __init__(self, filename):
         self._filename = filename
 
     def store(self, state):
+        """
+        Write the state to the restart file, replacing any existing restart
+        data.
+
+        Parameters
+        ----------
+        state : dict
+            A model state dictionary.
+        """
         new_filename = self._filename + '.new'
         if os.path.isfile(new_filename):
             raise IOException('Filename {} already exists'.format(new_filename))
@@ -196,6 +209,14 @@ class RestartMonitor(Monitor):
             os.remove(self._filename + '.old')
 
     def load(self):
+        """
+        Load the state from the restart file.
+
+        Returns
+        -------
+        state : dict
+            The model state stored in the restart file.
+        """
         dataset = xr.open_dataset(self._filename)
         state = {}
         for name, value in dataset.data_vars.items():
