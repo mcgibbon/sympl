@@ -9,7 +9,7 @@ from ._core.exceptions import (
 from ._core.array import DataArray
 from ._core.constants import default_constants
 from ._core.util import (
-    set_prognostic_update_frequency, set_dimension_names, combine_dimensions,
+    UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, put_prognostic_tendency_in_diagnostics)
 from ._components import (
@@ -24,7 +24,7 @@ __all__ = (
     InvalidStateException, SharedKeyException, IOException, DependencyException,
     DataArray,
     default_constants,
-    set_prognostic_update_frequency, set_dimension_names, combine_dimensions,
+    UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, put_prognostic_tendency_in_diagnostics,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,

@@ -1,6 +1,6 @@
 import pytest
 from sympl import (
-    set_prognostic_update_frequency, Prognostic, replace_none_with_default,
+    UpdateFrequencyWrapper, Prognostic, replace_none_with_default,
     default_constants, ensure_no_shared_keys, SharedKeyException, DataArray,
     combine_dimensions, set_dimension_names,
     put_prognostic_tendency_in_diagnostics, get_numpy_array)
@@ -171,9 +171,7 @@ def test_get_numpy_array_not_enough_out_dims():
 
 
 def test_set_prognostic_update_frequency_calls_initially():
-    MyPrognostic = set_prognostic_update_frequency(
-        MockPrognostic, timedelta(hours=1))
-    prognostic = MyPrognostic()
+    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic(state)
     assert len(diagnostics) == 1
@@ -181,9 +179,7 @@ def test_set_prognostic_update_frequency_calls_initially():
 
 
 def test_set_prognostic_update_frequency_caches_result():
-    MyPrognostic = set_prognostic_update_frequency(
-        MockPrognostic, timedelta(hours=1))
-    prognostic = MyPrognostic()
+    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic(state)
     tendencies, diagnostics = prognostic(state)
@@ -192,9 +188,7 @@ def test_set_prognostic_update_frequency_caches_result():
 
 
 def test_set_prognostic_update_frequency_caches_result_with_datetime():
-    MyPrognostic = set_prognostic_update_frequency(
-        MockPrognostic, timedelta(hours=1))
-    prognostic = MyPrognostic()
+    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
     state = {'time': datetime(2000, 1, 1)}
     tendencies, diagnostics = prognostic(state)
     tendencies, diagnostics = prognostic(state)
@@ -203,9 +197,7 @@ def test_set_prognostic_update_frequency_caches_result_with_datetime():
 
 
 def test_set_prognostic_update_frequency_updates_result_when_equal():
-    MyPrognostic = set_prognostic_update_frequency(
-        MockPrognostic, timedelta(hours=1))
-    prognostic = MyPrognostic()
+    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic({'time': timedelta(hours=0)})
     tendencies, diagnostics = prognostic({'time': timedelta(hours=1)})
@@ -214,9 +206,7 @@ def test_set_prognostic_update_frequency_updates_result_when_equal():
 
 
 def test_set_prognostic_update_frequency_updates_result_when_greater():
-    MyPrognostic = set_prognostic_update_frequency(
-        MockPrognostic, timedelta(hours=1))
-    prognostic = MyPrognostic()
+    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
     state = {'time': timedelta(hours=0)}
     tendencies, diagnostics = prognostic({'time': timedelta(hours=0)})
     tendencies, diagnostics = prognostic({'time': timedelta(hours=2)})

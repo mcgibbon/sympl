@@ -11,10 +11,9 @@ will be looking at:
     from model_package import (
         get_initial_state, Radiation, BoundaryLayer, DeepConvection,
         ImplicitDynamics)
-    from sympl import AdamsBashforth, PlotFunctionMonitor
+    from sympl import (
+        AdamsBashforth, PlotFunctionMonitor, UpdateFrequencyWrapper)
     from datetime import datetime, timedelta
-
-    set_prognostic_update_frequency(Radiation, timedelta(hours=2))
 
     def my_plot_function(fig, state):
         ax = fig.add_subplot(1, 1, 1)
@@ -33,7 +32,7 @@ will be looking at:
     state['time'] = datetime(2000, 1, 1)
 
     physics_stepper = AdamsBashforth(
-        Radiation(),
+        UpdateFrequencyWrapper(Radiation(), timedelta(hours=2)),
         BoundaryLayer(),
         DeepConvection(),
     )
@@ -67,23 +66,6 @@ and are dependent on the model package you are using. Here, the names
 `model_package`, `get_initial_state`, `Radiation`, `BoundaryLayer`,
 `DeepConvection`, and `ImplicitDynamics` are placeholders, and do not refer to
 an actual existing package.
-
-Modifying Classes
------------------
-
-The following line modifies the Radiation class so that it will only compute
-tendencies every 2 hours.
-
-.. code-block:: python
-
-    set_prognostic_update_frequency(Radiation, timedelta(hours=2))
-
-Radiation is a :py:class:`~sympl.Prognostic` class, which means it takes in a
-model state and returns tendencies from that state. The
-:py:func:`~sympl.set_prognostic_update_frequency` function modifies the
-class so that when it is given a state, it checks whether its given amount of
-(model) time has passed since the last time it computed tendencies, and if
-not it returns the cached tendencies which it last computed.
 
 Defining a PlotFunctionMonitor
 ------------------------------
@@ -138,7 +120,7 @@ Those are the "components":
 .. code-block:: python
 
     physics_stepper = AdamsBashforth(
-        Radiation(),
+        UpdateFrequencyWrapper(Radiation(), timedelta(hours=2)),
         BoundaryLayer(),
         DeepConvection(),
     )
@@ -152,6 +134,14 @@ what it takes as inputs and provides as outputs, and can be called with a model
 state to return tendencies for a set of quantities. The
 :py:class:`~sympl.TimeStepper` uses this information to step the model state
 forward in time.
+
+The :py:class:`~sympl.UpdateFrequencyWrapper` applied to the `Radiation` object
+is an object that acts like a :py:class:`~sympl.Prognostic` but only computes
+its output if at least a certain amount of model time has passed since the last
+time the output was computed. Otherwise, it returns the last computed output.
+This is commonly used in atmospheric models to avoid doing radiation
+calculations (which are very expensive) every timestep, but it can be applied
+to any Prognostic.
 
 The `ImplicitDynamics` class is a :py:class:`~sympl.Implicit` object, which
 steps the model state forward in time in the same way that a :py:class:`~sympl.TimeStepper`

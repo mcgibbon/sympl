@@ -90,7 +90,7 @@ def _ensure_no_invalid_directions(out_dims):
             'Invalid direction(s) in out_dims: {}'.format(invalid_dims))
 
 
-class Delayed(object):
+class UpdateFrequencyWrapper(object):
     """
     Wraps a prognostic object so that when it is called, it only computes new
     output if sufficient time has passed, and otherwise returns its last
@@ -133,60 +133,6 @@ class Delayed(object):
 
     def __getattr__(self, item):
         return getattr(self._prognostic, item)
-
-
-def set_prognostic_update_frequency(prognostic_class, update_timedelta):
-    """
-    Wraps a prognostic class so that when it is called, it only computes its
-    output once for every period of length update_timedelta. In between these
-    calls, the cached output from the last computation will be returned.
-
-    Note that the *class* itself must be given as input and a class is
-    returned. That class must afterwards be instantiated if you want to use
-    it.
-
-    Once modified, the class requires that the 'time' quantity is set on
-    states it receives, and that it is a datetime or timedelta object.
-
-    Example
-    -------
-    This how the function should be used on a Prognostic class MyPrognostic.
-
-    >>> from datetime import timedelta
-    >>> MyPrognostic = set_prognostic_update_frequency(MyPrognostic, timedelta(hours=1))
-    >>> prognostic = MyPrognostic()
-
-    Args
-    ----
-    prognostic_class : type
-        A subclass of Prognostic (not an instance of that class).
-    update_timedelta : timedelta
-        The amount that state['time'] must differ from when output
-        was cached before new output is computed.
-
-    Returns
-    -------
-    WrappedPrognostic : type
-        A new subclass of Prognostic that only computes its output
-        with the defined frequency, as described above.
-    """
-    class WrappedPrognostic(prognostic_class):
-        _spuf_update_timedelta = update_timedelta
-
-        def __init__(self, *args, **kwargs):
-            super(WrappedPrognostic, self).__init__(*args, **kwargs)
-            self._spuf_last_update_time = None
-
-        def __call__(self, state, **kwargs):
-            if (self._spuf_last_update_time is None or
-                    state['time'] >= self._spuf_last_update_time +
-                    self._spuf_update_timedelta):
-                self._spuf_cached_output = super(
-                    WrappedPrognostic, self).__call__(state, **kwargs)
-                self._spuf_last_update_time = state['time']
-            return self._spuf_cached_output
-
-    return WrappedPrognostic
 
 
 def put_prognostic_tendency_in_diagnostics(prognostic_class, label):
