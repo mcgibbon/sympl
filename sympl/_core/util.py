@@ -90,6 +90,51 @@ def _ensure_no_invalid_directions(out_dims):
             'Invalid direction(s) in out_dims: {}'.format(invalid_dims))
 
 
+class Delayed(object):
+    """
+    Wraps a prognostic object so that when it is called, it only computes new
+    output if sufficient time has passed, and otherwise returns its last
+    computed output. The Delayed object requires that the 'time' attribute is
+    set in the state, in addition to any requirements of the Prognostic
+
+    Example
+    -------
+    This how the wrapper should be used on a fictional Prognostic class
+    called MyPrognostic.
+
+    >>> from datetime import timedelta
+    >>> prognostic = Delayed(MyPrognostic(), timedelta(hours=1))
+    """
+
+    def __init__(self, prognostic, update_timedelta):
+        """
+        Initialize the Delayed object.
+
+        Args
+        ----
+        prognostic : Prognostic
+            The object to be wrapped
+        update_timedelta : timedelta
+            The amount that state['time'] must differ from when output
+            was cached before new output is computed.
+        """
+        self._prognostic = prognostic
+        self._update_timedelta = update_timedelta
+        self._cached_output = None
+        self._last_update_time = None
+
+    def __call__(self, state, **kwargs):
+        if ((self._last_update_time is None) or
+                (state['time'] >= self._last_update_time +
+                 self._update_timedelta)):
+            self._cached_output = self._prognostic(state, **kwargs)
+            self._last_update_time = state['time']
+        return self._cached_output
+
+    def __getattr__(self, item):
+        return getattr(self._prognostic, item)
+
+
 def set_prognostic_update_frequency(prognostic_class, update_timedelta):
     """
     Wraps a prognostic class so that when it is called, it only computes its
