@@ -11,5 +11,5 @@ default_constants = {
     'planetary_radius': DataArray(6.371e-6, attrs={'units': 'm'}),
     'latent_heat_of_vaporization_of_water': DataArray(2.5e6, attrs={'units': 'J kg^-1'}),
     'density_of_liquid_water': DataArray(1e3, attrs={'units': 'kg m^-3'}),
-    'solar_constant': DataArray(1367.,  attrs={'units': 'W m^-2'}),
+    'solar_constant': DataArray(1367., attrs={'units': 'W m^-2'}),
 }

@@ -263,8 +263,8 @@ def get_numpy_array(data_array, out_dims):
     slices_or_none = get_slices_and_placeholder_nones(
         data_array, out_dims, direction_to_names)
     final_shape = get_final_shape(data_array, out_dims, direction_to_names)
-    return data_array.transpose(
-        *target_dimension_order).values[slices_or_none].reshape(final_shape)
+    return np.reshape(data_array.transpose(
+        *target_dimension_order).values[slices_or_none], final_shape)
 
 
 def get_input_array_dim_names(data_array, out_dims):
@@ -336,5 +336,5 @@ def get_final_shape(data_array, out_dims, direction_to_names):
             # determine shape once dimensions for direction (usually '*') are combined
             final_shape.append(
                 np.product([len(data_array.coords[name])
-                             for name in direction_to_names[direction]]))
+                            for name in direction_to_names[direction]]))
     return final_shape
