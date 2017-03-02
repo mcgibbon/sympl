@@ -238,6 +238,34 @@ def test_get_numpy_array_asterisk_flattens():
     assert numpy_array.base is array.values
 
 
+def test_get_numpy_array_complicated_asterisk():
+    array = DataArray(
+        np.random.randn(2, 3, 4, 5),
+        dims=['x', 'h', 'y', 'q'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'x', 'y'])
+    for i in range(2):
+        for j in range(4):
+            assert np.allclose(numpy_array[:, i, j], array.values[i, :, j, :].flatten())
+    # copying may take place in this case, so no more asserts
+
+
+def test_get_numpy_array_zyx_to_starz_doesnt_copy():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    original_array = array.values
+    numpy_array = get_numpy_array(array, ['*', 'z'])
+    for i in range(2):
+        assert np.all(numpy_array[:, i] == array.values[i, :, :].flatten())
+    assert original_array is array.values
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
 def test_set_prognostic_update_frequency_calls_initially():
     prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
     state = {'time': timedelta(hours=0)}

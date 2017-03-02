@@ -276,11 +276,20 @@ def get_input_array_dim_names(data_array, out_dims):
     input_array_dim_names = {}
     for direction in out_dims:
         if direction != '*':
-            input_array_dim_names[direction] = set(
+            matching_dims = set(
                 data_array.dims).intersection(dim_names[direction])
+            # must ensure matching dims are in right order
+            input_array_dim_names[direction] = []
+            for dim in data_array.dims:
+                if dim in matching_dims:
+                    input_array_dim_names[direction].append(dim)
     if '*' in out_dims:
-        input_array_dim_names['*'] = set(
+        matching_dims = set(
             data_array.dims).difference(set.union(set([]), *input_array_dim_names.values()))
+        input_array_dim_names['*'] = []
+        for dim in data_array.dims:
+            if dim in matching_dims:
+                input_array_dim_names['*'].append(dim)
     return input_array_dim_names
 
 
