@@ -118,7 +118,20 @@ def test_get_numpy_array_invalid_dimension_raises_value_error():
         raise AssertionError('Expected ValueError but no error was raised')
 
 
-def test_get_numpy_array_nonexistant_dimension_raises_value_error():
+def test_get_numpy_array_invalid_dimension_collected_by_asterisk():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['sheep'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['*'])
+    assert numpy_array.shape == (2,)
+    assert np.all(numpy_array == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_dimension_not_listed_raises_value_error():
     array = DataArray(
         np.random.randn(2),
         dims=['z'],
@@ -126,6 +139,22 @@ def test_get_numpy_array_nonexistant_dimension_raises_value_error():
     )
     try:
         numpy_array = get_numpy_array(array, ['y'])
+    except ValueError:
+        pass
+    except Exception as err:
+        raise err
+    else:
+        raise AssertionError('Expected ValueError but no error was raised')
+
+
+def test_get_numpy_array_no_dimensions_listed_raises_value_error():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['z'],
+        attrs={'units': ''},
+    )
+    try:
+        numpy_array = get_numpy_array(array, [])
     except ValueError:
         pass
     except Exception as err:
@@ -168,6 +197,45 @@ def test_get_numpy_array_not_enough_out_dims():
         raise err
     else:
         raise AssertionError('Expected ValueError but no error was raised')
+
+
+def test_get_numpy_array_asterisk_creates_new_dim():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['x'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['x', '*'])
+    assert numpy_array.shape == (2, 1)
+    assert np.all(numpy_array[:, 0] == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_asterisk_creates_new_dim_reversed():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['x'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['*', 'x'])
+    assert numpy_array.shape == (1, 2)
+    assert np.all(numpy_array[0, :] == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
+
+
+def test_get_numpy_array_asterisk_flattens():
+    array = DataArray(
+        np.random.randn(2, 3),
+        dims=['y', 'z'],
+        attrs={'units': ''},
+    )
+    numpy_array = get_numpy_array(array, ['*'])
+    assert numpy_array.shape == (6,)
+    assert np.all(numpy_array.reshape((2, 3)) == array.values)
+    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert numpy_array.base is array.values
 
 
 def test_set_prognostic_update_frequency_calls_initially():

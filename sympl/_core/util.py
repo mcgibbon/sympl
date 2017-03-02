@@ -238,11 +238,12 @@ def get_numpy_array(data_array, out_dims):
     ----
     data_array : DataArray
         The object from which to retrieve data.
-    out_dims : {'x', 'y', 'z'}
+    out_dims : {'x', 'y', 'z', '*'}
         The desired dimensions of the output and their order.
         Length 1 dimensions will be created if the dimension
-        does not exist in data_array. Values in the iterable should be 'x',
-        'y', or 'z'.
+        does not exist in data_array. '*' indicates an axis which is the
+        flattened collection of all dimensions not explicitly listed in
+        out_dims, including any dimensions with unknown direction.
 
     Returns
     -------
@@ -257,22 +258,83 @@ def get_numpy_array(data_array, out_dims):
         in data_array, or data_array's dimensions are invalid in some way.
 
     """
-    indices = [None for _ in range(len(out_dims))]
-    dimensions = []
-    for i, dimension_names in zip(
-            range(len(out_dims)), [dim_names[name] for name in out_dims]):
-        dims = set(data_array.dims).intersection(dimension_names)
-        if len(dims) == 1:
-            dim = dims.pop()
-            dimensions.append(dim)
-            indices[i] = slice(0, len(data_array.coords[dim]))
-        elif len(dims) > 1:
+    direction_to_names = get_input_array_dim_names(data_array, out_dims)
+    target_dimension_order = get_target_dimension_order(out_dims, direction_to_names)
+    slices_or_none = get_slices_and_placeholder_nones(
+        data_array, out_dims, direction_to_names)
+    final_shape = get_final_shape(data_array, out_dims, direction_to_names)
+    return data_array.transpose(
+        *target_dimension_order).values[slices_or_none].reshape(final_shape)
+
+
+def get_input_array_dim_names(data_array, out_dims):
+    """
+    Takes in a DataArray and an iterable of directions
+    ('x', 'y', 'z', or '*'). Returns a dictionary mapping those directions to
+    a list of dimension names corresponding to those directions in data_array.
+    """
+    input_array_dim_names = {}
+    for direction in out_dims:
+        if direction != '*':
+            input_array_dim_names[direction] = set(
+                data_array.dims).intersection(dim_names[direction])
+    if '*' in out_dims:
+        input_array_dim_names['*'] = set(
+            data_array.dims).difference(set.union(set([]), *input_array_dim_names.values()))
+    return input_array_dim_names
+
+
+def get_target_dimension_order(out_dims, direction_to_names):
+    """
+    Takes in an iterable of directions ('x', 'y', 'z', or '*') and a dictionary
+    mapping those directions to a list of names corresponding to those
+    directions. Returns a list of names in the same order as in out_dims,
+    preserving the order within direction_to_names for each direction.
+    """
+    target_dimension_order = []
+    for direction in out_dims:
+        target_dimension_order.extend(direction_to_names[direction])
+    return target_dimension_order
+
+
+def get_slices_and_placeholder_nones(data_array, out_dims, direction_to_names):
+    """
+    Takes in a DataArray, a desired ordering of output directions, and
+    a dictionary mapping those directions to a list of names corresponding to
+    those directions. Returns a list with the same ordering as out_dims that
+    contains slices for out_dims that have corresponding names (as many slices
+    as names, and spanning the entire dimension named), and None for out_dims
+    without corresponding names.
+
+    This returned list can be used to create length-1 axes for the dimensions
+    that currently have no corresponding names in data_array.
+    """
+    slices_or_none = []
+    for direction in out_dims:
+        if len(direction_to_names[direction]) == 0:
+            slices_or_none.append(None)
+        elif (direction is not '*') and (len(direction_to_names[direction]) > 1):
             raise ValueError(
                 'DataArray has multiple dimensions for a single direction')
-    if len(dimensions) < len(data_array.dims):
-        raise ValueError(
-            'Was not able to classify all dimensions: {}'.format(
-                data_array.dims))
-    # Transpose correctly orders existing dimensions
-    # indices creates new length-1 dimensions
-    return data_array.transpose(*dimensions).values[indices]
+        else:
+            for name in direction_to_names[direction]:
+                slices_or_none.append(slice(0, len(data_array.coords[name])))
+    return slices_or_none
+
+
+def get_final_shape(data_array, out_dims, direction_to_names):
+    """
+    Determine the final shape that data_array must be reshaped to in order to
+    have one axis for each of the out_dims (for instance, combining all
+    axes collected by the '*' direction).
+    """
+    final_shape = []
+    for direction in out_dims:
+        if len(direction_to_names[direction]) == 0:
+            final_shape.append(1)
+        else:
+            # determine shape once dimensions for direction (usually '*') are combined
+            final_shape.append(
+                np.product([len(data_array.coords[name])
+                             for name in direction_to_names[direction]]))
+    return final_shape
