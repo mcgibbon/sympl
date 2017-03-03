@@ -1,5 +1,6 @@
 from .exceptions import SharedKeyException
 from .constants import default_constants
+from .array import DataArray
 from six import string_types
 import numpy as np
 from datetime import datetime
@@ -238,7 +239,7 @@ def get_numpy_array(data_array, out_dims):
     ----
     data_array : DataArray
         The object from which to retrieve data.
-    out_dims : {'x', 'y', 'z', '*'}
+    out_dims : list of {'x', 'y', 'z', '*'}
         The desired dimensions of the output and their order.
         Length 1 dimensions will be created if the dimension
         does not exist in data_array. '*' indicates an axis which is the
@@ -347,3 +348,51 @@ def get_final_shape(data_array, out_dims, direction_to_names):
                 np.product([len(data_array.coords[name])
                             for name in direction_to_names[direction]]))
     return final_shape
+
+
+def restore_dimensions(array, from_dims, result_like, result_attrs=None):
+    """
+    Restores a numpy array to a DataArray with similar dimensions to a reference
+    Data Array. This is meant to be the reverse of get_numpy_array.
+
+    Parameters
+    ----------
+    array : ndarray
+        The numpy array from which to create a DataArray
+    from_dims : list of {'x', 'y', 'z', '*'}
+        The directions describing the numpy array. If being used to reverse
+        a call to get_numpy_array, this should be the same as the out_dims
+        argument used in the call to get_numpy_array.
+    result_like : DataArray
+        A reference array with the desired output dimensions of the DataArray.
+        If being used to reverse a call to get_numpy_array, this should be
+        the same as the data_array argument used in the call to get_numpy_array.
+    result_attrs : dict, optional
+        A dictionary with the desired attributes of the output DataArray. If
+        not given, no attributes will be set.
+
+    Returns
+    -------
+    data_array : DataArray
+        The output DataArray with the same dimensions as the reference
+        DataArray.
+
+    See Also
+    --------
+    :py:func:~sympl.get_numpy_array: : Retrieves a numpy array with desired
+        dimensions from a given DataArray.
+    """
+    direction_to_names = get_input_array_dim_names(result_like, from_dims)
+    original_shape = []
+    original_coords = []
+    for direction in from_dims:
+        if direction in direction_to_names.keys():
+            for name in direction_to_names[direction]:
+                original_shape.append(len(result_like.coords[name]))
+                original_coords.append(result_like.coords[name])
+    data_array = DataArray(
+        np.reshape(array, original_shape), coords=original_coords).transpose(
+            *list(result_like.coords))
+    if result_attrs is not None:
+        data_array.attrs = result_attrs
+    return data_array

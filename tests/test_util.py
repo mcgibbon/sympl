@@ -3,7 +3,8 @@ from sympl import (
     UpdateFrequencyWrapper, Prognostic, replace_none_with_default,
     default_constants, ensure_no_shared_keys, SharedKeyException, DataArray,
     combine_dimensions, set_dimension_names,
-    put_prognostic_tendency_in_diagnostics, get_numpy_array)
+    put_prognostic_tendency_in_diagnostics, get_numpy_array,
+    restore_dimensions)
 from sympl._core.util import update_dict_by_adding_another
 from datetime import datetime, timedelta
 import numpy as np
@@ -264,6 +265,150 @@ def test_get_numpy_array_zyx_to_starz_doesnt_copy():
     assert original_array is array.values
     assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
     assert numpy_array.base is array.values
+
+
+def test_restore_dimensions_complicated_asterisk():
+    array = DataArray(
+        np.random.randn(2, 3, 4, 5),
+        dims=['x', 'h', 'y', 'q'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'x', 'y'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*', 'x', 'y'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+
+
+def test_restore_dimensions_starz_to_zyx():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*', 'z'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+
+
+def test_restore_dimensions_starz_to_zyx():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*', 'z'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+
+
+def test_restore_dimensions_starz_to_zyx_has_no_attrs():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*', 'z'], result_like=array)
+    assert len(restored_array.attrs) == 0
+
+
+def test_restore_dimensions_starz_to_zyx_doesnt_copy():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*', 'z'], result_like=array)
+    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+        array.values)
+    assert restored_array.values.base is array.values
+
+
+def test_restore_dimensions_starz_to_zyx_with_attrs():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*', 'z'], result_like=array, result_attrs={'units': 'K'})
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 1
+    assert 'units' in restored_array.attrs
+    assert restored_array.attrs['units'] == 'K'
+
+
+def test_restore_dimensions_3d_reverse():
+    array = DataArray(
+        np.random.randn(2, 3, 4),
+        dims=['z', 'y', 'x'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['x', 'y', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['x', 'y', 'z'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+        array.values)
+    assert restored_array.values.base is array.values
+
+
+def test_restore_dimensions_1d_flatten():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['z'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+        array.values)
+    assert restored_array.values.base is array.values
+
+
+def test_restore_dimensions_2d_flatten():
+    array = DataArray(
+        np.random.randn(2, 3),
+        dims=['z', 'y'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['*'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['*'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+        array.values)
+    assert restored_array.values.base is array.values
+
+
+def test_restore_dimensions_removes_dummy_axes():
+    array = DataArray(
+        np.random.randn(2),
+        dims=['z'],
+        attrs={'units': ''}
+    )
+    numpy_array = get_numpy_array(array, ['x', 'y', 'z'])
+    restored_array = restore_dimensions(
+        numpy_array, from_dims=['x', 'y', 'z'], result_like=array)
+    assert np.all(restored_array.values == array.values)
+    assert len(restored_array.attrs) == 0
+    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+        array.values)
+    assert restored_array.values.base is array.values
 
 
 def test_set_prognostic_update_frequency_calls_initially():
