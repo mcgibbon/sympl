@@ -210,11 +210,7 @@ def update_dict_by_adding_another(dict1, dict2):
         if key not in dict1:
             dict1[key] = dict2[key]
         else:
-            try:
-                # works for array-like objects, in-place
-                dict1[key][:] += dict2[key][:]
-            except TypeError:
-                dict1[key] += dict2[key]
+            dict1[key] += dict2[key]  # += is in-place addition operator
     return  # not returning anything emphasizes that this is in-place
 
 
