@@ -34,10 +34,14 @@ class Implicit(object):
             A model state dictionary. Will be updated with any
             diagnostic quantities produced by this object for the time of
             the input state.
+        timestep : timedelta
+            The amount of time to step forward.
 
         Returns
         -------
-        next_state : dict
+        diagnostics : dict
+            Diagnostics from the timestep of the input state.
+        new_state : dict
             A dictionary whose keys are strings indicating
             state quantities and values are the value of those quantities
             at the timestep after input state.

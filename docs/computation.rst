@@ -69,20 +69,18 @@ Diagnostic
     diagnostic_component = MyDiagnostic()
     diagnostics = diagnostic_component(state)
 
-Instead of returning a new dictionary with the additional diagnostic quantities,
-a :py:class:`~sympl.Diagnostic` can update the state dictionary in-place with the new
-quantities. You do this like so:
+You should be careful to check in the documentation of the particular
+:py:class:`~sympl.Diagnostic` you are using to see whether it modifies the
+``state`` given to it as input. :py:class:`~sympl.Diagnostic` objects in charge
+of updating ghost cells in particular may modify the arrays in the input
+dictionary, so that the arrays in the returned ``diagnostics`` dictionary are
+the same ones as were sent as input in the ``state``. To make it clear that
+the state is being modified when using such objects, we recommend using a
+syntax like:
 
 .. code-block:: python
 
-    diagnostic_component = MyDiagnostic()
-    diagnostic_component.update_state(state)
-
-The ``update_state`` call has the advantage that it will automatically check to
-see if it is overwriting any quantities already present in state, and will
-raise a :py:class:`~sympl.SharedKeyException` before doing so. This ensures you
-don't have multiple pieces of code trying to output the same diagnostic, with
-one overwriting the other.
+    state.update(diagnostic_component(state))
 
 .. autoclass:: sympl.Diagnostic
     :members:
@@ -106,14 +104,18 @@ can call an Implicit object like so:
     from datetime import timedelta
     implicit = MyImplicit()
     timestep = timedelta(minutes=10)
-    next_state = implicit(state, timestep)
+    diagnostics, next_state = implicit(state, timestep)
+    state.update(diagnostics)
 
-Following the ``implicit`` call, ``state`` will have been modified in-place to
-include any diagnostics produced by the :py:class:`~sympl.Implicit` component
-for the timestep of the input state.
-
-This is important, so we'll repeat it:
-**the input state can be modified by the call to the ``Implicit`` object**.
+The returned ``diagnostics`` dictionary contains diagnostic quantities from
+the timestep of the input ``state``, while ``next_state`` is the state
+dictionary for the next timestep. It is possible that some of the arrays in
+``diagnostics`` may be the same arrays as were given in the input ``state``,
+and that they have been modified. In other words, ``state`` may be modified by
+this call. For instance, the object may need to update ghost cells in the
+current state. Or if an object provides 'cloud_fraction' as a diagnostic, it
+may modify an existing 'cloud_fraction' array in the input state if one is
+present, instead of allocating a new array.
 
 .. autoclass:: sympl.Implicit
     :members:
