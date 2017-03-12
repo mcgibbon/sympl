@@ -32,7 +32,10 @@ class Implicit(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
+        return '{}({})'.format(
+            self.__class__,
+            '\n'.join('{}: {}'.format(repr(key), repr(value))
+                      for key, value in self.__dict__.items()))
 
     @abc.abstractmethod
     def __call__(self, state, timestep):
@@ -96,7 +99,10 @@ class Prognostic(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
+        return '{}({})'.format(
+            self.__class__,
+            '\n'.join('{}: {}'.format(repr(key), repr(value))
+                      for key, value in self.__dict__.items()))
 
     @abc.abstractmethod
     def __call__(self, state):
@@ -152,7 +158,10 @@ class Diagnostic(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
+        return '{}({})'.format(
+            self.__class__,
+            '\n'.join('{}: {}'.format(repr(key), repr(value))
+                      for key, value in self.__dict__.items()))
 
     @abc.abstractmethod
     def __call__(self, state):
