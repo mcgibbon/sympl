@@ -13,7 +13,7 @@ class Implicit(object):
         The quantities for which values for the new state are returned
         when the object is called.
     diagnostics: tuple of str
-        The diagnostic quantities that are inserted into the old state
+        The quantities for which values for the old state are returned
         when the object is called.
     """
     __metaclass__ = abc.ABCMeta
@@ -21,6 +21,18 @@ class Implicit(object):
     inputs = ()
     outputs = ()
     diagnostics = ()
+
+    def __str__(self):
+        return (
+            'instance of {}(Implicit)\n'
+            '    inputs: {}\n'
+            '    outputs: {}\n'
+            '    diagnostics: {}'.format(
+                self.__class__, self.inputs, self.outputs, self.diagnostics)
+        )
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__, self.__dict__)
 
     @abc.abstractmethod
     def __call__(self, state, timestep):
@@ -74,6 +86,18 @@ class Prognostic(object):
     tendencies = ()
     diagnostics = ()
 
+    def __str__(self):
+        return (
+            'instance of {}(Prognostic)\n'
+            '    inputs: {}\n'
+            '    tendencies: {}\n'
+            '    diagnostics: {}'.format(
+                self.__class__, self.inputs, self.tendencies, self.diagnostics)
+        )
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__, self.__dict__)
+
     @abc.abstractmethod
     def __call__(self, state):
         """
@@ -119,6 +143,17 @@ class Diagnostic(object):
     inputs = ()
     diagnostics = ()
 
+    def __str__(self):
+        return (
+            'instance of {}(Implicit)\n'
+            '    inputs: {}\n'
+            '    diagnostics: {}'.format(
+                self.__class__, self.inputs, self.diagnostics)
+        )
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__, self.__dict__)
+
     @abc.abstractmethod
     def __call__(self, state):
         """
@@ -148,6 +183,12 @@ class Diagnostic(object):
 class Monitor(object):
     __metaclass__ = abc.ABCMeta
 
+    def __str__(self):
+        return 'instance of {}(Monitor)'.format(self.__class__)
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__, self.__dict__)
+
     @abc.abstractmethod
     def store(self, state):
         """
@@ -169,6 +210,16 @@ class Monitor(object):
 class ComponentComposite(object):
 
     component_class = None
+
+    def __str__(self):
+        return '{}(\n{}\n)'.format(
+            self.__class__,
+            ',\n'.join(str(component) for component in self._components))
+
+    def __repr__(self):
+        return '{}(\n{}\n)'.format(
+            self.__class__,
+            ',\n'.join(repr(component) for component in self._components))
 
     def __init__(self, *args):
         """

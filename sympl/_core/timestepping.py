@@ -7,9 +7,34 @@ class TimeStepper(object):
 
     It uses Prognostic and Diagnostic objects to update the current model state
     with diagnostics, and to return the model state at the next timestep.
+
+    Attributes
+    ----------
+    inputs : tuple of str
+        The quantities required in the state when the object is called.
+    outputs: tuple of str
+        The quantities for which values for the new state are returned
+        when the object is called.
+    diagnostics: tuple of str
+        The quantities for which values for the old state are returned
+        when the object is called.
     """
 
     __metaclass__ = abc.ABCMeta
+
+    def __str__(self):
+        return (
+            'instance of {}(TimeStepper)\n'
+            '    inputs: {}\n'
+            '    outputs: {}\n'
+            '    diagnostics: {}\n'
+            '    Prognostic components: {}'.format(
+                self.__class__, self.inputs, self.outputs, self.diagnostics,
+                str(self._prognostic))
+        )
+
+    def __repr__(self):
+        return '{}({})'.format(self.__class__, self.__dict__)
 
     def __init__(self, prognostic_list, **kwargs):
         self._prognostic = PrognosticComposite(*prognostic_list)
@@ -47,6 +72,10 @@ class TimeStepper(object):
     @property
     def outputs(self):
         return self._prognostic.tendencies
+
+    @property
+    def diagnostics(self):
+        return self._prognostic.diagnostics
 
 
 class AdamsBashforth(TimeStepper):
