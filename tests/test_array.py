@@ -55,6 +55,21 @@ def test_array_unit_conversion_different_units():
     assert len(result.attrs) == 2
     assert result.attrs['units'] == 'm'
     assert result.attrs['foo'] == 'bar'
+    assert (a.values == np.array([1., 2., 3.])).all()
+    assert len(a.attrs) == 2
+    assert a.attrs['foo'] == 'bar'
+    assert a.attrs['units'] == 'km'
+
+
+def test_array_unit_conversion_different_units_doesnt_modify_original():
+    a = DataArray(np.array([1., 2., 3.]),
+                  attrs={'units': 'km', 'foo': 'bar'})
+    a.to_units('m')
+    assert (a.values == np.array([1., 2., 3.])).all()
+    assert len(a.attrs) == 2
+    assert a.attrs['foo'] == 'bar'
+    assert a.attrs['units'] == 'km'
+
 
 if __name__ == '__main__':
     pytest.main([__file__])
