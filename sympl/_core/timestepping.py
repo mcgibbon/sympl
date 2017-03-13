@@ -34,10 +34,17 @@ class TimeStepper(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(
-            self.__class__,
-            '\n'.join('{}: {}'.format(repr(key), repr(value))
-                      for key, value in self.__dict__.items()))
+        if self._making_repr:
+            return '{}(recursive reference)'.format(self.__class__)
+        else:
+            self._making_repr = True
+            return_value = '{}({})'.format(
+                self.__class__,
+                '\n'.join('{}: {}'.format(repr(key), repr(value))
+                          for key, value in self.__dict__.items()
+                          if key != '_making_repr'))
+            self._making_repr = False
+            return return_value
 
     def __init__(self, prognostic_list, **kwargs):
         self._prognostic = PrognosticComposite(*prognostic_list)

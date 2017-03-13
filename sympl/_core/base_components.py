@@ -32,10 +32,17 @@ class Implicit(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(
-            self.__class__,
-            '\n'.join('{}: {}'.format(repr(key), repr(value))
-                      for key, value in self.__dict__.items()))
+        if self._making_repr:
+            return '{}(recursive reference)'.format(self.__class__)
+        else:
+            self._making_repr = True
+            return_value = '{}({})'.format(
+                self.__class__,
+                '\n'.join('{}: {}'.format(repr(key), repr(value))
+                          for key, value in self.__dict__.items()
+                          if key != '_making_repr'))
+            self._making_repr = False
+            return return_value
 
     @abc.abstractmethod
     def __call__(self, state, timestep):
@@ -99,10 +106,17 @@ class Prognostic(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(
-            self.__class__,
-            '\n'.join('{}: {}'.format(repr(key), repr(value))
-                      for key, value in self.__dict__.items()))
+        if self._making_repr:
+            return '{}(recursive reference)'.format(self.__class__)
+        else:
+            self._making_repr = True
+            return_value = '{}({})'.format(
+                self.__class__,
+                '\n'.join('{}: {}'.format(repr(key), repr(value))
+                          for key, value in self.__dict__.items()
+                          if key != '_making_repr'))
+            self._making_repr = False
+            return return_value
 
     @abc.abstractmethod
     def __call__(self, state):
@@ -158,10 +172,17 @@ class Diagnostic(object):
         )
 
     def __repr__(self):
-        return '{}({})'.format(
-            self.__class__,
-            '\n'.join('{}: {}'.format(repr(key), repr(value))
-                      for key, value in self.__dict__.items()))
+        if self._making_repr:
+            return '{}(recursive reference)'.format(self.__class__)
+        else:
+            self._making_repr = True
+            return_value = '{}({})'.format(
+                self.__class__,
+                '\n'.join('{}: {}'.format(repr(key), repr(value))
+                          for key, value in self.__dict__.items()
+                          if key != '_making_repr'))
+            self._making_repr = False
+            return return_value
 
     @abc.abstractmethod
     def __call__(self, state):
@@ -196,7 +217,17 @@ class Monitor(object):
         return 'instance of {}(Monitor)'.format(self.__class__)
 
     def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
+        if self._making_repr:
+            return '{}(recursive reference)'.format(self.__class__)
+        else:
+            self._making_repr = True
+            return_value = '{}({})'.format(
+                self.__class__,
+                '\n'.join('{}: {}'.format(repr(key), repr(value))
+                          for key, value in self.__dict__.items()
+                          if key != '_making_repr'))
+            self._making_repr = False
+            return return_value
 
     @abc.abstractmethod
     def store(self, state):
