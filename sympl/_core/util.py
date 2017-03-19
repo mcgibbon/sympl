@@ -255,7 +255,11 @@ def get_numpy_array(data_array, out_dims):
         in data_array, or data_array's dimensions are invalid in some way.
 
     """
-    direction_to_names = get_input_array_dim_names(data_array, out_dims)
+    current_dim_names = dim_names.copy()
+    for dim in out_dims:
+        if dim not in ('x', 'y', 'z', '*'):
+            current_dim_names[dim] = dim
+    direction_to_names = get_input_array_dim_names(data_array, out_dims, current_dim_names)
     target_dimension_order = get_target_dimension_order(out_dims, direction_to_names)
     slices_or_none = get_slices_and_placeholder_nones(
         data_array, out_dims, direction_to_names)
@@ -264,7 +268,7 @@ def get_numpy_array(data_array, out_dims):
         *target_dimension_order).values[slices_or_none], final_shape)
 
 
-def get_input_array_dim_names(data_array, out_dims):
+def get_input_array_dim_names(data_array, out_dims, dim_names):
     """
     Takes in a DataArray and an iterable of directions
     ('x', 'y', 'z', or '*'). Returns a dictionary mapping those directions to
@@ -378,7 +382,11 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
     :py:func:~sympl.get_numpy_array: : Retrieves a numpy array with desired
         dimensions from a given DataArray.
     """
-    direction_to_names = get_input_array_dim_names(result_like, from_dims)
+    current_dim_names = dim_names.copy()
+    for dim in from_dims:
+        if dim not in ('x', 'y', 'z', '*'):
+            current_dim_names[dim] = dim
+    direction_to_names = get_input_array_dim_names(result_like, from_dims, current_dim_names)
     original_shape = []
     original_coords = []
     for direction in from_dims:
