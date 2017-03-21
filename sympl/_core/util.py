@@ -235,12 +235,14 @@ def get_numpy_array(data_array, out_dims):
     ----
     data_array : DataArray
         The object from which to retrieve data.
-    out_dims : list of {'x', 'y', 'z', '*'}
+    out_dims : list of str
         The desired dimensions of the output and their order.
-        Length 1 dimensions will be created if the dimension
-        does not exist in data_array. '*' indicates an axis which is the
-        flattened collection of all dimensions not explicitly listed in
-        out_dims, including any dimensions with unknown direction.
+        Length 1 dimensions will be created if the dimension is 'x', 'y', 'z',
+        or '*' and does not exist in data_array. 'x', 'y', and 'z' indicate any axes
+        registered to those directions with
+        :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
+        which is the flattened collection of all dimensions not explicitly
+        listed in out_dims, including any dimensions with unknown direction.
 
     Returns
     -------
@@ -258,7 +260,7 @@ def get_numpy_array(data_array, out_dims):
     current_dim_names = dim_names.copy()
     for dim in out_dims:
         if dim not in ('x', 'y', 'z', '*'):
-            current_dim_names[dim] = dim
+            current_dim_names[dim] = [dim]
     direction_to_names = get_input_array_dim_names(data_array, out_dims, current_dim_names)
     target_dimension_order = get_target_dimension_order(out_dims, direction_to_names)
     slices_or_none = get_slices_and_placeholder_nones(
@@ -359,10 +361,15 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
     ----------
     array : ndarray
         The numpy array from which to create a DataArray
-    from_dims : list of {'x', 'y', 'z', '*'}
+    from_dims : list of str
         The directions describing the numpy array. If being used to reverse
         a call to get_numpy_array, this should be the same as the out_dims
         argument used in the call to get_numpy_array.
+        'x', 'y', and 'z' indicate any axes
+        registered to those directions with
+        :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
+        which is the flattened collection of all dimensions not explicitly
+        listed in out_dims, including any dimensions with unknown direction.
     result_like : DataArray
         A reference array with the desired output dimensions of the DataArray.
         If being used to reverse a call to get_numpy_array, this should be
@@ -379,13 +386,13 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
 
     See Also
     --------
-    :py:func:~sympl.get_numpy_array: : Retrieves a numpy array with desired
+    :py:function:~sympl.get_numpy_array: : Retrieves a numpy array with desired
         dimensions from a given DataArray.
     """
     current_dim_names = dim_names.copy()
     for dim in from_dims:
         if dim not in ('x', 'y', 'z', '*'):
-            current_dim_names[dim] = dim
+            current_dim_names[dim] = [dim]
     direction_to_names = get_input_array_dim_names(result_like, from_dims, current_dim_names)
     original_shape = []
     original_coords = []
