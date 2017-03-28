@@ -34,7 +34,7 @@ class TimeStepper(object):
         )
 
     def __repr__(self):
-        if self._making_repr:
+        if hasattr(self, '_making_repr') and self._making_repr:
             return '{}(recursive reference)'.format(self.__class__)
         else:
             self._making_repr = True
