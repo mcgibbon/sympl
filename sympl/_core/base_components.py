@@ -15,6 +15,20 @@ class Implicit(object):
     diagnostics: tuple of str
         The quantities for which values for the old state are returned
         when the object is called.
+    input_properties : dict
+        A dictionary whose keys are quantities required in the state when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    output_properties : dict
+        A dictionary whose keys are quantities for which values
+        for the new state are returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    diagnostic_properties : dict
+        A dictionary whose keys are quantities for which values
+        for the old state are returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -101,6 +115,18 @@ class Prognostic(object):
         the object is called.
     diagnostics : tuple of str
         The diagnostic quantities returned when the object is called.
+    input_properties : dict
+        A dictionary whose keys are quantities required in the state when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    tendency_properties : dict
+        A dictionary whose keys are quantities for which tendencies are returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    diagnostic_properties : dict
+        A dictionary whose keys are diagnostic quantities returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -181,6 +207,14 @@ class Diagnostic(object):
         The quantities required in the state when the object is called.
     diagnostics : tuple of str
         The diagnostic quantities returned when the object is called.
+    input_properties : dict
+        A dictionary whose keys are quantities required in the state when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    diagnostic_properties : dict
+        A dictionary whose keys are diagnostic quantities returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -330,6 +364,17 @@ def ensure_components_have_class(components, component_class):
 
 
 class PrognosticComposite(ComponentComposite):
+    """
+    Attributes
+    ----------
+    inputs : tuple of str
+        The quantities required in the state when the object is called.
+    tendencies : tuple of str
+        The quantities for which tendencies are returned when
+        the object is called.
+    diagnostics : tuple of str
+        The diagnostic quantities returned when the object is called.
+    """
 
     component_class = Prognostic
 
@@ -385,6 +430,14 @@ class PrognosticComposite(ComponentComposite):
 
 
 class DiagnosticComposite(ComponentComposite):
+    """
+    Attributes
+    ----------
+    inputs : tuple of str
+        The quantities required in the state when the object is called.
+    diagnostics : tuple of str
+        The diagnostic quantities returned when the object is called.
+    """
 
     component_class = Diagnostic
 
