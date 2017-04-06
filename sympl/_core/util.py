@@ -226,13 +226,18 @@ def update_dict_by_adding_another(dict1, dict2):
     Takes two dictionaries. Add values in dict2 to the values in dict1, if
     present. If not present, create a new value in dict1 equal to the value in
     dict2. Addition is done in-place if the values are
-    array-like, to avoid data copying.
+    array-like, to avoid data copying. Units are handled if the values are
+    DataArrays with a 'units' attribute.
     """
     for key in dict2.keys():
         if key not in dict1:
             dict1[key] = dict2[key]
         else:
-            dict1[key] += dict2[key]  # += is in-place addition operator
+            if (isinstance(dict1[key], DataArray) and isinstance(dict2[key], DataArray) and
+                    ('units' in dict1[key].attrs) and ('units' in dict2[key].attrs)):
+                dict1[key] += dict2[key].to_units(dict1[key].attrs['units'])
+            else:
+                dict1[key] += dict2[key]  # += is in-place addition operator
     return  # not returning anything emphasizes that this is in-place
 
 

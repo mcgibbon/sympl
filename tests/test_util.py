@@ -245,6 +245,8 @@ def test_put_prognostic_tendency_in_diagnostics_one_tendency():
     tendencies, diagnostics = prognostic({})
     assert 'tendency_of_quantity_due_to_scheme' in diagnostics.keys()
     assert len(diagnostics) == 1
+    assert tendencies['quantity'] == 1.
+    assert diagnostics['tendency_of_quantity_due_to_scheme'] == 1.
 
 if __name__ == '__main__':
     pytest.main([__file__])
