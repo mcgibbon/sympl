@@ -17,6 +17,26 @@ except ImportError:
 dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
 
 
+def get_numpy_arrays_with_properties(property_dictionary, state):
+    out_dict = {}
+    for quantity_name, properties in property_dictionary.items():
+        out_dict[quantity_name] = get_numpy_array(
+            state[quantity_name].to_units(properties['units'], properties['dims']))
+    return out_dict
+
+
+def restore_data_arrays_with_properties(
+        raw_arrays, property_dict, attr_dict, results_like_dict):
+    out_dict = {}
+    for quantity_name, array in raw_arrays.items():
+        out_dict[quantity_name] = restore_dimensions(
+            array,
+            from_dims=property_dict[quantity_name]['dims'],
+            result_like=results_like_dict[quantity_name],
+            result_attrs=attr_dict[quantity_name])
+    return out_dict
+
+
 def datetime64_to_datetime(dt64):
     ts = (dt64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
     return datetime.utcfromtimestamp(ts)
@@ -136,57 +156,59 @@ class UpdateFrequencyWrapper(object):
         return getattr(self._prognostic, item)
 
 
-def put_prognostic_tendency_in_diagnostics(prognostic_class, label):
+class TendencyInDiagnosticsWrapper(object):
     """
-    Wraps the class prognostic_class so that when it is called, its
-    tendencies are all put in its diagnostics dictionary as
-    "tendency_of_{quantity}_due_to_{label}", where label is passed in to this
-    function.
-
-    Note that a *class* is wrapped and returned. You must afterwards
-    instantiate that class if you want to use it.
+    Wraps a prognostic object so that when it is called, it returns all
+    tendencies in its diagnostics.
 
     Example
     -------
-    This how the function should be used on a Prognostic class RRTMRadiation.
+    This how the wrapper should be used on a fictional Prognostic class
+    called RRTMRadiation.
 
-    >>> RRTMRadiation = put_prognostic_tendency_in_diagnostics(RRTMRadiation, 'radiation')
-    >>> prognostic = RRTMRadiation()
-
-    Args
-    ----
-    prognostic_class : type
-        A subclass of Prognostic (not an instance of that class).
-    label : str
-        Label describing what the tendencies are due to, to be
-        put in the diagnostic quantity names.
-
-    Returns
-    -------
-    WrappedPrognostic : type
-        The subclass of Prognostic wrapped as described above.
+    >>> prognostic = TendencyInDiagnosticsWrapper(RRTMRadiation(), 'radiation')
     """
-    class WrappedPrognostic(prognostic_class):
-        _pptid_tendency_label = label
 
-        def __init__(self, *args, **kwargs):
-            super(WrappedPrognostic, self).__init__(*args, **kwargs)
-            diagnostic_names = list(self.diagnostics)
-            for quantity_name in self.tendencies:
-                diagnostic_names.append('tendency_of_{}_due_to_{}'.format(
-                    quantity_name, self._pptid_tendency_label))
-            self.diagnostics = tuple(diagnostic_names)
+    def __init__(self, prognostic, label):
+        """
+        Initialize the Delayed object.
 
-        def __call__(self, state, **kwargs):
-            tendencies, diagnostics = super(WrappedPrognostic, self).__call__(
-                state, **kwargs)
-            for quantity_name in tendencies.keys():
-                diagnostic_name = 'tendency_of_{}_due_to_{}'.format(
-                    quantity_name, self._pptid_tendency_label)
-                diagnostics[diagnostic_name] = tendencies[quantity_name]
-            return tendencies, diagnostics
+        Args
+        ----
+        prognostic : Prognostic
+            The object to be wrapped
+        label : str
+            Label describing what the tendencies are due to, to be
+            put in the diagnostic quantity names.
+        """
+        self._prognostic = prognostic
+        self._tendency_label = label
+        self._tendency_diagnostic_properties = {}
+        for quantity_name, properties in prognostic.tendency_properties.items():
+            print('setting property for {}'.format(quantity_name))
+            diagnostic_name = 'tendency_of_{}_due_to_{}'.format(quantity_name, label)
+            self._tendency_diagnostic_properties[diagnostic_name] = properties
 
-    return WrappedPrognostic
+    @property
+    def diagnostics(self):
+        return list(self.diagnostic_properties.keys())
+
+    @property
+    def diagnostic_properties(self):
+        return_dict = self._prognostic.diagnostic_properties.copy()
+        return_dict.update(self._tendency_diagnostic_properties)
+        return return_dict
+
+    def __call__(self, state, **kwargs):
+        tendencies, diagnostics = self._prognostic(state, **kwargs)
+        for quantity_name in tendencies.keys():
+            diagnostic_name = 'tendency_of_{}_due_to_{}'.format(
+                quantity_name, self._tendency_label)
+            diagnostics[diagnostic_name] = tendencies[quantity_name]
+        return tendencies, diagnostics
+
+    def __getattr__(self, item):
+        return getattr(self._prognostic, item)
 
 
 def replace_none_with_default(constant_name, value):

@@ -3,7 +3,7 @@ from sympl import (
     UpdateFrequencyWrapper, Prognostic, replace_none_with_default,
     default_constants, ensure_no_shared_keys, SharedKeyException, DataArray,
     combine_dimensions, set_dimension_names,
-    put_prognostic_tendency_in_diagnostics, get_numpy_array,
+    TendencyInDiagnosticsWrapper, get_numpy_array,
     restore_dimensions)
 from sympl._core.util import update_dict_by_adding_another
 from datetime import datetime, timedelta
@@ -226,10 +226,8 @@ def test_put_prognostic_tendency_in_diagnostics_no_tendencies():
     class MockPrognostic(Prognostic):
         def __call__(self, state):
             return {}, {}
-    MyPrognostic = put_prognostic_tendency_in_diagnostics(
-        MockPrognostic, 'scheme')
 
-    prognostic = MyPrognostic()
+    prognostic = TendencyInDiagnosticsWrapper(MockPrognostic(), 'scheme')
     tendencies, diagnostics = prognostic({})
     assert len(tendencies) == 0
     assert len(diagnostics) == 0
@@ -237,14 +235,12 @@ def test_put_prognostic_tendency_in_diagnostics_no_tendencies():
 
 def test_put_prognostic_tendency_in_diagnostics_one_tendency():
     class MockPrognostic(Prognostic):
-        tendencies = ('quantity',)
+        tendency_properties = {'quantity': {}}
         def __call__(self, state):
             return {'quantity': 1.}, {}
 
-    MyPrognostic = put_prognostic_tendency_in_diagnostics(
-        MockPrognostic, 'scheme')
-
-    prognostic = MyPrognostic()
+    prognostic = TendencyInDiagnosticsWrapper(MockPrognostic(), 'scheme')
+    tendencies, diagnostics = prognostic({})
     assert 'tendency_of_quantity_due_to_scheme' in prognostic.diagnostics
     tendencies, diagnostics = prognostic({})
     assert 'tendency_of_quantity_due_to_scheme' in diagnostics.keys()

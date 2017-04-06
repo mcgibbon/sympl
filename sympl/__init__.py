@@ -11,8 +11,9 @@ from ._core.constants import default_constants
 from ._core.util import (
     UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
-    get_numpy_array, jit, put_prognostic_tendency_in_diagnostics,
-    restore_dimensions)
+    get_numpy_array, jit, TendencyInDiagnosticsWrapper,
+    restore_dimensions, get_numpy_arrays_with_properties,
+    restore_data_arrays_with_properties)
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
@@ -27,8 +28,9 @@ __all__ = (
     default_constants,
     UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
-    get_numpy_array, jit, put_prognostic_tendency_in_diagnostics,
-    restore_dimensions,
+    get_numpy_array, jit, TendencyInDiagnosticsWrapper,
+    restore_dimensions, get_numpy_arrays_with_properties,
+    restore_data_arrays_with_properties,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
 )

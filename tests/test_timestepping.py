@@ -31,45 +31,45 @@ class TimesteppingBase(object):
 
     def test_timestepper_reveals_inputs(self):
         prog1 = MockPrognostic()
-        prog1.inputs = ('input1',)
+        prog1.input_properties = {'input1': {}}
         time_stepper = self.timestepper_class([prog1])
         assert same_list(time_stepper.inputs, ('input1',))
 
     def test_timestepper_combines_inputs(self):
         prog1 = MockPrognostic()
-        prog1.inputs = ('input1',)
+        prog1.input_properties = {'input1': {}}
         prog2 = MockPrognostic()
-        prog2.inputs = ('input2',)
+        prog2.input_properties = {'input2': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
         assert same_list(time_stepper.inputs, ('input1', 'input2'))
 
     def test_timestepper_doesnt_duplicate_inputs(self):
         prog1 = MockPrognostic()
-        prog1.inputs = ('input1',)
+        prog1.input_properties = {'input1': {}}
         prog2 = MockPrognostic()
-        prog2.inputs = ('input1',)
+        prog2.input_properties = {'input1': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
         assert same_list(time_stepper.inputs, ('input1',))
 
     def test_timestepper_reveals_outputs(self):
         prog1 = MockPrognostic()
-        prog1.tendencies = ('output1',)
+        prog1.tendency_properties = {'output1': {}}
         time_stepper = self.timestepper_class([prog1])
         assert same_list(time_stepper.outputs, ('output1',))
 
     def test_timestepper_combines_outputs(self):
         prog1 = MockPrognostic()
-        prog1.tendencies = ('output1',)
+        prog1.tendency_properties = {'output1': {}}
         prog2 = MockPrognostic()
-        prog2.tendencies = ('output2',)
+        prog2.tendency_properties = {'output2': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
         assert same_list(time_stepper.outputs, ('output1', 'output2'))
 
     def test_timestepper_doesnt_duplicate_outputs(self):
         prog1 = MockPrognostic()
-        prog1.tendencies = ('output1',)
+        prog1.tendency_properties = {'output1': {}}
         prog2 = MockPrognostic()
-        prog2.tendencies = ('output1',)
+        prog2.tendency_properties = {'output1': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
         assert same_list(time_stepper.outputs, ('output1',))
 

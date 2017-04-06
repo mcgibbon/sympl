@@ -18,9 +18,21 @@ class Implicit(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    inputs = ()
-    outputs = ()
-    diagnostics = ()
+    input_properties = {}
+    output_properties = {}
+    diagnostic_properties = {}
+
+    @property
+    def inputs(self):
+        return list(self.input_properties.keys())
+
+    @property
+    def outputs(self):
+        return list(self.output_properties.keys())
+
+    @property
+    def diagnostics(self):
+        return list(self.diagnostic_properties.keys())
 
     def __str__(self):
         return (
@@ -92,9 +104,21 @@ class Prognostic(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    inputs = ()
-    tendencies = ()
-    diagnostics = ()
+    input_properties = {}
+    tendency_properties = {}
+    diagnostic_properties = {}
+
+    @property
+    def inputs(self):
+        return list(self.input_properties.keys())
+
+    @property
+    def tendencies(self):
+        return list(self.tendency_properties.keys())
+
+    @property
+    def diagnostics(self):
+        return list(self.diagnostic_properties.keys())
 
     def __str__(self):
         return (
@@ -160,8 +184,16 @@ class Diagnostic(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    inputs = ()
-    diagnostics = ()
+    input_properties = {}
+    diagnostic_properties = {}
+
+    @property
+    def inputs(self):
+        return list(self.input_properties.keys())
+
+    @property
+    def diagnostics(self):
+        return list(self.diagnostic_properties.keys())
 
     def __str__(self):
         return (
