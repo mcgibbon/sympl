@@ -125,6 +125,16 @@ class TimesteppingBase(object):
         assert new_state == {'air_temperature': 274.}
 
     @mock.patch.object(MockPrognostic, '__call__')
+    def test_float_one_step_with_units(self, mock_prognostic_call):
+        mock_prognostic_call.return_value = ({'eastward_wind': DataArray(0.02, attrs={'units': 'km/s^2'})}, {})
+        state = {'eastward_wind': DataArray(1., attrs={'units': 'm/s'})}
+        timestep = timedelta(seconds=1.)
+        time_stepper = self.timestepper_class([MockPrognostic()])
+        diagnostics, new_state = time_stepper.__call__(state, timestep)
+        assert state == {'eastward_wind': DataArray(1., attrs={'units': 'm/s'})}
+        assert new_state == {'eastward_wind': DataArray(21., attrs={'units': 'm/s'})}
+
+    @mock.patch.object(MockPrognostic, '__call__')
     def test_float_three_steps(self, mock_prognostic_call):
         mock_prognostic_call.return_value = ({'air_temperature': 1.}, {})
         state = {'air_temperature': 273.}

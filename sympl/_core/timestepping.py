@@ -1,5 +1,6 @@
 from .base_components import PrognosticComposite
 import abc
+from .array import DataArray
 
 
 class TimeStepper(object):
@@ -143,6 +144,7 @@ class AdamsBashforth(TimeStepper):
         self._ensure_constant_timestep(timestep)
         state = state.copy()
         tendencies, diagnostics = self._prognostic(state)
+        convert_tendencies_units_for_state(tendencies, state)
         self._tendencies_list.append(tendencies)
         new_state = self._perform_step(state, timestep)
         self._copy_untouched_quantities(state, new_state)
@@ -173,6 +175,19 @@ class AdamsBashforth(TimeStepper):
         elif self._timestep != timestep:
             raise ValueError(
                 'timestep must be constant for Adams-Bashforth time stepping')
+
+
+def convert_tendencies_units_for_state(tendencies, state):
+    """
+    Converts the units of any DataArrays with unit informaton in the
+    tendencies dictionary to have units of {value_units}/second where
+    {value_units} is the units of the value in the state dictionary.
+    This is done in-place.
+    """
+    for quantity_name in tendencies.keys():
+        if isinstance(tendencies[quantity_name], DataArray) and ('units' in tendencies[quantity_name].attrs):
+            desired_units = '{}/s'.format(state[quantity_name].attrs['units'])
+            tendencies[quantity_name] = tendencies[quantity_name].to_units(desired_units)
 
 
 class Leapfrog(TimeStepper):
@@ -252,6 +267,7 @@ class Leapfrog(TimeStepper):
         state = state.copy()
         self._ensure_constant_timestep(timestep)
         tendencies, diagnostics = self._prognostic(state)
+        convert_tendencies_units_for_state(tendencies, state)
         if self._old_state is None:
             new_state = step_forward_euler(state, tendencies, timestep)
         else:
