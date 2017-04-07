@@ -21,7 +21,8 @@ def get_numpy_arrays_with_properties(property_dictionary, state):
     out_dict = {}
     for quantity_name, properties in property_dictionary.items():
         out_dict[quantity_name] = get_numpy_array(
-            state[quantity_name].to_units(properties['units'], properties['dims']))
+            state[quantity_name].to_units(properties['units']),
+            out_dims=properties['dims'])
     return out_dict
 
 
