@@ -27,14 +27,46 @@ def get_numpy_arrays_with_properties(property_dictionary, state):
 
 
 def restore_data_arrays_with_properties(
-        raw_arrays, property_dict, attr_dict, results_like_dict):
+        raw_arrays, output_property_dict, input_property_dict, input_state):
+    """
+    Parameters
+    ----------
+    raw_arrays : dict
+        A dictionary whose keys are quantity names and values are numpy arrays
+        containing the data for those quantities.
+    output_property_dict : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with properties for those quantities. The propertiy "dims_like" must be
+        present, and specifies an input quantity that the dimensions of the
+        output quantity should be like. All other properties are included as
+        attributes on the output DataArray for that quantity.
+    input_property_dict : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with input properties for those quantities. The property "dims" must be
+        present, indicating the dimensions that the quantity was transformed to
+        when taken as input to a component.
+    input_state : dict
+        A state dictionary that was used as input to a component for which
+        DataArrays are being restored.
+
+    Returns
+    -------
+    out_dict : dict
+        A dictionary whose keys are quantities and values are DataArrays
+        corresponding to those quantities, with data, shapes and attributes
+        determined from the inputs to this function.
+    """
     out_dict = {}
     for quantity_name, array in raw_arrays.items():
+        attrs = output_property_dict[quantity_name].copy()
+        dims_like = attrs.pop('dims_like')
+        from_dims = input_property_dict[dims_like]
+        result_like = input_state[dims_like]
         out_dict[quantity_name] = restore_dimensions(
             array,
-            from_dims=property_dict[quantity_name]['dims'],
-            result_like=results_like_dict[quantity_name],
-            result_attrs=attr_dict[quantity_name])
+            from_dims=from_dims,
+            result_like=result_like,
+            result_attrs=attrs)
     return out_dict
 
 
