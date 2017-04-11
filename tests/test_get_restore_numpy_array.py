@@ -12,6 +12,7 @@ get_numpy_arrays_with_properties:
     - returns numpy arrays in the dict
     - those numpy arrays should have same dtype as original data
         * even when unit conversion happens
+    - properly collects dimensions along a direction
     - they should actually be the same numpy arrays (with memory) as original data if no conversion happens
         * even when units are specified (so long as they match)
     - should be the same quantities as requested by the properties
@@ -19,18 +20,26 @@ get_numpy_arrays_with_properties:
         * not contain extra
         * raise exception if some are missing
     - units
-        * converts if requested and present, with correct value and units attribute
+        * converts if requested and present
         * does nothing if not requested whether or not present
-        * does nothing if requested but not present
+        * raises exception if not requested or not present
+        * unit conversion should not modify the input array
     - requires "dims" to be specified, raises exception if they aren't
-    - dims_like
+    - match_dims_like
         * should work if matched dimensions are identical
         * should raise exception if matched dimensions are not identical
         * should require value to be a quantity in property_dictionary
+        * should require all A matches to look like B and all B matches to look like A
+    - should raise ValueError when explicitly specified dimension is not present
+    - should return a scalar array when called on a scalar DataArray
+
+Test case for when wildcard dimension doesn't match anything - the error message needs to be much more descriptive
+    e.g. dims=['x', 'y', 'z'] and state=['foo', 'y', 'z']
 
 restore_data_arrays_with_properties:
     - should return a dictionary of DataArrays
     - DataArray values should be the same arrays as original data if no conversion happens
+    - properly restores collected dimensions
     - if conversion does happen, dtype should be the same as the input
     - should return same quantities as requested by the properties
         * contain all
@@ -41,6 +50,7 @@ restore_data_arrays_with_properties:
     - requires dims_like to be specified, raises exception if it's not
         * returned DataArray should have same dimensions as dims_like object
         * exception should be raised if dims_like is wrong (shape is incompatible)
+        * should return coords like the dims_like quantity
 
 Should add any created exceptions to the docstrings for these functions
 """
@@ -1019,6 +1029,33 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         else:
             raise AssertionError('should have raised InvalidPropertyDictError')
 
+    def test_collects_horizontal_dimensions(self):
+        random = np.random.RandomState(0)
+        T_array = random.randn(3, 2, 4)
+        input_state = {
+            'air_temperature': DataArray(
+                T_array,
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['z', '*'],
+                'units': 'degK',
+            }
+        }
+        return_value = get_numpy_arrays_with_properties(input_state, input_properties)
+        assert np.byte_bounds(
+            return_value['air_temperature']) == np.byte_bounds(
+            T_array)
+        assert return_value['air_temperature'].base is T_array
+        assert return_value['air_temperature'].shape == (4, 6)
+        for i in range(3):
+            for j in range(2):
+                for k in range(4):
+                    assert return_value['air_temperature'][k, j+2*i] == T_array[i, j, k]
+
 
 class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
 
@@ -1064,6 +1101,44 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
                 input_state['air_temperature'].values)
         assert return_value['air_temperature_tendency'].shape == (2, 2, 4)
 
+    def test_restores_collected_horizontal_dimensions(self):
+        random = np.random.RandomState(0)
+        T_array = random.randn(3, 2, 4)
+        input_state = {
+            'air_temperature': DataArray(
+                T_array,
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['z', '*'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
+        raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
+        output_properties = {
+            'air_temperature_tendency': {
+                'dims_like': 'air_temperature',
+                'units': 'degK/s',
+            }
+        }
+        return_value = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert isinstance(return_value, dict)
+        assert len(return_value.keys()) == 1
+        assert isinstance(return_value['air_temperature_tendency'], DataArray)
+        assert return_value['air_temperature_tendency'].attrs['units'] is 'degK/s'
+        assert np.byte_bounds(
+            return_value['air_temperature_tendency'].values) == np.byte_bounds(
+            input_state['air_temperature'].values)
+        assert (return_value['air_temperature_tendency'].values.base is
+                input_state['air_temperature'].values)
+        assert return_value['air_temperature_tendency'].shape == (3, 2, 4)
+        assert np.all(return_value['air_temperature_tendency'] == T_array)
 
 if __name__ == '__main__':
     pytest.main([__file__])
