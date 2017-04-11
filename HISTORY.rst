@@ -12,6 +12,9 @@ Latest
 * Expanded tests.
 * Added function to put prognostic tendencies in diagnostic output.
 * NetCDFMonitor is actually working now, and has tests.
+* There are now helper functions for automatically extracting required numpy
+  arrays with correct dimensions and units from input state dictionaries. See
+  the note about _properties attributes in Breaking changes below.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -32,6 +35,9 @@ Breaking changes
   "inputs", "outputs" etc. lists which are auto-generated from these new
   dictionaries.
 * Class wrapping now works by inheritance, instead of by monkey patching methods.
+* All Exception classes (e.g. SharedKeyException) have been renamed to "Error"
+  classes (e.g. SharedKeyError) to be consistent with normal Python naming
+  conventions
 
 0.1.1 (2017-01-05)
 ------------------

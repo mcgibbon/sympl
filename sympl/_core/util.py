@@ -84,6 +84,7 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
     ensure_dims_like_are_satisfied(matches, property_dictionary)
     return out_dict
 
+
 def ensure_dims_like_are_satisfied(matches, property_dictionary):
     for quantity_name, properties in property_dictionary.items():
         if 'match_dims_like' in properties:
@@ -94,7 +95,6 @@ def ensure_dims_like_are_satisfied(matches, property_dictionary):
                         properties['match_dims_like'], quantity_name
                     ))
             like_name = properties['match_dims_like']
-            like_properties = property_dictionary[like_name]
             if not same_list(matches[quantity_name].keys(), matches[like_name].keys()):
                 raise InvalidPropertyDictError(
                     "quantity {} does not have the same wildcard ('x', 'y', 'z'"
@@ -112,6 +112,7 @@ def ensure_dims_like_are_satisfied(matches, property_dictionary):
                             like_name, matches[like_name][wildcard_dim],
                             wildcard_dim, quantity_name,
                             matches[quantity_name][wildcard_dim]))
+
 
 def restore_data_arrays_with_properties(
         raw_arrays, output_properties, input_state, input_properties):
