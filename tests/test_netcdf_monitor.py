@@ -296,7 +296,7 @@ def test_netcdf_monitor_raises_when_names_change_on_sequential_write():
             raise err
         else:
             raise AssertionError(
-                'Expected InvalidStateException but was not raised.')
+                'Expected InvalidStateError but was not raised.')
     finally:  # make sure we remove the output file
         if os.path.isfile('out.nc'):
             os.remove('out.nc')
@@ -321,7 +321,7 @@ def test_netcdf_monitor_raises_when_names_change_on_batch_write():
             raise err
         else:
             raise AssertionError(
-                'Expected InvalidStateException but was not raised.')
+                'Expected InvalidStateError but was not raised.')
     finally:  # make sure we remove the output file
         if os.path.isfile('out.nc'):
             os.remove('out.nc')

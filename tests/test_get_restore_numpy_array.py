@@ -2,7 +2,8 @@ import pytest
 from sympl import (
     DataArray, set_dimension_names, get_numpy_array,
     restore_dimensions, get_numpy_arrays_with_properties,
-    restore_data_arrays_with_properties, InvalidStateException)
+    restore_data_arrays_with_properties, InvalidStateError,
+    InvalidPropertyDictError)
 import numpy as np
 import unittest
 
@@ -588,10 +589,10 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         }
         try:
             return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidStateException:
+        except InvalidStateError:
             pass
         else:
-            raise AssertionError('should have raised InvalidStateException')
+            raise AssertionError('should have raised InvalidStateError')
 
     def test_creates_length_1_dimensions(self):
         T_array = np.zeros([4], dtype=np.float64) + 280.
@@ -701,10 +702,10 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         }
         try:
             get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidStateException:
+        except InvalidStateError:
             pass
         else:
-            raise AssertionError('should have raised InvalidStateException')
+            raise AssertionError('should have raised InvalidStateError')
 
     def test_converts_units(self):
         property_dictionary = {
@@ -759,7 +760,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         }
         try:
             return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        except ValueError:
+        except InvalidPropertyDictError:
             pass
         else:
             raise AssertionError('should have raised ValueError')
@@ -779,10 +780,10 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         }
         try:
             return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidStateException:
+        except InvalidStateError:
             pass
         else:
-            raise AssertionError('should have raised InvalidStateException')
+            raise AssertionError('should have raised InvalidStateError')
 
     def test_raises_if_no_units_undefined(self):
         property_dictionary = {
@@ -798,12 +799,12 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         }
         try:
             return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        except ValueError:
+        except InvalidPropertyDictError:
             pass
-        except InvalidStateException:
+        except InvalidStateError:
             pass
         else:
-            raise AssertionError('should have raised ValueError or InvalidStateException')
+            raise AssertionError('should have raised InvalidPropertyDictError or InvalidStateError')
 
     def test_raises_if_dims_property_not_specified(self):
         property_dictionary = {
@@ -820,32 +821,34 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         }
         try:
             get_numpy_arrays_with_properties(state, property_dictionary)
-        except ValueError:
+        except InvalidPropertyDictError:
             pass
         else:
             raise AssertionError('should have raised ValueError')
 
     def test_dims_like_accepts_valid_case(self):
-        set_dimension_names(z=['mid_levels', 'full_levels'])
+        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+                            z=['mid_levels', 'interface_levels'])
         property_dictionary = {
             'air_temperature': {
                 'dims': ['x', 'y', 'mid_levels'],
                 'units': 'degK',
             },
             'air_pressure': {
-                'dims': ['x', 'y', 'full_levels'],
+                'dims': ['x', 'y', 'interface_levels'],
                 'units': 'Pa',
                 'match_dims_like': 'air_temperature'
             },
         }
         state = {
             'air_temperature': DataArray(
-                np.zeros([4], dtype=np.float64),
-                dims=['z'],
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'mid_levels'],
                 attrs={'units': 'degK'},
             ),
             'air_pressure': DataArray(
-                np.zeros([2,2,4], dtype=np.float64),
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'interface_levels'],
                 attrs={'units': 'Pa'}
             ),
         }
@@ -855,6 +858,194 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert 'air_temperature' in return_value.keys()
         assert 'air_pressure' in return_value.keys()
 
+    def test_dims_like_rejects_mismatched_dimensions(self):
+        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+                            z=['mid_levels', 'interface_levels'])
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'mid_levels'],
+                'units': 'degK',
+            },
+            'air_pressure': {
+                'dims': ['x', 'y', 'interface_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'mid_levels'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_interface', 'y', 'interface_levels'],
+                attrs={'units': 'Pa'}
+            ),
+        }
+        try:
+            get_numpy_arrays_with_properties(state, property_dictionary)
+        except InvalidStateError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidStateError')
+
+    def test_dims_like_raises_if_quantity_not_in_property_dict(self):
+        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+                            z=['mid_levels', 'interface_levels'])
+        property_dictionary = {
+            'air_pressure': {
+                'dims': ['x', 'y', 'interface_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'mid_levels'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_interface', 'y', 'interface_levels'],
+                attrs={'units': 'Pa'}
+            ),
+        }
+        try:
+            get_numpy_arrays_with_properties(state, property_dictionary)
+        except InvalidPropertyDictError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidPropertyDictError')
+
+    def test_dims_like_raises_if_same_dimensions_not_matched(self):
+        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+                            z=['mid_levels', 'interface_levels'])
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x_cell_center', 'y', 'mid_levels'],
+                'units': 'K',
+            },
+            'air_pressure': {
+                'dims': ['x', 'y', 'interface_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'mid_levels'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_interface', 'y', 'interface_levels'],
+                attrs={'units': 'Pa'}
+            ),
+        }
+        try:
+            get_numpy_arrays_with_properties(state, property_dictionary)
+        except InvalidPropertyDictError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidPropertyDictError')
+
+    def test_dims_like_raises_if_same_dimensions_not_matched_alternate(self):
+        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+                            z=['mid_levels', 'interface_levels'])
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'mid_levels'],
+                'units': 'K',
+            },
+            'air_pressure': {
+                'dims': ['x_cell_interface', 'y', 'interface_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'mid_levels'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_interface', 'y', 'interface_levels'],
+                attrs={'units': 'Pa'}
+            ),
+        }
+        try:
+            get_numpy_arrays_with_properties(state, property_dictionary)
+        except InvalidPropertyDictError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidPropertyDictError')
+
+    def test_match_dims_like_raises_if_fewer_dimensions_matched(self):
+        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+                            z=['mid_levels', 'interface_levels'])
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'mid_levels'],
+                'units': 'K',
+            },
+            'air_pressure': {
+                'dims': ['y', 'interface_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4], dtype=np.float64),
+                dims=['x_cell_center', 'y', 'mid_levels'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2, 4], dtype=np.float64),
+                dims=['y', 'interface_levels'],
+                attrs={'units': 'Pa'}
+            ),
+        }
+        try:
+            get_numpy_arrays_with_properties(state, property_dictionary)
+        except InvalidPropertyDictError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidPropertyDictError')
+
+
+class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        set_dimension_names(x=(), y=(), z=())
+
+    def test_returns_dict(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2,2,4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
+        output_properties = {
+
+        }
 
 
 if __name__ == '__main__':

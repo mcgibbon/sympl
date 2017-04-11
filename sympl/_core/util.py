@@ -1,4 +1,5 @@
-from .exceptions import SharedKeyException, InvalidStateException
+from .exceptions import (
+    SharedKeyError, InvalidStateError, InvalidPropertyDictError)
 from .constants import default_constants
 from .array import DataArray
 from six import string_types
@@ -15,6 +16,10 @@ except ImportError:
             return signature_or_function
 
 dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
+
+
+class NoDimensionMatchError(Exception):
+    pass
 
 
 def get_numpy_arrays_with_properties(state, property_dictionary):
@@ -44,31 +49,69 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
 
     Raises
     ------
-    InvalidStateException
+    InvalidStateError
         If a DataArray in the state is missing an explicitly-specified
         dimension defined in its properties (dimension names other than
         'x', 'y', 'z', or '*'), or if the state is missing a required quantity.
-    ValueError
+    InvalidPropertyError
         If a quantity in property_dictionary is missing values for "dims" or
         "units".
     """
     out_dict = {}
+    matches = {}
     for quantity_name, properties in property_dictionary.items():
         if 'dims' not in properties:
-            raise ValueError('dims not specified for quantity {}'.format(quantity_name))
+            raise InvalidPropertyDictError(
+                'dims not specified for quantity {}'.format(quantity_name))
         if 'units' not in properties:
-            raise ValueError('units not specified for quantity {}'.format(quantity_name))
+            raise InvalidPropertyDictError(
+                'units not specified for quantity {}'.format(quantity_name))
+        if quantity_name not in state.keys():
+            raise InvalidStateError(
+                'state is missing quantity {}'.format(quantity_name))
+        if 'units' not in state[quantity_name].attrs:
+            raise InvalidStateError(
+                'quantity {} is missing units attribute'.format(quantity_name))
         try:
-            out_dict[quantity_name] = get_numpy_array(
+            out_dict[quantity_name], matches[quantity_name] = get_numpy_array(
                 state[quantity_name].to_units(properties['units']),
-                out_dims=properties['dims'])
-        except ValueError as err:
-            raise InvalidStateException('{} does not have explicit dimension {}'.format(
-                quantity_name, err))
-        except KeyError as err:
-            raise InvalidStateException('state is missing quantity {}'.format(err))
+                out_dims=properties['dims'], return_wildcard_matches=True)
+        except NoDimensionMatchError as err:
+            raise InvalidStateError(
+                'dimension {} is missing from quantity {}'.format(
+                    err, quantity_name)
+            )
+    ensure_dims_like_are_satisfied(matches, property_dictionary)
     return out_dict
 
+def ensure_dims_like_are_satisfied(matches, property_dictionary):
+    for quantity_name, properties in property_dictionary.items():
+        if 'match_dims_like' in properties:
+            if properties['match_dims_like'] not in property_dictionary.keys():
+                raise InvalidPropertyDictError(
+                    'quantity {} is not specified in property dictionary, '
+                    'but is referred to by {} in match_dims_like'.format(
+                        properties['match_dims_like'], quantity_name
+                    ))
+            like_name = properties['match_dims_like']
+            like_properties = property_dictionary[like_name]
+            if not same_list(matches[quantity_name].keys(), matches[like_name].keys()):
+                raise InvalidPropertyDictError(
+                    "quantity {} does not have the same wildcard ('x', 'y', 'z'"
+                    ", or '*') dimensions as {} despite being referred to in"
+                    "match_dims_like.".format(like_name, quantity_name)
+                )
+            for wildcard_dim in matches[quantity_name].keys():
+                # We must use == because we need the dim order to be the same
+                if not (matches[quantity_name][wildcard_dim] ==
+                        matches[like_name][wildcard_dim]):
+                    raise InvalidStateError(
+                        'quantity {} matches dimensions {} for direction {}, but'
+                        'is referred to in match_dims_like by quantity {} with matches'
+                        '{}'.format(
+                            like_name, matches[like_name][wildcard_dim],
+                            wildcard_dim, quantity_name,
+                            matches[quantity_name][wildcard_dim]))
 
 def restore_data_arrays_with_properties(
         raw_arrays, output_properties, input_state, input_properties):
@@ -319,16 +362,16 @@ def update_dict_by_adding_another(dict1, dict2):
 
 def ensure_no_shared_keys(dict1, dict2):
     """
-    Raises SharedKeyException if there exists a key present in both
+    Raises SharedKeyError if there exists a key present in both
     dictionaries.
     """
     shared_keys = set(dict1.keys()).intersection(dict2.keys())
     if len(shared_keys) > 0:
-        raise SharedKeyException(
+        raise SharedKeyError(
             'unexpected shared keys: {}'.format(shared_keys))
 
 
-def get_numpy_array(data_array, out_dims):
+def get_numpy_array(data_array, out_dims, return_wildcard_matches=False):
     """
     Retrieve a numpy array with the desired dimensions and dimension order
     from the given DataArray, using transpose and creating length 1 dimensions
@@ -346,6 +389,10 @@ def get_numpy_array(data_array, out_dims):
         :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
         which is the flattened collection of all dimensions not explicitly
         listed in out_dims, including any dimensions with unknown direction.
+    return_wildcard_matches : bool, optional
+        If True, will additionally return a dictionary whose keys are direciton
+        wildcards ('x', 'y', 'z', or '*') and values are lists of matched
+        dimensions in the order they appear.
 
     Returns
     -------
@@ -361,18 +408,29 @@ def get_numpy_array(data_array, out_dims):
 
     """
     if (len(data_array.values.shape) == 0) and (len(out_dims) == 0):
-        return data_array.values  # special case, 0-dimensional scalar array
-    current_dim_names = dim_names.copy()
-    for dim in out_dims:
-        if dim not in ('x', 'y', 'z', '*'):
-            current_dim_names[dim] = [dim]
-    direction_to_names = get_input_array_dim_names(data_array, out_dims, current_dim_names)
-    target_dimension_order = get_target_dimension_order(out_dims, direction_to_names)
-    slices_or_none = get_slices_and_placeholder_nones(
-        data_array, out_dims, direction_to_names)
-    final_shape = get_final_shape(data_array, out_dims, direction_to_names)
-    return np.reshape(data_array.transpose(
-        *target_dimension_order).values[slices_or_none], final_shape)
+        direction_to_names = {}  # required in case we need wildcard_matches
+        return_array = data_array.values  # special case, 0-dimensional scalar array
+    else:
+        current_dim_names = dim_names.copy()
+        for dim in out_dims:
+            if dim not in ('x', 'y', 'z', '*'):
+                current_dim_names[dim] = [dim]
+        direction_to_names = get_input_array_dim_names(
+            data_array, out_dims, current_dim_names)
+        target_dimension_order = get_target_dimension_order(
+            out_dims, direction_to_names)
+        slices_or_none = get_slices_and_placeholder_nones(
+            data_array, out_dims, direction_to_names)
+        final_shape = get_final_shape(data_array, out_dims, direction_to_names)
+        return_array = np.reshape(data_array.transpose(
+            *target_dimension_order).values[slices_or_none], final_shape)
+    if return_wildcard_matches:
+        wildcard_matches = {
+            key: value for key, value in direction_to_names.items()
+            if key in ('x', 'y', 'z', '*')}
+        return return_array, wildcard_matches
+    else:
+        return return_array
 
 
 def get_input_array_dim_names(data_array, out_dims, dim_names):
@@ -393,7 +451,7 @@ def get_input_array_dim_names(data_array, out_dims, dim_names):
                     input_array_dim_names[direction].append(dim)
             if (direction not in ('x', 'y', 'z', '*') and
                     len(input_array_dim_names[direction]) == 0):
-                raise ValueError(direction)
+                raise NoDimensionMatchError(direction)
     if '*' in out_dims:
         matching_dims = set(
             data_array.dims).difference(set.union(set([]), *input_array_dim_names.values()))

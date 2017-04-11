@@ -5,7 +5,8 @@ from ._core.base_components import (
 )
 from ._core.timestepping import TimeStepper, Leapfrog, AdamsBashforth
 from ._core.exceptions import (
-    InvalidStateException, SharedKeyException, IOException, DependencyException)
+    InvalidStateError, SharedKeyError, DependencyError,
+    InvalidPropertyDictError)
 from ._core.array import DataArray
 from ._core.constants import default_constants
 from ._core.util import (
@@ -23,7 +24,8 @@ __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite,
     TimeStepper, Leapfrog, AdamsBashforth,
-    InvalidStateException, SharedKeyException, IOException, DependencyException,
+    InvalidStateError, SharedKeyError, DependencyError,
+    InvalidPropertyDictError,
     DataArray,
     default_constants,
     UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,

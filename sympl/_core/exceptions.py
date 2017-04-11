@@ -1,14 +1,14 @@
-class InvalidStateException(Exception):
+class InvalidStateError(Exception):
     pass
 
 
-class SharedKeyException(Exception):
+class InvalidPropertyDictError(Exception):
     pass
 
 
-class IOException(Exception):
+class SharedKeyError(Exception):
     pass
 
 
-class DependencyException(Exception):
+class DependencyError(Exception):
     pass

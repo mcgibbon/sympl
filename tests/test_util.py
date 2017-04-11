@@ -162,7 +162,7 @@ def test_ensure_no_shared_keys_with_shared_keys():
         raise err
     else:
         raise AssertionError(
-            'No exception raised but expected SharedKeyException.')
+            'No exception raised but expected SharedKeyError.')
 
 
 class CombineDimensionsTests(unittest.TestCase):

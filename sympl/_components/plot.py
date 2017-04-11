@@ -1,5 +1,5 @@
 from .._core.base_components import Monitor
-from .._core.exceptions import DependencyException
+from .._core.exceptions import DependencyError
 
 
 class PlotFunctionMonitor(Monitor):
@@ -25,7 +25,7 @@ class PlotFunctionMonitor(Monitor):
         try:
             import matplotlib.pyplot as plt
         except ImportError:
-            raise DependencyException(
+            raise DependencyError(
                 'matplotlib must be installed to use PlotFunctionMonitor')
         if interactive:
             plt.ion()

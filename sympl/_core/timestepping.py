@@ -256,7 +256,7 @@ class Leapfrog(TimeStepper):
 
         Raises
         ------
-        SharedKeyException
+        SharedKeyError
             If a Diagnostic object has an output that is
             already in the state at the start of the timestep.
         ValueError

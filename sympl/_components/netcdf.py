@@ -1,6 +1,6 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import (
-    DependencyException, InvalidStateException, IOException)
+    DependencyError, InvalidStateError)
 from .._core.units import from_unit_to_another
 from .._core.array import DataArray
 from .._core.util import same_list, datetime64_to_datetime
@@ -19,7 +19,7 @@ if nc4 is None:
     class NetCDFMonitor(Monitor):
 
         def __init__(self, filename):
-            raise DependencyException(
+            raise DependencyError(
                 'netCDF4-python must be installed to use NetCDFMonitor')
 
         def store(self, state):
@@ -73,7 +73,7 @@ else:
 
             Raises
             ------
-            InvalidStateException
+            InvalidStateError
                 If state is not a valid input for the Diagnostic instance.
             """
             if self._store_names is not None:
@@ -113,7 +113,7 @@ else:
 
             Raises
             ------
-            InvalidStateException
+            InvalidStateError
                 If the cached states do not meet the requirements.
             """
             if len(self._cached_state_dict) == 0:
@@ -125,7 +125,7 @@ else:
                 reference_keys = reference_state.keys()
             for state in self._cached_state_dict.values():
                 if not same_list(list(state.keys()), list(reference_keys)):
-                    raise InvalidStateException(
+                    raise InvalidStateError(
                         'NetCDFMonitor was passed a different set of '
                         'quantities for different times: {} vs. {}'.format(
                             list(reference_keys), list(state.keys())))
@@ -141,7 +141,7 @@ else:
 
             Raises
             ------
-            InvalidStateException
+            InvalidStateError
                 If cached states do not all have the same quantities
                 as every other cached and written state.
             """
@@ -197,7 +197,7 @@ class RestartMonitor(Monitor):
         """
         new_filename = self._filename + '.new'
         if os.path.isfile(new_filename):
-            raise IOException('Filename {} already exists'.format(new_filename))
+            raise IOError('Filename {} already exists'.format(new_filename))
         netcdf_monitor = NetCDFMonitor(new_filename)
         netcdf_monitor.store(state)
         netcdf_monitor.write()
@@ -266,7 +266,7 @@ def ensure_variable_exists(dataset, name, data):
     be a DataArray.
 
     Ensures there is a Variable in the dataset that corresponds to the given
-    name and data, and creates it if not. Raises IOException if there is already
+    name and data, and creates it if not. Raises IOError if there is already
     a Variable but it is incompatible with the data."""
     if name not in dataset.variables:
         create_variable(dataset, name, data)
@@ -284,8 +284,8 @@ def create_variable(dataset, name, data):
                 else:
                     ensure_dimension_exists(
                         dataset, data.dims[i], data.values.shape[i])
-            except IOException as err:
-                raise IOException(
+            except IOError as err:
+                raise IOError(
                     'Error while creating {}: {}'.format(name, err))
         dataset.createVariable(
             name, data.values.dtype, data.dims)
@@ -297,16 +297,16 @@ def create_variable(dataset, name, data):
 
 def ensure_variable_is_compatible(variable, name, data):
     if variable.dimensions != data.dims:
-        raise IOException(
+        raise IOError(
             'Dimension in file is {} but on variable is {}'.format(
                 variable.dimensions, data.dims))
     for key, value in data.attrs.items():
         if key not in variable.ncattrs():
-            raise InvalidStateException(
+            raise InvalidStateError(
                 'State has attr {} for quantity {} but this is not '
                 'present in the netCDF file'.format(key, name))
         elif value != variable.getncattr(key):
-            raise InvalidStateException(
+            raise InvalidStateError(
                 'State has attr {} with value {} for quantity {} but '
                 'the value in the netCDF file is {}'.format(
                     key, value, name,
@@ -317,11 +317,11 @@ def ensure_dimension_exists(dataset, dim_name, dim_length):
     if dim_name in dataset.dimensions:
         if dim_length is None:
             if not dataset.dimensions[dim_name].isunlimited():
-                raise IOException(
+                raise IOError(
                     'Dimension {} is unlimited in file but dim_length {} '
                     'is given'.format(dim_name, dim_length))
         elif dim_length != dataset.dimensions[dim_name].size:
-            raise IOException(
+            raise IOError(
                 'Dimension {} is length {} in file but dim_length {} '
                 'is given'.format(
                     dim_name, dataset.dimensions[dim_name].size, dim_length))

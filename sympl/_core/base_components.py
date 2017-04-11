@@ -1,6 +1,6 @@
 import abc
 from .util import ensure_no_shared_keys, update_dict_by_adding_another
-from .exceptions import SharedKeyException
+from .exceptions import SharedKeyError
 
 
 class Implicit(object):
@@ -98,7 +98,7 @@ class Implicit(object):
         ------
         KeyError
             If a required quantity is missing from the state.
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for the Implicit instance
             for other reasons.
         """
@@ -194,7 +194,7 @@ class Prognostic(object):
         ------
         KeyError
             If a required quantity is missing from the state.
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
 
@@ -271,7 +271,7 @@ class Diagnostic(object):
         ------
         KeyError
             If a required quantity is missing from the state.
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
 
@@ -308,7 +308,7 @@ class Monitor(object):
 
         Raises
         ------
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for the Diagnostic instance.
         """
 
@@ -336,7 +336,7 @@ class ComponentComposite(object):
 
         Raises
         ------
-        SharedKeyException
+        SharedKeyError
             If two components compute the same diagnostic quantity.
         """
         if self.component_class is not None:
@@ -345,7 +345,7 @@ class ComponentComposite(object):
         if hasattr(self, 'diagnostics'):
             if (len(self.diagnostics) !=
                     sum([len(comp.diagnostics) for comp in self._components])):
-                raise SharedKeyException(
+                raise SharedKeyError(
                     'Two components in a composite should not compute '
                     'the same diagnostic')
 
@@ -400,12 +400,12 @@ class PrognosticComposite(ComponentComposite):
 
         Raises
         ------
-        SharedKeyException
+        SharedKeyError
             If multiple Prognostic objects contained in the
             collection return the same diagnostic quantity.
         KeyError
             If a required quantity is missing from the state.
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for a Prognostic instance.
         """
         return_tendencies = {}
@@ -459,12 +459,12 @@ class DiagnosticComposite(ComponentComposite):
 
         Raises
         ------
-        SharedKeyException
+        SharedKeyError
             If multiple Diagnostic objects contained in the
             collection return the same diagnostic quantity.
         KeyError
             If a required quantity is missing from the state.
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for a Diagnostic instance.
         """
         return_diagnostics = {}
@@ -502,7 +502,7 @@ class MonitorComposite(ComponentComposite):
         ------
         KeyError
             If a required quantity is missing from the state.
-        InvalidStateException
+        InvalidStateError
             If state is not a valid input for a Monitor instance.
         """
         for monitor in self._components:
