@@ -1,4 +1,4 @@
-from .exceptions import SharedKeyException
+from .exceptions import SharedKeyException, InvalidStateException
 from .constants import default_constants
 from .array import DataArray
 from six import string_types
@@ -18,36 +18,80 @@ dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
 
 
 def get_numpy_arrays_with_properties(property_dictionary, state):
+    """
+    Parameters
+    ----------
+    property_dictionary : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with properties for those quantities. The property "dims" must be
+        present, indicating the dimensions that the quantity must have when it
+        is returned as a numpy array. The property "units" must be present,
+        and will be used to check the units on the input state and perform
+        a conversion if necessary. If the optional property "match_dims_like"
+        is present, its value should be a quantity also present in
+        property_dictionary, and it will be ensured that wildcard-matched
+        dimensions ('x', 'y', 'z', '*') for this quantity are the same as the
+        specified quantity.
+    state : dict
+        A state dictionary.
+
+    Returns
+    -------
+    out_dict : dict
+        A dictionary whose keys are quantity names and values are numpy arrays
+        containing the data for those quantities, as specified by
+        property_dictionary.
+
+    Raises
+    ------
+    InvalidStateException
+        If a DataArray in the state is missing an explicitly-specified
+        dimension defined in its properties (dimension names other than
+        'x', 'y', 'z', or '*'), or if the state is missing a required quantity.
+    ValueError
+        If a quantity in property_dictionary is missing values for "dims" or
+        "units".
+    """
     out_dict = {}
     for quantity_name, properties in property_dictionary.items():
-        out_dict[quantity_name] = get_numpy_array(
-            state[quantity_name].to_units(properties['units']),
-            out_dims=properties['dims'])
+        if 'dims' not in properties:
+            raise ValueError('dims not specified for quantity {}'.format(quantity_name))
+        if 'units' not in properties:
+            raise ValueError('units not specified for quantity {}'.format(quantity_name))
+        try:
+            out_dict[quantity_name] = get_numpy_array(
+                state[quantity_name].to_units(properties['units']),
+                out_dims=properties['dims'])
+        except ValueError as err:
+            raise InvalidStateException('{} does not have explicit dimension {}'.format(
+                quantity_name, err.message))
+        except KeyError as err:
+            raise InvalidStateException('state is missing quantity {}'.format(err.message))
     return out_dict
 
 
 def restore_data_arrays_with_properties(
-        raw_arrays, output_property_dict, input_property_dict, input_state):
+        raw_arrays, output_properties, input_state, input_properties):
     """
     Parameters
     ----------
     raw_arrays : dict
         A dictionary whose keys are quantity names and values are numpy arrays
         containing the data for those quantities.
-    output_property_dict : dict
+    output_properties : dict
         A dictionary whose keys are quantity names and values are dictionaries
-        with properties for those quantities. The propertiy "dims_like" must be
+        with properties for those quantities. The property "dims_like" must be
         present, and specifies an input quantity that the dimensions of the
         output quantity should be like. All other properties are included as
         attributes on the output DataArray for that quantity.
-    input_property_dict : dict
+    input_state : dict
+        A state dictionary that was used as input to a component for which
+        DataArrays are being restored.
+    input_properties : dict
         A dictionary whose keys are quantity names and values are dictionaries
         with input properties for those quantities. The property "dims" must be
         present, indicating the dimensions that the quantity was transformed to
         when taken as input to a component.
-    input_state : dict
-        A state dictionary that was used as input to a component for which
-        DataArrays are being restored.
 
     Returns
     -------
@@ -58,9 +102,9 @@ def restore_data_arrays_with_properties(
     """
     out_dict = {}
     for quantity_name, array in raw_arrays.items():
-        attrs = output_property_dict[quantity_name].copy()
+        attrs = output_properties[quantity_name].copy()
         dims_like = attrs.pop('dims_like')
-        from_dims = input_property_dict[dims_like]
+        from_dims = input_properties[dims_like]
         result_like = input_state[dims_like]
         out_dict[quantity_name] = restore_dimensions(
             array,
@@ -218,7 +262,6 @@ class TendencyInDiagnosticsWrapper(object):
         self._tendency_label = label
         self._tendency_diagnostic_properties = {}
         for quantity_name, properties in prognostic.tendency_properties.items():
-            print('setting property for {}'.format(quantity_name))
             diagnostic_name = 'tendency_of_{}_due_to_{}'.format(quantity_name, label)
             self._tendency_diagnostic_properties[diagnostic_name] = properties
 
@@ -317,6 +360,8 @@ def get_numpy_array(data_array, out_dims):
         in data_array, or data_array's dimensions are invalid in some way.
 
     """
+    if (len(data_array.values.shape) == 0) and (len(out_dims) == 0):
+        return data_array.values  # special case, 0-dimensional scalar array
     current_dim_names = dim_names.copy()
     for dim in out_dims:
         if dim not in ('x', 'y', 'z', '*'):
@@ -346,6 +391,9 @@ def get_input_array_dim_names(data_array, out_dims, dim_names):
             for dim in data_array.dims:
                 if dim in matching_dims:
                     input_array_dim_names[direction].append(dim)
+            if (direction not in ('x', 'y', 'z', '*') and
+                    len(input_array_dim_names[direction]) == 0):
+                raise ValueError(direction)
     if '*' in out_dims:
         matching_dims = set(
             data_array.dims).difference(set.union(set([]), *input_array_dim_names.values()))
