@@ -855,39 +855,6 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert 'air_temperature' in return_value.keys()
         assert 'air_pressure' in return_value.keys()
 
-    def test_dims_like_rejects_invalid_case(self):
-        set_dimension_names(z=['mid_levels', 'full_levels'])
-        property_dictionary = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'mid_levels'],
-                'units': 'degK',
-            },
-            'air_pressure': {
-                'dims': ['x', 'y', 'full_levels'],
-                'units': 'Pa',
-                'match_dims_like': 'air_temperature'
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                np.zeros([4], dtype=np.float64),
-                dims=['x', 'y', 'mid_levels'],
-                attrs={'units': 'degK'},
-            ),
-            'air_pressure': DataArray(
-                np.zeros([2,2,4], dtype=np.float64),
-                dims=['x', 'y', 'mid_levels'],
-                attrs={'units': 'Pa'}
-            ),
-        }
-        try:
-            get_numpy_arrays_with_properties(state, property_dictionary)
-        except
-        assert isinstance(return_value, dict)
-        assert len(return_value.keys()) == 2
-        assert 'air_temperature' in return_value.keys()
-        assert 'air_pressure' in return_value.keys()
-
 
 
 if __name__ == '__main__':
