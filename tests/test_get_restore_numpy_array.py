@@ -1028,10 +1028,10 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
     def tearDown(self):
         set_dimension_names(x=(), y=(), z=())
 
-    def test_returns_dict(self):
+    def test_returns_simple_value(self):
         input_state = {
             'air_temperature': DataArray(
-                np.zeros([2,2,4]),
+                np.zeros([2, 2, 4]),
                 dims=['x', 'y', 'z'],
                 attrs={'units': 'degK'},
             )
@@ -1043,9 +1043,26 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
             }
         }
         raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
+        raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
         output_properties = {
-
+            'air_temperature_tendency': {
+                'dims_like': 'air_temperature',
+                'units': 'degK/s',
+            }
         }
+        return_value = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert isinstance(return_value, dict)
+        assert len(return_value.keys()) == 1
+        assert isinstance(return_value['air_temperature_tendency'], DataArray)
+        assert return_value['air_temperature_tendency'].attrs['units'] is 'degK/s'
+        assert np.byte_bounds(
+            return_value['air_temperature_tendency'].values) == np.byte_bounds(
+            input_state['air_temperature'].values)
+        assert (return_value['air_temperature_tendency'].values.base is
+                input_state['air_temperature'].values)
+        assert return_value['air_temperature_tendency'].shape == (2, 2, 4)
 
 
 if __name__ == '__main__':

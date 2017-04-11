@@ -1,5 +1,5 @@
 import pytest
-from sympl import NetCDFMonitor, DataArray, InvalidStateException
+from sympl import NetCDFMonitor, DataArray, InvalidStateError
 import os
 from datetime import datetime, timedelta
 import numpy as np
@@ -290,7 +290,7 @@ def test_netcdf_monitor_raises_when_names_change_on_sequential_write():
         monitor.store(current_state)
         try:
             monitor.write()
-        except InvalidStateException:
+        except InvalidStateError:
             pass
         except Exception as err:
             raise err
@@ -315,7 +315,7 @@ def test_netcdf_monitor_raises_when_names_change_on_batch_write():
         monitor.store(current_state)
         try:
             monitor.write()
-        except InvalidStateException:
+        except InvalidStateError:
             pass
         except Exception as err:
             raise err

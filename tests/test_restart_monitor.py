@@ -1,9 +1,8 @@
 import pytest
-from sympl import RestartMonitor, DataArray, InvalidStateException
+from sympl import RestartMonitor, DataArray, InvalidStateError
 import os
 from datetime import datetime, timedelta
 import numpy as np
-import xarray as xr
 
 random = np.random.RandomState(0)
 

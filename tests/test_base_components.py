@@ -2,9 +2,8 @@ import pytest
 import mock
 from sympl import (
     Prognostic, Diagnostic, Monitor, PrognosticComposite, DiagnosticComposite,
-    MonitorComposite, SharedKeyException, DataArray
+    MonitorComposite, SharedKeyError, DataArray
 )
-
 
 def same_list(list1, list2):
     return (len(list1) == len(list2) and all(
@@ -197,7 +196,7 @@ def test_prognostic_composite_ensures_valid_state():
     prognostic2.diagnostic_properties = {'diagnostic1': {}}
     try:
         PrognosticComposite(prognostic1, prognostic2)
-    except SharedKeyException:
+    except SharedKeyError:
         pass
     except Exception as err:
         raise err
@@ -262,7 +261,7 @@ def test_diagnostic_composite_ensures_valid_state():
     diagnostic2.diagnostic_properties = {'diagnostic1': {}}
     try:
         DiagnosticComposite(diagnostic1, diagnostic2)
-    except SharedKeyException:
+    except SharedKeyError:
         pass
     except Exception as err:
         raise err

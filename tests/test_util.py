@@ -1,7 +1,7 @@
 import pytest
 from sympl import (
     UpdateFrequencyWrapper, Prognostic, replace_none_with_default,
-    default_constants, ensure_no_shared_keys, SharedKeyException, DataArray,
+    default_constants, ensure_no_shared_keys, SharedKeyError, DataArray,
     combine_dimensions, set_dimension_names,
     TendencyInDiagnosticsWrapper, get_numpy_array,
     restore_dimensions)
@@ -9,7 +9,6 @@ from sympl._core.util import update_dict_by_adding_another
 from datetime import datetime, timedelta
 import numpy as np
 import unittest
-
 
 def same_list(list1, list2):
     return (len(list1) == len(list2) and all(
@@ -156,7 +155,7 @@ def test_ensure_no_shared_keys_with_no_shared_keys():
 def test_ensure_no_shared_keys_with_shared_keys():
     try:
         ensure_no_shared_keys({'a': 1, 'b': 2}, {'e': 2, 'a': 1})
-    except SharedKeyException:
+    except SharedKeyError:
         pass
     except Exception as err:
         raise err

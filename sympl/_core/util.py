@@ -147,7 +147,7 @@ def restore_data_arrays_with_properties(
     for quantity_name, array in raw_arrays.items():
         attrs = output_properties[quantity_name].copy()
         dims_like = attrs.pop('dims_like')
-        from_dims = input_properties[dims_like]
+        from_dims = input_properties[dims_like]['dims']
         result_like = input_state[dims_like]
         out_dict[quantity_name] = restore_dimensions(
             array,
@@ -155,6 +155,64 @@ def restore_data_arrays_with_properties(
             result_like=result_like,
             result_attrs=attrs)
     return out_dict
+
+
+def restore_dimensions(array, from_dims, result_like, result_attrs=None):
+    """
+    Restores a numpy array to a DataArray with similar dimensions to a reference
+    Data Array. This is meant to be the reverse of get_numpy_array.
+
+    Parameters
+    ----------
+    array : ndarray
+        The numpy array from which to create a DataArray
+    from_dims : list of str
+        The directions describing the numpy array. If being used to reverse
+        a call to get_numpy_array, this should be the same as the out_dims
+        argument used in the call to get_numpy_array.
+        'x', 'y', and 'z' indicate any axes
+        registered to those directions with
+        :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
+        which is the flattened collection of all dimensions not explicitly
+        listed in out_dims, including any dimensions with unknown direction.
+    result_like : DataArray
+        A reference array with the desired output dimensions of the DataArray.
+        If being used to reverse a call to get_numpy_array, this should be
+        the same as the data_array argument used in the call to get_numpy_array.
+    result_attrs : dict, optional
+        A dictionary with the desired attributes of the output DataArray. If
+        not given, no attributes will be set.
+
+    Returns
+    -------
+    data_array : DataArray
+        The output DataArray with the same dimensions as the reference
+        DataArray.
+
+    See Also
+    --------
+    :py:function:~sympl.get_numpy_array: : Retrieves a numpy array with desired
+        dimensions from a given DataArray.
+    """
+    current_dim_names = dim_names.copy()
+    for dim in from_dims:
+        if dim not in ('x', 'y', 'z', '*'):
+            current_dim_names[dim] = [dim]
+    direction_to_names = get_input_array_dim_names(
+        result_like, from_dims, current_dim_names)
+    original_shape = []
+    original_coords = []
+    for direction in from_dims:
+        if direction in direction_to_names.keys():
+            for name in direction_to_names[direction]:
+                original_shape.append(len(result_like.coords[name]))
+                original_coords.append(result_like.coords[name])
+    data_array = DataArray(
+        np.reshape(array, original_shape), coords=original_coords).transpose(
+            *list(result_like.coords))
+    if result_attrs is not None:
+        data_array.attrs = result_attrs
+    return data_array
 
 
 def datetime64_to_datetime(dt64):
@@ -516,60 +574,3 @@ def get_final_shape(data_array, out_dims, direction_to_names):
                 np.product([len(data_array.coords[name])
                             for name in direction_to_names[direction]]))
     return final_shape
-
-
-def restore_dimensions(array, from_dims, result_like, result_attrs=None):
-    """
-    Restores a numpy array to a DataArray with similar dimensions to a reference
-    Data Array. This is meant to be the reverse of get_numpy_array.
-
-    Parameters
-    ----------
-    array : ndarray
-        The numpy array from which to create a DataArray
-    from_dims : list of str
-        The directions describing the numpy array. If being used to reverse
-        a call to get_numpy_array, this should be the same as the out_dims
-        argument used in the call to get_numpy_array.
-        'x', 'y', and 'z' indicate any axes
-        registered to those directions with
-        :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
-        which is the flattened collection of all dimensions not explicitly
-        listed in out_dims, including any dimensions with unknown direction.
-    result_like : DataArray
-        A reference array with the desired output dimensions of the DataArray.
-        If being used to reverse a call to get_numpy_array, this should be
-        the same as the data_array argument used in the call to get_numpy_array.
-    result_attrs : dict, optional
-        A dictionary with the desired attributes of the output DataArray. If
-        not given, no attributes will be set.
-
-    Returns
-    -------
-    data_array : DataArray
-        The output DataArray with the same dimensions as the reference
-        DataArray.
-
-    See Also
-    --------
-    :py:function:~sympl.get_numpy_array: : Retrieves a numpy array with desired
-        dimensions from a given DataArray.
-    """
-    current_dim_names = dim_names.copy()
-    for dim in from_dims:
-        if dim not in ('x', 'y', 'z', '*'):
-            current_dim_names[dim] = [dim]
-    direction_to_names = get_input_array_dim_names(result_like, from_dims, current_dim_names)
-    original_shape = []
-    original_coords = []
-    for direction in from_dims:
-        if direction in direction_to_names.keys():
-            for name in direction_to_names[direction]:
-                original_shape.append(len(result_like.coords[name]))
-                original_coords.append(result_like.coords[name])
-    data_array = DataArray(
-        np.reshape(array, original_shape), coords=original_coords).transpose(
-            *list(result_like.coords))
-    if result_attrs is not None:
-        data_array.attrs = result_attrs
-    return data_array
