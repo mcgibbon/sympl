@@ -491,7 +491,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary, state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
@@ -514,7 +514,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary, state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
@@ -536,7 +536,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary, state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
@@ -561,7 +561,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary, state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
@@ -587,7 +587,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            return_value = get_numpy_arrays_with_properties(property_dictionary, state)
+            return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         except InvalidStateException:
             pass
         else:
@@ -608,8 +608,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                        state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
@@ -638,8 +637,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'Pa'},
             )
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                        state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert 'air_temperature' in return_value.keys()
@@ -671,12 +669,13 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'm/s'}
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                        state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 2
         assert 'air_temperature' in return_value.keys()
         assert 'air_pressure' in return_value.keys()
+        assert np.all(return_value['air_temperature'] == 0.)
+        assert np.all(return_value['air_pressure'] == 0.)
 
     def test_raises_exception_on_missing_quantity(self):
         property_dictionary = {
@@ -701,7 +700,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            get_numpy_arrays_with_properties(property_dictionary, state)
+            get_numpy_arrays_with_properties(state, property_dictionary)
         except InvalidStateException:
             pass
         else:
@@ -721,8 +720,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                        state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert 'air_temperature' in return_value.keys()
@@ -742,8 +740,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 attrs={'units': 'degK'},
             ),
         }
-        return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                        state)
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         assert np.all(state['air_temperature'].values == 0.)
         assert state['air_temperature'].attrs['units'] is 'degK'
 
@@ -761,8 +758,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                            state)
+            return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         except ValueError:
             pass
         else:
@@ -782,8 +778,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                            state)
+            return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         except InvalidStateException:
             pass
         else:
@@ -802,8 +797,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                            state)
+            return_value = get_numpy_arrays_with_properties(state, property_dictionary)
         except ValueError:
             pass
         except InvalidStateException:
@@ -825,12 +819,74 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            return_value = get_numpy_arrays_with_properties(property_dictionary,
-                                                            state)
+            get_numpy_arrays_with_properties(state, property_dictionary)
         except ValueError:
             pass
         else:
             raise AssertionError('should have raised ValueError')
+
+    def test_dims_like_accepts_valid_case(self):
+        set_dimension_names(z=['mid_levels', 'full_levels'])
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'mid_levels'],
+                'units': 'degK',
+            },
+            'air_pressure': {
+                'dims': ['x', 'y', 'full_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([4], dtype=np.float64),
+                dims=['z'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2,2,4], dtype=np.float64),
+                attrs={'units': 'Pa'}
+            ),
+        }
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
+        assert isinstance(return_value, dict)
+        assert len(return_value.keys()) == 2
+        assert 'air_temperature' in return_value.keys()
+        assert 'air_pressure' in return_value.keys()
+
+    def test_dims_like_rejects_invalid_case(self):
+        set_dimension_names(z=['mid_levels', 'full_levels'])
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'mid_levels'],
+                'units': 'degK',
+            },
+            'air_pressure': {
+                'dims': ['x', 'y', 'full_levels'],
+                'units': 'Pa',
+                'match_dims_like': 'air_temperature'
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([4], dtype=np.float64),
+                dims=['x', 'y', 'mid_levels'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2,2,4], dtype=np.float64),
+                dims=['x', 'y', 'mid_levels'],
+                attrs={'units': 'Pa'}
+            ),
+        }
+        try:
+            get_numpy_arrays_with_properties(state, property_dictionary)
+        except
+        assert isinstance(return_value, dict)
+        assert len(return_value.keys()) == 2
+        assert 'air_temperature' in return_value.keys()
+        assert 'air_pressure' in return_value.keys()
 
 
 
