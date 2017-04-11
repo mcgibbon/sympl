@@ -17,10 +17,12 @@ except ImportError:
 dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
 
 
-def get_numpy_arrays_with_properties(property_dictionary, state):
+def get_numpy_arrays_with_properties(state, property_dictionary):
     """
     Parameters
     ----------
+    state : dict
+        A state dictionary.
     property_dictionary : dict
         A dictionary whose keys are quantity names and values are dictionaries
         with properties for those quantities. The property "dims" must be
@@ -32,8 +34,6 @@ def get_numpy_arrays_with_properties(property_dictionary, state):
         property_dictionary, and it will be ensured that wildcard-matched
         dimensions ('x', 'y', 'z', '*') for this quantity are the same as the
         specified quantity.
-    state : dict
-        A state dictionary.
 
     Returns
     -------
@@ -64,9 +64,9 @@ def get_numpy_arrays_with_properties(property_dictionary, state):
                 out_dims=properties['dims'])
         except ValueError as err:
             raise InvalidStateException('{} does not have explicit dimension {}'.format(
-                quantity_name, err.message))
+                quantity_name, err))
         except KeyError as err:
-            raise InvalidStateException('state is missing quantity {}'.format(err.message))
+            raise InvalidStateException('state is missing quantity {}'.format(err))
     return out_dict
 
 
