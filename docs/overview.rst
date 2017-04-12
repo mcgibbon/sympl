@@ -42,8 +42,8 @@ can own and maintain their own models. The framework API ensures that models
 using Sympl are clear and accessible, and allows components from different models
 and packages to be used alongside one another.
 
-So where's the model?
----------------------
+Then where's the model?
+-----------------------
 
 Models created with Sympl can work differently from traditional Fortran models.
 A model developer makes the components of their model available. Using these

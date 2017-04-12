@@ -14,21 +14,24 @@ Documentation
 -------------
 
 .. toctree::
+   :caption: Users
    :maxdepth: 1
 
    history
    overview
    quickstart
    faq
-   installation
    state
    timestepping
    computation
    monitors
    composites
+   writing_components
    memory_management
    contributing
    authors
+
+..   installation
 
 License
 -------

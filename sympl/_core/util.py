@@ -208,7 +208,8 @@ def restore_data_arrays_with_properties(
         with properties for those quantities. The property "dims_like" must be
         present, and specifies an input quantity that the dimensions of the
         output quantity should be like. All other properties are included as
-        attributes on the output DataArray for that quantity.
+        attributes on the output DataArray for that quantity, including "units"
+        which is required.
     input_state : dict
         A state dictionary that was used as input to a component for which
         DataArrays are being restored.
