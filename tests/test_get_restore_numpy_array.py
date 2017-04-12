@@ -755,6 +755,26 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert np.all(state['air_temperature'].values == 0.)
         assert state['air_temperature'].attrs['units'] is 'degK'
 
+    def test_converting_units_maintains_float32_dtype(self):
+        property_dictionary = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degC',
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                np.zeros([4], dtype=np.float32),
+                dims=['z'],
+                attrs={'units': 'degK'},
+            ),
+        }
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
+        assert isinstance(return_value, dict)
+        assert len(return_value.keys()) == 1
+        assert 'air_temperature' in return_value.keys()
+        assert return_value['air_temperature'].dtype is np.dtype('float32')
+
     def test_raises_if_units_property_undefined(self):
         property_dictionary = {
             'air_temperature': {
@@ -1056,6 +1076,48 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
                 for k in range(4):
                     assert return_value['air_temperature'][k, j+2*i] == T_array[i, j, k]
 
+    def test_raises_when_quantity_has_extra_dim(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2,4]),
+                dims=['foo', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['z'],
+                'units': 'degK',
+            }
+        }
+        try:
+            get_numpy_arrays_with_properties(input_state, input_properties)
+        except InvalidStateError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidStateError')
+
+    def test_raises_when_quantity_has_extra_dim_and_unmatched_wildcard(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 4]),
+                dims=['foo', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['y', 'z'],
+                'units': 'degK',
+            }
+        }
+        try:
+            get_numpy_arrays_with_properties(input_state, input_properties)
+        except InvalidStateError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidStateError')
+
 
 class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
 
@@ -1139,6 +1201,128 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
                 input_state['air_temperature'].values)
         assert return_value['air_temperature_tendency'].shape == (3, 2, 4)
         assert np.all(return_value['air_temperature_tendency'] == T_array)
+        assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
+
+    def test_restores_coords(self):
+        x = np.array([0., 10.])
+        y = np.array([0., 10.])
+        z = np.array([0., 5., 10., 15.])
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+                coords=[
+                    ('x', x, {'units': 'm'}),
+                    ('y', y, {'units': 'km'}),
+                    ('z', z, {'units': 'cm'})]
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
+        raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
+        output_properties = {
+            'air_temperature_tendency': {
+                'dims_like': 'air_temperature',
+                'units': 'degK/s',
+            }
+        }
+        return_value = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert np.all(return_value['air_temperature_tendency'].coords['x'] ==
+                      input_state['air_temperature'].coords['x'])
+        assert return_value['air_temperature_tendency'].coords['x'].attrs['units'] == 'm'
+        assert np.all(return_value['air_temperature_tendency'].coords['y'] ==
+                      input_state['air_temperature'].coords['y'])
+        assert return_value['air_temperature_tendency'].coords['y'].attrs['units'] == 'km'
+        assert np.all(return_value['air_temperature_tendency'].coords['z'] ==
+                      input_state['air_temperature'].coords['z'])
+        assert return_value['air_temperature_tendency'].coords['z'].attrs['units'] == 'cm'
+        assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
+
+    def test_restores_matched_coords(self):
+        set_dimension_names(x=['lon'], y=['lat'], z=['height'])
+        x = np.array([0., 10.])
+        y = np.array([0., 10.])
+        z = np.array([0., 5., 10., 15.])
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['lon', 'lat', 'height'],
+                attrs={'units': 'degK'},
+                coords=[
+                    ('lon', x, {'units': 'degrees_E'}),
+                    ('lat', y, {'units': 'degrees_N'}),
+                    ('height', z, {'units': 'km'})]
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
+        raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
+        output_properties = {
+            'air_temperature_tendency': {
+                'dims_like': 'air_temperature',
+                'units': 'degK/s',
+            }
+        }
+        return_value = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert np.all(return_value['air_temperature_tendency'].coords['lon'] ==
+                      input_state['air_temperature'].coords['lon'])
+        assert return_value['air_temperature_tendency'].coords['lon'].attrs['units'] == 'degrees_E'
+        assert np.all(return_value['air_temperature_tendency'].coords['lat'] ==
+                      input_state['air_temperature'].coords['lat'])
+        assert return_value['air_temperature_tendency'].coords['lat'].attrs['units'] == 'degrees_N'
+        assert np.all(return_value['air_temperature_tendency'].coords['height'] ==
+                      input_state['air_temperature'].coords['height'])
+        assert return_value['air_temperature_tendency'].coords['height'].attrs['units'] == 'km'
+        assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
+
+    def test_raises_on_invalid_shape(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = {
+            'foo': np.zeros([2, 4])
+        }
+        output_properties = {
+            'foo': {
+                'dims_like': 'air_temperature',
+                'units': 'm',
+            }
+        }
+        try:
+            restore_data_arrays_with_properties(
+                raw_arrays, output_properties, input_state, input_properties
+            )
+        except InvalidPropertyDictError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidPropertyDictError')
+
+
 
 if __name__ == '__main__':
     pytest.main([__file__])

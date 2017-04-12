@@ -17,8 +17,18 @@ except ImportError:
 
 dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
 
+# internal exceptions used only within this module
 
-class NoDimensionMatchError(Exception):
+
+class NoMatchForDirectionError(Exception):
+    pass
+
+
+class DimensionNotInOutDimsError(ValueError):
+    pass
+
+
+class ShapeMismatchError(Exception):
     pass
 
 
@@ -76,13 +86,84 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
             out_dict[quantity_name], matches[quantity_name] = get_numpy_array(
                 state[quantity_name].to_units(properties['units']),
                 out_dims=properties['dims'], return_wildcard_matches=True)
-        except NoDimensionMatchError as err:
+        except NoMatchForDirectionError as err:
             raise InvalidStateError(
                 'dimension {} is missing from quantity {}'.format(
                     err, quantity_name)
             )
+        except DimensionNotInOutDimsError as err:
+            raise InvalidStateError(
+                'dims property {} on quantity {} does not allow for state'
+                'quantity to have dimension {} (but it does)'.format(
+                    properties['dims'], quantity_name, err)
+            )
     ensure_dims_like_are_satisfied(matches, property_dictionary)
     return out_dict
+
+
+def get_numpy_array(data_array, out_dims, return_wildcard_matches=False):
+    """
+    Retrieve a numpy array with the desired dimensions and dimension order
+    from the given DataArray, using transpose and creating length 1 dimensions
+    as necessary.
+
+    Args
+    ----
+    data_array : DataArray
+        The object from which to retrieve data.
+    out_dims : list of str
+        The desired dimensions of the output and their order.
+        Length 1 dimensions will be created if the dimension is 'x', 'y', 'z',
+        or '*' and does not exist in data_array. 'x', 'y', and 'z' indicate any axes
+        registered to those directions with
+        :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
+        which is the flattened collection of all dimensions not explicitly
+        listed in out_dims, including any dimensions with unknown direction.
+    return_wildcard_matches : bool, optional
+        If True, will additionally return a dictionary whose keys are direciton
+        wildcards ('x', 'y', 'z', or '*') and values are lists of matched
+        dimensions in the order they appear.
+
+    Returns
+    -------
+    numpy_array : ndarray
+        The desired array, with dimensions in the
+        correct order and length 1 dimensions created as needed.
+
+    Raises
+    ------
+    ValueError
+        If out_dims has values that are incompatible with the dimensions
+        in data_array, or data_array's dimensions are invalid in some way.
+
+    """
+    if (len(data_array.values.shape) == 0) and (len(out_dims) == 0):
+        direction_to_names = {}  # required in case we need wildcard_matches
+        return_array = data_array.values  # special case, 0-dimensional scalar array
+    else:
+        current_dim_names = dim_names.copy()
+        for dim in out_dims:
+            if dim not in ('x', 'y', 'z', '*'):
+                current_dim_names[dim] = [dim]
+        direction_to_names = get_input_array_dim_names(
+            data_array, out_dims, current_dim_names)
+        target_dimension_order = get_target_dimension_order(
+            out_dims, direction_to_names)
+        for dim in data_array.dims:
+            if dim not in target_dimension_order:
+                raise DimensionNotInOutDimsError(dim)
+        slices_or_none = get_slices_and_placeholder_nones(
+            data_array, out_dims, direction_to_names)
+        final_shape = get_final_shape(data_array, out_dims, direction_to_names)
+        return_array = np.reshape(data_array.transpose(
+            *target_dimension_order).values[slices_or_none], final_shape)
+    if return_wildcard_matches:
+        wildcard_matches = {
+            key: value for key, value in direction_to_names.items()
+            if key in ('x', 'y', 'z', '*')}
+        return return_array, wildcard_matches
+    else:
+        return return_array
 
 
 def ensure_dims_like_are_satisfied(matches, property_dictionary):
@@ -150,11 +231,20 @@ def restore_data_arrays_with_properties(
         dims_like = attrs.pop('dims_like')
         from_dims = input_properties[dims_like]['dims']
         result_like = input_state[dims_like]
-        out_dict[quantity_name] = restore_dimensions(
-            array,
-            from_dims=from_dims,
-            result_like=result_like,
-            result_attrs=attrs)
+        try:
+            out_dict[quantity_name] = restore_dimensions(
+                array,
+                from_dims=from_dims,
+                result_like=result_like,
+                result_attrs=attrs)
+        except ShapeMismatchError:
+            raise InvalidPropertyDictError(
+                'quantity {} has dims_like {}, but the provided array for {} has '
+                'a shape incompatible with the shape of {} in the input '
+                'quantities. Do they really have the same dimensions?'.format(
+                    quantity_name, dims_like, quantity_name, dims_like
+                )
+            )
     return out_dict
 
 
@@ -208,6 +298,8 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
             for name in direction_to_names[direction]:
                 original_shape.append(len(result_like.coords[name]))
                 original_coords.append(result_like.coords[name])
+    if np.product(array.shape) != np.product(original_shape):
+        raise ShapeMismatchError
     data_array = DataArray(
         np.reshape(array, original_shape), coords=original_coords).transpose(
             *list(result_like.coords))
@@ -430,68 +522,6 @@ def ensure_no_shared_keys(dict1, dict2):
             'unexpected shared keys: {}'.format(shared_keys))
 
 
-def get_numpy_array(data_array, out_dims, return_wildcard_matches=False):
-    """
-    Retrieve a numpy array with the desired dimensions and dimension order
-    from the given DataArray, using transpose and creating length 1 dimensions
-    as necessary.
-
-    Args
-    ----
-    data_array : DataArray
-        The object from which to retrieve data.
-    out_dims : list of str
-        The desired dimensions of the output and their order.
-        Length 1 dimensions will be created if the dimension is 'x', 'y', 'z',
-        or '*' and does not exist in data_array. 'x', 'y', and 'z' indicate any axes
-        registered to those directions with
-        :py:function:`~sympl.set_dimension_names`. '*' indicates an axis
-        which is the flattened collection of all dimensions not explicitly
-        listed in out_dims, including any dimensions with unknown direction.
-    return_wildcard_matches : bool, optional
-        If True, will additionally return a dictionary whose keys are direciton
-        wildcards ('x', 'y', 'z', or '*') and values are lists of matched
-        dimensions in the order they appear.
-
-    Returns
-    -------
-    numpy_array : ndarray
-        The desired array, with dimensions in the
-        correct order and length 1 dimensions created as needed.
-
-    Raises
-    ------
-    ValueError
-        If out_dims has values that are incompatible with the dimensions
-        in data_array, or data_array's dimensions are invalid in some way.
-
-    """
-    if (len(data_array.values.shape) == 0) and (len(out_dims) == 0):
-        direction_to_names = {}  # required in case we need wildcard_matches
-        return_array = data_array.values  # special case, 0-dimensional scalar array
-    else:
-        current_dim_names = dim_names.copy()
-        for dim in out_dims:
-            if dim not in ('x', 'y', 'z', '*'):
-                current_dim_names[dim] = [dim]
-        direction_to_names = get_input_array_dim_names(
-            data_array, out_dims, current_dim_names)
-        target_dimension_order = get_target_dimension_order(
-            out_dims, direction_to_names)
-        slices_or_none = get_slices_and_placeholder_nones(
-            data_array, out_dims, direction_to_names)
-        final_shape = get_final_shape(data_array, out_dims, direction_to_names)
-        return_array = np.reshape(data_array.transpose(
-            *target_dimension_order).values[slices_or_none], final_shape)
-    if return_wildcard_matches:
-        wildcard_matches = {
-            key: value for key, value in direction_to_names.items()
-            if key in ('x', 'y', 'z', '*')}
-        return return_array, wildcard_matches
-    else:
-        return return_array
-
-
 def get_input_array_dim_names(data_array, out_dims, dim_names):
     """
     Takes in a DataArray and an iterable of directions
@@ -510,7 +540,7 @@ def get_input_array_dim_names(data_array, out_dims, dim_names):
                     input_array_dim_names[direction].append(dim)
             if (direction not in ('x', 'y', 'z', '*') and
                     len(input_array_dim_names[direction]) == 0):
-                raise NoDimensionMatchError(direction)
+                raise NoMatchForDirectionError(direction)
     if '*' in out_dims:
         matching_dims = set(
             data_array.dims).difference(set.union(set([]), *input_array_dim_names.values()))
