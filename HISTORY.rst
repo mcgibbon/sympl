@@ -15,6 +15,7 @@ Latest
 * There are now helper functions for automatically extracting required numpy
   arrays with correct dimensions and units from input state dictionaries. See
   the note about _properties attributes in Breaking changes below.
+* Added base object for testing components
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

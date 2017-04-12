@@ -15,6 +15,7 @@ from ._core.util import (
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties)
+from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)

@@ -9,19 +9,14 @@ class Implicit(object):
     ----------
     inputs : tuple of str
         The quantities required in the state when the object is called.
-    outputs: tuple of str
-        The quantities for which values for the new state are returned
-        when the object is called.
     diagnostics: tuple of str
         The quantities for which values for the old state are returned
         when the object is called.
+    outputs: tuple of str
+        The quantities for which values for the new state are returned
+        when the object is called.
     input_properties : dict
         A dictionary whose keys are quantities required in the state when the
-        object is called, and values are dictionaries which indicate 'dims' and
-        'units'.
-    output_properties : dict
-        A dictionary whose keys are quantities for which values
-        for the new state are returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
     diagnostic_properties : dict
@@ -29,24 +24,29 @@ class Implicit(object):
         for the old state are returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
+    output_properties : dict
+        A dictionary whose keys are quantities for which values
+        for the new state are returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
     """
     __metaclass__ = abc.ABCMeta
 
     input_properties = {}
-    output_properties = {}
     diagnostic_properties = {}
+    output_properties = {}
 
     @property
     def inputs(self):
         return list(self.input_properties.keys())
 
     @property
-    def outputs(self):
-        return list(self.output_properties.keys())
-
-    @property
     def diagnostics(self):
         return list(self.diagnostic_properties.keys())
+
+    @property
+    def outputs(self):
+        return list(self.output_properties.keys())
 
     def __str__(self):
         return (

@@ -224,6 +224,13 @@ def restore_data_arrays_with_properties(
         A dictionary whose keys are quantities and values are DataArrays
         corresponding to those quantities, with data, shapes and attributes
         determined from the inputs to this function.
+
+    Raises
+    ------
+    InvalidPropertyDictError
+        When an output property is specified to have dims_like an input
+        property, but the arrays for the two properties have incompatible
+        shapes.
     """
     out_dict = {}
     for quantity_name, array in raw_arrays.items():

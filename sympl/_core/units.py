@@ -18,6 +18,19 @@ unit_registry.define('degrees_east = degree_east = degree_E = degrees_E = degree
 unit_registry.define('percent = 0.01*count = %')
 
 
+def is_valid_unit(unit_string):
+    """Returns True if the unit string is recognized, and False otherwise."""
+    unit_string = unit_string.replace(
+        '%', 'percent').replace(
+        '°', 'degree')
+    try:
+        unit_registry(unit_string)
+    except pint.UndefinedUnitError:
+        return False
+    else:
+        return True
+
+
 def data_array_to_units(value, units):
     if not hasattr(value, 'attrs') or 'units' not in value.attrs:
         raise TypeError(
