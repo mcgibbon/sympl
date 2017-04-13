@@ -41,7 +41,7 @@ target temperature.
         tendency_properties = {
             'air_temperature': {
                 'dims_like': 'air_temperature',
-                'units': 'degK',
+                'units': 'degK/s',
             }
         }
 
@@ -65,6 +65,9 @@ target temperature.
                 state, self.input_properties)
             return diagnostics, tendencies
 
+Imports
+*******
+
 There are a lot of parts to that code, so let's go through some of them
 step-by-step. First we have to import objects and functions from Sympl that
 we plan to use. The import statement should always go at the top of your file
@@ -75,6 +78,9 @@ so that it can be found right away by anyone reading your code.
     from sympl import (
         Prognostic, get_numpy_arrays_with_properties,
         restore_data_arrays_with_properties)
+
+Define an Object
+****************
 
 Once these are imported, there's this line:
 
@@ -87,6 +93,9 @@ will be the name of the new object. The :py:class:`~sympl.Prognostic`
 in parentheses is telling Python that ``TemperatureRelaxation`` is a *subclass* of
 :py:class:`~sympl.Prognostic`. This tells Sympl that it can expect your object
 to behave like a :py:class:`~sympl.Prognostic`.
+
+Define Attributes
+*****************
 
 The next few lines define attributes of your object:
 
@@ -109,7 +118,7 @@ The next few lines define attributes of your object:
         tendency_properties = {
             'air_temperature': {
                 'dims_like': 'air_temperature',
-                'units': 'degK',
+                'units': 'degK/s',
             }
         }
 
@@ -137,6 +146,15 @@ It's your responsibility, though, to make sure that the input units are the
 units you want to acquire in the numpy array data, and that the output units
 are the units of the values in the raw output arrays that you want to convert
 to :py:class:`~sympl.DataArray` objects.
+
+It is possible that some of these attributes won't be known until you
+create the object (they may depend on things passed in on initialization).
+If that's the case, you can write the ``__init__`` method (see below) so that
+it sets any relevant properties like ``self.input_properties`` to have the
+correct values.
+
+Initialization Method
+*********************
 
 Next we see a method being defined for this class, which may seem to have a
 weird name:
@@ -179,6 +197,9 @@ target temperature for the relaxation. Now you can use these shorter variables
 in the actual code to keep long lines for equations short, knowing that your
 variables are well-documented.
 
+The Computation
+***************
+
 That brings us to the ``__call__`` method. This is what's called when you
 use the object as though it is a function. In Sympl components, this is the
 method which takes in a state dictionary and returns dictionaries with outputs.
@@ -219,7 +240,7 @@ quantities, meaning they're on the same grid for those wildcards. You can still,
 however, have one be on say 'mid_levels' and another on 'interface_levels' if
 those dimensions are explicitly listed (instead of listing 'z').
 
-py:func:`~sympl.restore_data_arrays_with_properties` does something fairly
+:py:func:`~sympl.restore_data_arrays_with_properties` does something fairly
 magical. In this example, it takes the raw_tendencies dictionary and converts
 the value for 'air_temperature' from a numpy array to a DataArray that has
 the same dimensions as ``air_temperature`` had in the input state. That means
@@ -230,6 +251,9 @@ tendency dictionary with the same dimensions (and order) that the model uses!
 And internally you can work with a simple 1-dimensional array. This is
 particularly useful for writing pointwise components using ``['*']`` or column
 components with ``['*', 'z']`` or ``['z', '*']``.
+
+You can read more about properties in the section
+:ref:`Input/Output Properties`.
 
 .. autofunction:: sympl.get_numpy_arrays_with_properties
 

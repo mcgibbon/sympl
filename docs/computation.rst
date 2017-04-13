@@ -17,6 +17,10 @@ can initialize (e.g. there is no one 'prognostic' scheme), but instead should
 be subclassed to contain computational code relevant to the model you're
 running.
 
+In addition to the computational functionality below, all components have "properties"
+for their inputs and outputs, which are described in the section
+:ref:`Input/Output Properties`.
+
 Prognostic
 ----------
 
@@ -121,3 +125,154 @@ present, instead of allocating a new array.
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
+
+Input/Output Properties
+-----------------------
+
+You may have noticed when reading the documentation for the classes above that
+there are a number of attributes with names like ``input_properties`` for
+components. These attributes give a fairly complete description of the inputs
+and outputs of the component.
+
+You can access them like this (for an example :py:class:`~sympl.Prognostic`
+class ``RRTMRadiation``):
+
+.. code-block:: python
+
+    radiation = RRTMRadiation()
+    radiation.input_properties
+    radiation.diagnostic_properties
+    radiation.tendency_properties
+
+Input
+*****
+
+All components have input_properties, because they all take inputs. This
+attribute (like all the other properties attributes) is a python ``dict``,
+or "dictionary" (if you are unfamiliar with these, please read the `Python
+documentation for dicts`_).
+
+An example input_properties would be
+
+.. code-block:: python
+
+    {
+        'air_temperature': {
+            'dims': ['*', 'z'],
+            'units': 'degK',
+        },
+        'vertical_wind': {
+            'dims': ['*', 'z'],
+            'units': 'm/s',
+            'match_dims_like': ['air_temperature']
+        }
+    }
+
+Each entry in the input_properties dictionary is a quantity that the object
+requires as an input, and its value is another dictionary that tells you how
+the object uses that quantity. The ``units`` property is the units used
+internally in the object. You don't need to pass in the quantity with those
+those units, as long as the units can be converted, but if you do use the same
+units in the input state it will avoid the computational cost of
+converting units.
+
+The ``dims`` property can be more confusing, but is very useful. It says what
+dimensions the component uses internally for those quantities. The component
+requires that you give it quantities that can be transformed into those
+internal dimensions, but it can take care of that transformation itself. In
+this example, it will transform the arrays for both quantities to put the
+vertical dimension last, and collect all the other dimensions into a single
+first dimension. If you pass this object arrays that have their vertical
+dimension last, it may speed up the computation, depending on the component
+(but not for all components!).
+
+So what are '*' and 'z' anyways? These are *wildcard* dimensions. 'z' will
+match any dimension that is vertical, while '*' will match *any* dimension that
+is not specified somewhere else in the ``dims`` list. There are also 'x' and
+'y' for horizontal dimensions. The directional matches are given to Sympl
+using the functions :py:func:`~sympl.set_direction_names` or
+:py:func:`~sympl.add_direction_names`. If you're using someone else's package
+for a component, it is likely that they call these functions for you, so you
+don't have to (and if you're writing such a package, you should use
+:py:func:`~sympl.add_direction_names`).
+
+If a component is using a wildcard it
+means it doesn't care very much about those directions. For example, a column
+component like radiation will simply call itself on each column of the domain,
+so it doesn't care about the specifics of what the non-vertical dimensions are,
+as long as the desired quantities are co-located.
+
+That's where ``match_dims_like`` comes in. This property says the object
+requires all matched dimensions of the quantity to be the same as the other
+specified quantity. In this case, it will ensure that ``vertical_wind`` is on
+the same grid as ``air_temperature``.
+
+Let's consider a slight variation on the earlier example:
+
+.. code-block:: python
+
+    {
+        'air_temperature': {
+            'dims': ['*', 'mid_levels'],
+            'units': 'degK',
+        },
+        'vertical_wind': {
+            'dims': ['*', 'interface_levels'],
+            'units': 'm/s',
+            'match_dims_like': ['air_temperature']
+        }
+    }
+
+This version requires that ``air_temperature`` be on the ``mid_levels`` vertical
+grid, while ``vertical_wind`` is on the ``interface_levels``. It still requires
+that all other dimensions are the same between the two quantities, so that they
+are on the same horizontal grid (if they have a horizontal grid).
+
+Outputs
+*******
+
+There are a few output property dictionaries in Sympl: ``tendency_properties``,
+``diagnostic_properties``, and ``output_properties``. They are all formatted
+the same way with the same properties, but tell you about the tendencies,
+diagnostics, or next state values that are output by the component,
+respectively.
+
+Here's an example output dictionary:
+
+.. code-block:: python
+
+    tendency_properties = {
+        'air_temperature': {
+            'dims_like': 'air_temperature',
+            'units': 'degK/s',
+        }
+    }
+
+In tendency_properties, the quantity names specify the quantities for which
+tendencies are given. The ``units`` are the units of the output value, which
+is also put in the output :py:class:`~sympl.DataArray` as the ``units``
+attribute.
+
+``dims_like`` is telling you that the output array will have the same dimensions
+as the array you gave it for ``air_temperature`` as an input. If you pass it
+an ``air_temperature`` array with ('latitude', 'longitude', 'mid_levels') as
+its axes, it will return an array with ('latitude', 'longitude', 'mid_levels')
+for the temperature tendency. If ``dims_like`` is not specified in the
+``tendency_properties`` dictionary, it is assumed to be the matching quantity
+in the input, but for the other quantities ``dims_like`` must always be
+explicitly defined. For instance, if the object as a ``diagnostic_properties``
+equal to:
+
+.. code-block:: python
+
+    tendency_properties = {
+        'cloud_fraction': {
+            'dims_like': 'air_temperature',
+            'units': '',
+        }
+    }
+
+that the object will output ``cloud_fraction`` in its diagnostics on the
+same grid as ``air_temperature``, in dimensionless units.
+
+.. _Python documentation for dicts: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
