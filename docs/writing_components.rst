@@ -56,7 +56,7 @@ target temperature.
             T = raw_arrays['air_temperature']
             # here the actual computation happens
             raw_tendencies = {
-                'air_temperature': T - self._T0,
+                'air_temperature': (T - self._T0)/self._tau,
             }
             # now we re-format the data in a way the host model can use
             diagnostics = {}
@@ -192,7 +192,7 @@ method which takes in a state dictionary and returns dictionaries with outputs.
             T = raw_arrays['air_temperature']
             # here the actual computation happens
             raw_tendencies = {
-                'air_temperature': T - self._T0,
+                'air_temperature': (T - self._T0)/self._tau,
             }
             # now we re-format the data in a way the host model can use
             diagnostics = {}
