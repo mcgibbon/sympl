@@ -5,6 +5,7 @@ from .array import DataArray
 from six import string_types
 import numpy as np
 from datetime import datetime
+import warnings
 try:
     from numba import jit
 except ImportError:
@@ -329,11 +330,34 @@ def same_list(list1, list2):
 
 
 def set_dimension_names(x=None, y=None, z=None):
+    warnings.warn(
+        'set_dimension_names is deprecated, use set_direction_names instead',
+        DeprecationWarning)
+    return set_direction_names(x=x, y=y, z=z)
+
+
+def set_direction_names(x=None, y=None, z=None):
+    """
+    Sets the directional wildcards 'x', 'y', and 'z' to match the provided
+    dimension names only.
+    """
     for key, value in [('x', x), ('y', y), ('z', z)]:
         if isinstance(value, string_types):
             dim_names[key] = [key, value]
         elif value is not None:
             dim_names[key] = [key] + list(value)
+
+
+def add_direction_names(x=None, y=None, z=None):
+    """
+    Sets the directional wildcards 'x', 'y', and 'z' to match the provided
+    dimension names, in addition to any names they are already matching.
+    """
+    for key, value in [('x', x), ('y', y), ('z', z)]:
+        if isinstance(value, string_types):
+            dim_names[key].append(value)
+        elif value is not None:
+            dim_names[key].extend(value)
 
 
 def combine_dimensions(arrays, out_dims):

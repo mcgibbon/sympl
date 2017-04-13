@@ -14,7 +14,8 @@ from ._core.util import (
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,
-    restore_data_arrays_with_properties)
+    restore_data_arrays_with_properties,
+    set_direction_names, add_direction_names)
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
@@ -34,6 +35,7 @@ __all__ = (
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
+    set_direction_names, add_direction_names,
     ComponentTestBase,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,

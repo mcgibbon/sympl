@@ -16,6 +16,9 @@ Latest
   arrays with correct dimensions and units from input state dictionaries. See
   the note about _properties attributes in Breaking changes below.
 * Added base object for testing components
+* Renamed set_dimension_names to set_direction_names, set_dimension_names is
+  now deprecated and gives a warning. add_direction_names was added to append
+  to the dimension list instead of replacing it.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
