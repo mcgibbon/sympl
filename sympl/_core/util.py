@@ -47,9 +47,9 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
         and will be used to check the units on the input state and perform
         a conversion if necessary. If the optional property "match_dims_like"
         is present, its value should be a quantity also present in
-        property_dictionary, and it will be ensured that wildcard-matched
-        dimensions ('x', 'y', 'z', '*') for this quantity are the same as the
-        specified quantity.
+        property_dictionary, and it will be ensured that any shared wildcard
+        dimensions ('x', 'y', 'z', '*') for this quantity match the same
+        dimensions as the specified quantity.
 
     Returns
     -------
@@ -83,9 +83,20 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
         if 'units' not in state[quantity_name].attrs:
             raise InvalidStateError(
                 'quantity {} is missing units attribute'.format(quantity_name))
+        if 'alias' in properties.keys():
+            out_name = properties['alias']
+            if out_name in out_dict.keys():
+                raise InvalidPropertyDictError(
+                    'Multiple arrays have alias {}'.format(out_name))
+        else:
+            out_name = quantity_name
         try:
-            out_dict[quantity_name], matches[quantity_name] = get_numpy_array(
-                state[quantity_name].to_units(properties['units']),
+            quantity_array = state[quantity_name].to_units(properties['units'])
+        except ValueError as err:
+            raise ValueError(err.args[0] + ' for quantity {}'.format(quantity_name))
+        try:
+            out_dict[out_name], matches[quantity_name] = get_numpy_array(
+                quantity_array,
                 out_dims=properties['dims'], return_wildcard_matches=True)
         except NoMatchForDirectionError as err:
             raise InvalidStateError(
@@ -177,19 +188,21 @@ def ensure_dims_like_are_satisfied(matches, property_dictionary):
                         properties['match_dims_like'], quantity_name
                     ))
             like_name = properties['match_dims_like']
-            if not same_list(matches[quantity_name].keys(), matches[like_name].keys()):
-                raise InvalidPropertyDictError(
-                    "quantity {} does not have the same wildcard ('x', 'y', 'z'"
-                    ", or '*') dimensions as {} despite being referred to in"
-                    "match_dims_like.".format(like_name, quantity_name)
-                )
-            for wildcard_dim in matches[quantity_name].keys():
+            # if not same_list(matches[quantity_name].keys(), matches[like_name].keys()):
+            #     raise InvalidPropertyDictError(
+            #         "quantity {} does not have the same wildcard ('x', 'y', 'z'"
+            #         ", or '*') dimensions as {} despite being referred to in "
+            #         "match_dims_like.\n{}: {}\n{}: {}".format(
+            #             like_name, quantity_name, quantity_name, list(matches[quantity_name].keys()), like_name, list(matches[like_name].keys()))
+            #     )
+            for wildcard_dim in set(matches[quantity_name].keys()).intersection(
+                    matches[like_name].keys()):
                 # We must use == because we need the dim order to be the same
                 if not (matches[quantity_name][wildcard_dim] ==
                         matches[like_name][wildcard_dim]):
                     raise InvalidStateError(
-                        'quantity {} matches dimensions {} for direction {}, but'
-                        'is referred to in match_dims_like by quantity {} with matches'
+                        'quantity {} matches dimensions {} for direction {}, but '
+                        'is referred to in match_dims_like by quantity {} with matches '
                         '{}'.format(
                             like_name, matches[like_name][wildcard_dim],
                             wildcard_dim, quantity_name,
@@ -235,9 +248,20 @@ def restore_data_arrays_with_properties(
         shapes.
     """
     out_dict = {}
-    for quantity_name, array in raw_arrays.items():
-        attrs = output_properties[quantity_name].copy()
-        dims_like = attrs.pop('dims_like')
+    for quantity_name, properties in output_properties.items():
+        attrs = properties.copy()
+        dims_like = attrs.pop('dims_like', quantity_name)
+        if 'alias' in properties:
+            from_name = attrs.pop('alias')
+        elif quantity_name in input_properties.keys() and 'alias' in input_properties[quantity_name].keys():
+            from_name = input_properties[dims_like]['alias']
+        else:
+            from_name = quantity_name
+        if from_name not in raw_arrays.keys():
+            raise ValueError(
+                'requested output {} is not present in raw_arrays'.format(
+                    from_name))
+        array = raw_arrays[from_name]
         from_dims = input_properties[dims_like]['dims']
         result_like = input_state[dims_like]
         try:
@@ -301,17 +325,21 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
     direction_to_names = get_input_array_dim_names(
         result_like, from_dims, current_dim_names)
     original_shape = []
+    original_dims = []
     original_coords = []
     for direction in from_dims:
         if direction in direction_to_names.keys():
             for name in direction_to_names[direction]:
                 original_shape.append(len(result_like.coords[name]))
+                original_dims.append(name)
                 original_coords.append(result_like.coords[name])
     if np.product(array.shape) != np.product(original_shape):
         raise ShapeMismatchError
     data_array = DataArray(
-        np.reshape(array, original_shape), coords=original_coords).transpose(
-            *list(result_like.coords))
+        np.reshape(array, original_shape),
+        dims=original_dims,
+        coords=original_coords).transpose(
+            *list(result_like.dims))
     if result_attrs is not None:
         data_array.attrs = result_attrs
     return data_array
@@ -556,9 +584,21 @@ def ensure_no_shared_keys(dict1, dict2):
 
 def get_input_array_dim_names(data_array, out_dims, dim_names):
     """
-    Takes in a DataArray and an iterable of directions
-    ('x', 'y', 'z', or '*'). Returns a dictionary mapping those directions to
-    a list of dimension names corresponding to those directions in data_array.
+    Parameters
+    ----------
+    data_array : DataArray
+    out_dims : iterable
+        directions in dim_names that should be included in the output,
+        in the order they should be included
+    dim_names : dict
+        a mapping from directions to dimension names that fall under that
+        direction wildcard.
+
+    Returns
+    -------
+    input_array_dim_names : dict
+        A mapping from directions included in out_dims to the directions
+        present in data_array that correspond to those directions
     """
     input_array_dim_names = {}
     for direction in out_dims:

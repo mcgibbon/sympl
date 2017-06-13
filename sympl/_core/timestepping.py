@@ -1,6 +1,7 @@
 from .base_components import PrognosticComposite
 import abc
 from .array import DataArray
+import numpy as np
 
 
 class TimeStepper(object):
@@ -186,7 +187,7 @@ def convert_tendencies_units_for_state(tendencies, state):
     """
     for quantity_name in tendencies.keys():
         if isinstance(tendencies[quantity_name], DataArray) and ('units' in tendencies[quantity_name].attrs):
-            desired_units = '{}/s'.format(state[quantity_name].attrs['units'])
+            desired_units = '{} s^-1'.format(state[quantity_name].attrs['units'])
             tendencies[quantity_name] = tendencies[quantity_name].to_units(desired_units)
 
 

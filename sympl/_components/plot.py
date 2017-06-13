@@ -1,5 +1,18 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import DependencyError
+from .._core.array import DataArray
+import time
+
+def copy_state(state):
+    return_state = {}
+    for name, quantity in state.items():
+        if isinstance(quantity, DataArray):
+            return_state[name] = DataArray(
+                quantity.values.copy(), quantity.coords, quantity.dims,
+                quantity.name, quantity.attrs)
+        else:
+            return_state[name] = quantity
+    return return_state
 
 
 class PlotFunctionMonitor(Monitor):
@@ -29,8 +42,11 @@ class PlotFunctionMonitor(Monitor):
                 'matplotlib must be installed to use PlotFunctionMonitor')
         if interactive:
             plt.ion()
+            self._fig = plt.figure()
+        else:
+            plt.ioff()
+            self._fig = None
         self._plot_function = plot_function
-        self._fig = plt.figure()
 
     def store(self, state):
         """
@@ -41,7 +57,14 @@ class PlotFunctionMonitor(Monitor):
         state : dict
             A model state dictionary.
         """
-        self._fig.clear()
-        self._plot_function(self._fig, state)
+        if self._fig is not None:
+            self._fig.clear()
+            time.sleep(1e-5)
+            fig = self._fig
+        else:
+            fig = plt.figure()
+        self._plot_function(fig, copy_state(state))
         plt.draw_all()
         plt.pause(1e-5)  # necessary to draw, pause can be arbitrarily small
+        if self._fig is None:
+            plt.show()

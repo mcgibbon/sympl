@@ -7,9 +7,10 @@ class UnitRegistry(pint.UnitRegistry):
     def __call__(self, input_string, **kwargs):
         return super(UnitRegistry, self).__call__(
             input_string.replace(
-                '%', 'percent').replace(
-                '°', 'degree'
-            ), **kwargs)
+                u'%', 'percent').replace(
+                u'°', 'degree'
+            ),
+            **kwargs)
 
 
 unit_registry = UnitRegistry()

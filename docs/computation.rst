@@ -203,7 +203,8 @@ so it doesn't care about the specifics of what the non-vertical dimensions are,
 as long as the desired quantities are co-located.
 
 That's where ``match_dims_like`` comes in. This property says the object
-requires all matched dimensions of the quantity to be the same as the other
+requires all shared wildcard dimensions between the two quantity match the
+same dimensions as the other
 specified quantity. In this case, it will ensure that ``vertical_wind`` is on
 the same grid as ``air_temperature``.
 
