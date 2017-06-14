@@ -25,24 +25,25 @@ state = {
 
 
 def test_restart_monitor_initializes():
-    assert not os.path.isfile('restart.nc')
-    RestartMonitor('restart.nc')
-    assert not os.path.isfile('restart.nc')  # should not create file on init
+    restart_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'restart.nc')
+    if os.path.isfile(restart_filename):
+        os.remove(restart_filename)
+    assert not os.path.isfile(restart_filename)
+    RestartMonitor(restart_filename)
+    assert not os.path.isfile(restart_filename)  # should not create file on init
 
 
 def test_restart_monitor_stores_state():
-    filename = 'restart.nc'
-    assert not os.path.isfile(filename)
-    monitor = RestartMonitor(filename)
-    assert not os.path.isfile(filename)  # should not create file on init
-    try:
-        monitor.store(state)
-        assert os.path.isfile(filename)
-        new_monitor = RestartMonitor(filename)
-        loaded_state = new_monitor.load()
-    finally:
-        if os.path.isfile(filename):
-            os.remove(filename)
+    restart_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'restart.nc')
+    if os.path.isfile(restart_filename):
+        os.remove(restart_filename)
+    assert not os.path.isfile(restart_filename)
+    monitor = RestartMonitor(restart_filename)
+    assert not os.path.isfile(restart_filename)  # should not create file on init
+    monitor.store(state)
+    assert os.path.isfile(restart_filename)
+    new_monitor = RestartMonitor(restart_filename)
+    loaded_state = new_monitor.load()
     for name in state.keys():
         if name is 'time':
             assert state['time'] == loaded_state['time']
@@ -50,7 +51,6 @@ def test_restart_monitor_stores_state():
             assert np.all(state[name].values == loaded_state[name].values)
             assert state[name].dims == loaded_state[name].dims
             assert state[name].attrs == loaded_state[name].attrs
-    assert not os.path.isfile(filename)  # clean up should be successful
 
 if __name__ == '__main__':
     pytest.main([__file__])

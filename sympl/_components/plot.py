@@ -3,6 +3,7 @@ from .._core.exceptions import DependencyError
 from .._core.array import DataArray
 import time
 
+
 def copy_state(state):
     return_state = {}
     for name, quantity in state.items():
