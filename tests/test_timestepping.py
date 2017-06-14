@@ -3,7 +3,6 @@ import mock
 from sympl import (
     Prognostic, Leapfrog, AdamsBashforth, DataArray)
 from datetime import timedelta
-import numpy as np
 
 
 def same_list(list1, list2):
