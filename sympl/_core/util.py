@@ -46,6 +46,61 @@ def ensure_consistent_dimension_lengths(state):
                     dimension_lengths[name] = array.shape[i]
 
 
+def ensure_properties_have_dims_and_units(properties, quantity_name):
+    if 'dims' not in properties:
+        raise InvalidPropertyDictError(
+            'dims not specified for quantity {}'.format(quantity_name))
+    if 'units' not in properties:
+        raise InvalidPropertyDictError(
+            'units not specified for quantity {}'.format(quantity_name))
+
+
+def ensure_quantity_has_units(quantity, quantity_name):
+    if 'units' not in quantity.attrs:
+        raise InvalidStateError(
+            'quantity {} is missing units attribute'.format(quantity_name))
+
+
+def independent_wildcards_first(item_list):
+    """
+    Sorts the items in a (quantity_name, properties) item list so that
+    quantities that match_dims_like other quantities are placed *after* those
+    quantities in the list. In the case that two quantities match_dims_like
+    one another, a InvalidPropertyDictError is raised.
+
+    This is necessary so that information about the wildcard matches from
+    previous calls can be given to later calls to ensure wildcard-matched
+    dimensions are ordered the same.
+    """
+    name_list = []
+    properties_list = []
+    matched_by_dict = {}
+    for quantity_name, properties in item_list:
+        if 'match_dims_like' in properties:
+            target_name = properties['match_dims_like']
+            if target_name in matched_by_dict:
+                matched_by_dict[target_name].append(quantity_name)
+            else:
+                matched_by_dict[target_name] = [quantity_name]
+    for quantity_name, properties in item_list:
+        if quantity_name not in matched_by_dict:
+            name_list.append(quantity_name)
+            properties_list.append(properties)
+        else:
+            matched_by_indices = []
+            for matched_by_name in matched_by_dict[quantity_name]:
+                if matched_by_name in name_list:
+                    matched_by_indices.append(name_list.index(matched_by_name))
+            if len(matched_by_indices) == 0:
+                name_list.append(quantity_name)
+                properties_list.append(properties)
+            else:
+                index = min(matched_by_indices)
+                name_list.insert(index, quantity_name)
+                properties_list.insert(index, properties)
+    return zip(name_list, properties_list)
+
+
 def get_numpy_arrays_with_properties(state, property_dictionary):
     """
     Parameters
@@ -84,34 +139,35 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
     ensure_consistent_dimension_lengths(state)
     out_dict = {}
     matches = {}
-    for quantity_name, properties in property_dictionary.items():
-        if 'dims' not in properties:
-            raise InvalidPropertyDictError(
-                'dims not specified for quantity {}'.format(quantity_name))
-        if 'units' not in properties:
-            raise InvalidPropertyDictError(
-                'units not specified for quantity {}'.format(quantity_name))
+    for quantity_name, properties in independent_wildcards_first(property_dictionary.items()):
+        ensure_properties_have_dims_and_units(properties, quantity_name)
         if quantity_name not in state.keys():
             raise InvalidStateError(
                 'state is missing quantity {}'.format(quantity_name))
-        if 'units' not in state[quantity_name].attrs:
-            raise InvalidStateError(
-                'quantity {} is missing units attribute'.format(quantity_name))
-        if 'alias' in properties.keys():
+        ensure_quantity_has_units(state[quantity_name], quantity_name)
+        quantity_has_alias = 'alias' in properties.keys()
+        if quantity_has_alias:
             out_name = properties['alias']
-            if out_name in out_dict.keys():
-                raise InvalidPropertyDictError(
-                    'Multiple arrays have alias {}'.format(out_name))
         else:
             out_name = quantity_name
+        if out_name in out_dict.keys():
+            raise InvalidPropertyDictError(
+                'Multiple arrays with output name {}'.format(out_name))
         try:
             quantity_array = state[quantity_name].to_units(properties['units'])
         except ValueError as err:
             raise ValueError(err.args[0] + ' for quantity {}'.format(quantity_name))
         try:
-            out_dict[out_name], matches[quantity_name] = get_numpy_array(
-                quantity_array,
-                out_dims=properties['dims'], return_wildcard_matches=True)
+            if ('match_dims_like' in properties.keys() and
+                    properties['match_dims_like'] in matches):
+                out_dict[out_name], matches[quantity_name] = get_numpy_array(
+                    quantity_array,
+                    out_dims=properties['dims'], return_wildcard_matches=True,
+                    require_wildcard_matches=matches[properties['match_dims_like']])
+            else:
+                out_dict[out_name], matches[quantity_name] = get_numpy_array(
+                    quantity_array,
+                    out_dims=properties['dims'], return_wildcard_matches=True)
         except NoMatchForDirectionError as err:
             raise InvalidStateError(
                 'dimension {} is missing from quantity {}'.format(
@@ -127,7 +183,9 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
     return out_dict
 
 
-def get_numpy_array(data_array, out_dims, return_wildcard_matches=False):
+def get_numpy_array(
+        data_array, out_dims, return_wildcard_matches=False,
+        require_wildcard_matches=None):
     """
     Retrieve a numpy array with the desired dimensions and dimension order
     from the given DataArray, using transpose and creating length 1 dimensions
@@ -149,6 +207,10 @@ def get_numpy_array(data_array, out_dims, return_wildcard_matches=False):
         If True, will additionally return a dictionary whose keys are direciton
         wildcards ('x', 'y', 'z', or '*') and values are lists of matched
         dimensions in the order they appear.
+    require_wildcard_matches : dict, optional
+        A dictionary mapping wildcards to matches. If the wildcard is used in
+        out_dims, ensures that it matches the quantities present in this
+        dictionary, in the same order.
 
     Returns
     -------
@@ -173,6 +235,18 @@ def get_numpy_array(data_array, out_dims, return_wildcard_matches=False):
                 current_dim_names[dim] = [dim]
         direction_to_names = get_input_array_dim_names(
             data_array, out_dims, current_dim_names)
+        if require_wildcard_matches is not None:
+            for direction in out_dims:
+                if (direction in require_wildcard_matches and
+                        same_list(direction_to_names[direction],
+                                  require_wildcard_matches[direction])):
+                    direction_to_names[direction] = require_wildcard_matches[
+                        direction]
+                else:
+                    # we could raise an exception here, because this is
+                    # inconsistent, but that exception is already raised
+                    # elsewhere when ensure_dims_like_are_satisfied is called
+                    pass
         target_dimension_order = get_target_dimension_order(
             out_dims, direction_to_names)
         for dim in data_array.dims:
@@ -202,17 +276,11 @@ def ensure_dims_like_are_satisfied(matches, property_dictionary):
                         properties['match_dims_like'], quantity_name
                     ))
             like_name = properties['match_dims_like']
-            # if not same_list(matches[quantity_name].keys(), matches[like_name].keys()):
-            #     raise InvalidPropertyDictError(
-            #         "quantity {} does not have the same wildcard ('x', 'y', 'z'"
-            #         ", or '*') dimensions as {} despite being referred to in "
-            #         "match_dims_like.\n{}: {}\n{}: {}".format(
-            #             like_name, quantity_name, quantity_name, list(matches[quantity_name].keys()), like_name, list(matches[like_name].keys()))
-            #     )
             for wildcard_dim in set(matches[quantity_name].keys()).intersection(
                     matches[like_name].keys()):
                 # We must use == because we need the dim order to be the same
-                if not (matches[quantity_name][wildcard_dim] ==
+                if not same_list(
+                        matches[quantity_name][wildcard_dim],
                         matches[like_name][wildcard_dim]):
                     raise InvalidStateError(
                         'quantity {} matches dimensions {} for direction {}, but '
@@ -470,7 +538,7 @@ class UpdateFrequencyWrapper(object):
     called MyPrognostic.
 
     >>> from datetime import timedelta
-    >>> prognostic = Delayed(MyPrognostic(), timedelta(hours=1))
+    >>> prognostic = UpdateFrequencyWrapper(MyPrognostic(), timedelta(hours=1))
     """
 
     def __init__(self, prognostic, update_timedelta):

@@ -1,6 +1,6 @@
 import pytest
 from sympl import (
-    DataArray, set_dimension_names, get_numpy_array,
+    DataArray, set_direction_names, get_numpy_array,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties, InvalidStateError,
     InvalidPropertyDictError)
@@ -208,7 +208,7 @@ def test_get_numpy_array_no_dimensions_listed_raises_value_error():
 
 def test_get_numpy_array_multiple_dims_on_same_direction():
     try:
-        set_dimension_names(x=['lon'])
+        set_direction_names(x=['lon'])
         array = DataArray(
             np.random.randn(2, 3),
             dims=['x', 'lon'],
@@ -223,7 +223,7 @@ def test_get_numpy_array_multiple_dims_on_same_direction():
         else:
             raise AssertionError('Expected ValueError but no error was raised')
     finally:
-        set_dimension_names(x=[], y=[], z=[])
+        set_direction_names(x=[], y=[], z=[])
 
 
 def test_get_numpy_array_not_enough_out_dims():
@@ -485,7 +485,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         pass
 
     def tearDown(self):
-        set_dimension_names(x=(), y=(), z=())
+        set_direction_names(x=(), y=(), z=())
 
     def test_returns_numpy_array(self):
         T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
@@ -509,6 +509,54 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert np.byte_bounds(return_value['air_temperature']) == np.byte_bounds(
             T_array)
         assert return_value['air_temperature'].base is T_array
+
+    def test_returns_numpy_array_using_alias(self):
+        T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
+        property_dictionary = {
+            'air_temperature': {
+                'units': 'degK',
+                'dims': ['x', 'y', 'z'],
+                'alias': 'T',
+            },
+        }
+        state = {
+            'air_temperature': DataArray(
+                T_array,
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            ),
+        }
+        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
+        assert isinstance(return_value, dict)
+        assert len(return_value.keys()) == 1
+        assert isinstance(return_value['T'], np.ndarray)
+        assert np.byte_bounds(return_value['T']) == np.byte_bounds(
+            T_array)
+        assert return_value['T'].base is T_array
+
+    def test_returns_numpy_array_alias_doesnt_apply_to_state(self):
+        T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
+        property_dictionary = {
+            'air_temperature': {
+                'units': 'degK',
+                'dims': ['x', 'y', 'z'],
+                'alias': 'T',
+            },
+        }
+        state = {
+            'T': DataArray(
+                T_array,
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            ),
+        }
+        try:
+            return_value = get_numpy_arrays_with_properties(
+                state, property_dictionary)
+        except InvalidStateError:
+            pass
+        else:
+            raise AssertionError('should have raised InvalidStateError')
 
     def test_returns_scalar_array(self):
         T_array = np.array(0.)
@@ -557,7 +605,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert return_value['air_temperature'].base is T_array
 
     def test_collects_wildcard_dimension(self):
-        set_dimension_names(z=['mid_levels'])
+        set_direction_names(z=['mid_levels'])
         T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
         property_dictionary = {
             'air_temperature': {
@@ -582,7 +630,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert return_value['air_temperature'].shape == (2, 3, 4)
 
     def test_raises_on_missing_explicit_dimension(self):
-        set_dimension_names(z=['mid_levels'])
+        set_direction_names(z=['mid_levels'])
         T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
         property_dictionary = {
             'air_temperature': {
@@ -857,7 +905,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             raise AssertionError('should have raised ValueError')
 
     def test_dims_like_accepts_valid_case(self):
-        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+        set_direction_names(x=['x_cell_center', 'x_cell_interface'],
                             z=['mid_levels', 'interface_levels'])
         property_dictionary = {
             'air_temperature': {
@@ -889,7 +937,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert 'air_pressure' in return_value.keys()
 
     def test_dims_like_rejects_mismatched_dimensions(self):
-        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+        set_direction_names(x=['x_cell_center', 'x_cell_interface'],
                             z=['mid_levels', 'interface_levels'])
         property_dictionary = {
             'air_temperature': {
@@ -922,7 +970,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             raise AssertionError('should have raised InvalidStateError')
 
     def test_dims_like_raises_if_quantity_not_in_property_dict(self):
-        set_dimension_names(x=['x_cell_center', 'x_cell_interface'],
+        set_direction_names(x=['x_cell_center', 'x_cell_interface'],
                             z=['mid_levels', 'interface_levels'])
         property_dictionary = {
             'air_pressure': {
@@ -1026,7 +1074,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         pass
 
     def tearDown(self):
-        set_dimension_names(x=(), y=(), z=())
+        set_direction_names(x=(), y=(), z=())
 
     def test_returns_simple_value(self):
         input_state = {
@@ -1183,7 +1231,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
 
     def test_restores_matched_coords(self):
-        set_dimension_names(x=['lon'], y=['lat'], z=['height'])
+        set_direction_names(x=['lon'], y=['lat'], z=['height'])
         x = np.array([0., 10.])
         y = np.array([0., 10.])
         z = np.array([0., 5., 10., 15.])
