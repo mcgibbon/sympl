@@ -1,7 +1,6 @@
 from .base_components import PrognosticComposite
 import abc
 from .array import DataArray
-import numpy as np
 
 
 class TimeStepper(object):
