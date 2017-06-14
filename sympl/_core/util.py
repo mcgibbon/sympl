@@ -277,6 +277,7 @@ def restore_data_arrays_with_properties(
                 'requested output {} is not present in raw_arrays'.format(
                     from_name))
         array = raw_arrays[from_name]
+        from_dims = input_properties[dims_like]['dims']
         result_like = input_state[dims_like]
         try:
             out_dict[quantity_name] = restore_dimensions(
