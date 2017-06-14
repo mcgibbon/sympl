@@ -1323,6 +1323,115 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         else:
             raise AssertionError('should have raised ValueError')
 
+    def test_restores_aliased_name(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = {
+            'p': np.zeros([2, 2, 4])
+        }
+        output_properties = {
+            'air_pressure': {
+                'dims_like': 'air_temperature',
+                'units': 'm',
+                'alias': 'p',
+            },
+        }
+        data_arrays = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert len(data_arrays.keys()) == 1
+        assert 'air_pressure' in data_arrays.keys()
+        assert np.all(data_arrays['air_pressure'].values == raw_arrays['p'])
+        assert np.byte_bounds(data_arrays['air_pressure'].values) == np.byte_bounds(raw_arrays['p'])
+
+    def test_restores_when_name_has_alias(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            }
+        }
+        raw_arrays = {
+            'air_pressure': np.zeros([2, 2, 4])
+        }
+        output_properties = {
+            'air_pressure': {
+                'dims_like': 'air_temperature',
+                'units': 'm',
+                'alias': 'p',
+            },
+        }
+        data_arrays = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert len(data_arrays.keys()) == 1
+        assert 'air_pressure' in data_arrays.keys()
+        assert np.all(data_arrays['air_pressure'].values == raw_arrays['air_pressure'])
+        assert np.byte_bounds(
+            data_arrays['air_pressure'].values) == np.byte_bounds(
+            raw_arrays['air_pressure'])
+
+    def test_restores_using_alias_from_input(self):
+        input_state = {
+            'air_temperature': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            ),
+            'air_pressure': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            ),
+        }
+        input_properties = {
+            'air_temperature': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+            },
+            'air_pressure': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'degK',
+                'alias': 'p'
+            },
+        }
+        raw_arrays = {
+            'p': np.zeros([2, 2, 4])
+        }
+        output_properties = {
+            'air_pressure': {
+                'dims_like': 'air_temperature',
+                'units': 'm',
+            },
+        }
+        data_arrays = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert len(data_arrays.keys()) == 1
+        assert 'air_pressure' in data_arrays.keys()
+        assert np.all(data_arrays['air_pressure'].values == raw_arrays['p'])
+        assert np.byte_bounds(
+            data_arrays['air_pressure'].values) == np.byte_bounds(
+            raw_arrays['p'])
+
 
 if __name__ == '__main__':
     pytest.main([__file__])

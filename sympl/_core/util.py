@@ -33,6 +33,19 @@ class ShapeMismatchError(Exception):
     pass
 
 
+def ensure_consistent_dimension_lengths(state):
+    dimension_lengths = {}
+    for name, array in state.items():
+        if isinstance(array, DataArray):
+            for i, name in enumerate(array.dims):
+                if name in dimension_lengths and (array.shape[i] != dimension_lengths[name]):
+                    raise InvalidStateError(
+                        'dimension {} has multiple lengths (at least {} and {})'.format(
+                            name, array.shape[i], dimension_lengths[name]))
+                else:
+                    dimension_lengths[name] = array.shape[i]
+
+
 def get_numpy_arrays_with_properties(state, property_dictionary):
     """
     Parameters
@@ -68,6 +81,7 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
         If a quantity in property_dictionary is missing values for "dims" or
         "units".
     """
+    ensure_consistent_dimension_lengths(state)
     out_dict = {}
     matches = {}
     for quantity_name, properties in property_dictionary.items():
@@ -247,14 +261,15 @@ def restore_data_arrays_with_properties(
         property, but the arrays for the two properties have incompatible
         shapes.
     """
+    ensure_consistent_dimension_lengths(input_state)
     out_dict = {}
     for quantity_name, properties in output_properties.items():
         attrs = properties.copy()
         dims_like = attrs.pop('dims_like', quantity_name)
-        if 'alias' in properties:
+        if (quantity_name not in raw_arrays.keys()) and ('alias' in properties):
             from_name = attrs.pop('alias')
         elif quantity_name in input_properties.keys() and 'alias' in input_properties[quantity_name].keys():
-            from_name = input_properties[dims_like]['alias']
+            from_name = input_properties[quantity_name]['alias']
         else:
             from_name = quantity_name
         if from_name not in raw_arrays.keys():
@@ -262,7 +277,6 @@ def restore_data_arrays_with_properties(
                 'requested output {} is not present in raw_arrays'.format(
                     from_name))
         array = raw_arrays[from_name]
-        from_dims = input_properties[dims_like]['dims']
         result_like = input_state[dims_like]
         try:
             out_dict[quantity_name] = restore_dimensions(
