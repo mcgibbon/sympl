@@ -13,11 +13,11 @@ class TimeStepper(object):
     ----------
     inputs : tuple of str
         The quantities required in the state when the object is called.
-    outputs: tuple of str
-        The quantities for which values for the new state are returned
-        when the object is called.
     diagnostics: tuple of str
         The quantities for which values for the old state are returned
+        when the object is called.
+    outputs: tuple of str
+        The quantities for which values for the new state are returned
         when the object is called.
     """
 

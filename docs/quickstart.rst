@@ -58,13 +58,15 @@ At the beginning of the script we have import statements:
     from model_package import (
         get_initial_state, Radiation, BoundaryLayer, DeepConvection,
         ImplicitDynamics)
-    from sympl import AdamsBashforth, PlotFunctionMonitor
+    from sympl import (
+        AdamsBashforth, PlotFunctionMonitor, UpdateFrequencyWrapper)
     from datetime import datetime, timedelta
 
 These grant access to the objects that will be used to construct the model,
 and are dependent on the model package you are using. Here, the names
-`model_package`, `get_initial_state`, `Radiation`, `BoundaryLayer`,
-`DeepConvection`, and `ImplicitDynamics` are placeholders, and do not refer to
+:py:class:`model_package`, :py:class:`get_initial_state`, :py:class:`Radiation`,
+:py:class:`BoundaryLayer`, :py:class:`DeepConvection`, and
+:py:class:`ImplicitDynamics` are placeholders, and do not refer to
 an actual existing package.
 
 Defining a PlotFunctionMonitor
@@ -91,14 +93,16 @@ Here we define a plotting function, and use it to create a
 That :py:class:`~sympl.Monitor` will be used to produce an animated plot of the lowest model
 level air temperature as the model runs. Here we assume that the first axis
 is the vertical axis, and that the lowest level is at the lowest index, but
-this might be different for different models.
+this depends entirely on your model. The ``[0, :, :]`` part might be different
+for your model.
 
 Initialize the Model State
 --------------------------
 
 To initialize the model, we need to create a dictionary which contains the
 model state. The way this is done is model-dependent. Here we assume there is
-a function that was defined by the `model_package` package which does so:
+a function that was defined by the `model_package` package which handles this
+for us:
 
 .. code-block:: python
 
@@ -143,7 +147,7 @@ This is commonly used in atmospheric models to avoid doing radiation
 calculations (which are very expensive) every timestep, but it can be applied
 to any Prognostic.
 
-The `ImplicitDynamics` class is a :py:class:`~sympl.Implicit` object, which
+The :py:class:`ImplicitDynamics` class is a :py:class:`~sympl.Implicit` object, which
 steps the model state forward in time in the same way that a :py:class:`~sympl.TimeStepper`
 would, but doesn't use :py:class:`~sympl.Prognostic` objects in doing so.
 
@@ -166,5 +170,5 @@ computation is done -- the main loop:
         state = next_state
 
 In the main loop, a series of component calls update the state, and the figure
-presented by `plot_monitor` is updated. The code is meant to be as
+presented by ``plot_monitor`` is updated. The code is meant to be as
 self-explanatory as possible.

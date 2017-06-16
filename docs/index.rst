@@ -21,6 +21,7 @@ Documentation
    overview
    quickstart
    faq
+   installation
    state
    timestepping
    computation
