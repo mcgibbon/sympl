@@ -49,6 +49,10 @@ class PlotFunctionMonitor(Monitor):
             self._fig = None
         self._plot_function = plot_function
 
+    @property
+    def interactive(self):
+        return self._fig is not None
+
     def store(self, state):
         """
         Updates the plot using the given state.
@@ -58,7 +62,7 @@ class PlotFunctionMonitor(Monitor):
         state : dict
             A model state dictionary.
         """
-        if self._fig is not None:
+        if self.interactive:
             self._fig.clear()
             time.sleep(1e-5)
             fig = self._fig
@@ -66,6 +70,7 @@ class PlotFunctionMonitor(Monitor):
             fig = plt.figure()
         self._plot_function(fig, copy_state(state))
         plt.draw_all()
-        plt.pause(1e-5)  # necessary to draw, pause can be arbitrarily small
-        if self._fig is None:
+        if self.interactive:
+            time.sleep(1e-5)  # necessary to draw, pause can be arbitrarily small
+        else:
             plt.show()
