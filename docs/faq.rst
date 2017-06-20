@@ -28,3 +28,7 @@ In short, the more your work involves configuring and developing models, the
 more time you will save, at the cost of slightly slower model runs. But in the
 end, what is the cost of your sanity?
 
+What calendar is my model using?
+--------------------------------
+
+Hopefully the section on :ref:`Choice of Datetime` can clear this up.

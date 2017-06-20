@@ -2,8 +2,8 @@
 Writing Components
 ==================
 
-.. note:: This section is intended for model package developers. If you intend
-    only to use someone else's model, you can probably ignore it.
+.. note:: This section is intended for model developers. If you intend
+    to use only components that are already written, you can probably ignore it.
 
 Perhaps the best way to learn how to write components is to read components
 someone else has written. For example, you can look at the CliMT project. Here
@@ -106,7 +106,7 @@ The next few lines define attributes of your object:
                 'dims': ['*'],
                 'units': 'degK',
             },
-            'vertical_wind': {
+            'eastward_wind': {
                 'dims': ['*'],
                 'units': 'm/s',
                 'match_dims_like': ['air_temperature']
@@ -121,6 +121,9 @@ The next few lines define attributes of your object:
                 'units': 'degK/s',
             }
         }
+
+.. note:: 'eastward_wind' wouldn't normally make sense as an input for this object,
+          it's only included so we can talk about *match_dims_like*.
 
 These attributes will be attributes both of the class object you're defining
 and of any instances of that object. That means you can access them using:
@@ -258,3 +261,61 @@ You can read more about properties in the section
 .. autofunction:: sympl.get_numpy_arrays_with_properties
 
 .. autofunction:: sympl.restore_data_arrays_with_properties
+
+
+Aliases
+-------
+
+.. note:: Using aliases isn't necessary, but it may make your code easier to
+          read if you have long quantity names
+
+Let's say if instead of the properties we set before, we have
+
+
+.. code-block:: python
+
+        input_properties = {
+            'air_temperature': {
+                'dims': ['*'],
+                'units': 'degK',
+                'alias': 'T',
+            },
+            'eastward_wind': {
+                'dims': ['*'],
+                'units': 'm/s',
+                'match_dims_like': ['air_temperature']
+                'alias': 'u',
+            }
+        }
+
+The difference here is we've set 'T' and 'u' to be *aliases* for
+'air_temperature' and 'eastward_wind'. What does that mean? Well, in the
+computational code, we can write:
+
+.. code-block:: python
+
+        def __call__(self, state):
+            # we get numpy arrays with specifications from input_properties
+            raw_arrays = get_numpy_arrays_with_properties(
+                state, self.input_properties)
+            T = raw_arrays['T']
+            # here the actual computation happens
+            raw_tendencies = {
+                'T': (T - self._T0)/self._tau,
+            }
+            # now we re-format the data in a way the host model can use
+            diagnostics = {}
+            tendencies = restore_data_arrays_with_properties(
+                raw_tendencies, self.tendency_properties,
+                state, self.input_properties)
+            return diagnostics, tendencies
+
+Instead of using 'air_temperature' in the raw_arrays and raw_tendencies
+dictionaries, we can use 'T'. This doesn't matter much for a name as short as
+air_temperature, but it might matter for longer names like
+'correlation_of_eastward_wind_and_liquid_water_potential_temperature_on_interface_levels'.
+
+Also notice that even though the alias is set in input_properties, it is also
+used when restoring DataArrays. If there is an output that is not
+also an input, the alias could instead be set in ``diagnostic_properties``,
+``tendency_properties``, or ``output_properties``, wherever is relevant.
