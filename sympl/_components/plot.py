@@ -1,7 +1,6 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import DependencyError
 from .._core.array import DataArray
-import time
 
 
 def copy_state(state):
