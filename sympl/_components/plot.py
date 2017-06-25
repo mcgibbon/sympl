@@ -64,13 +64,13 @@ class PlotFunctionMonitor(Monitor):
         """
         if self.interactive:
             self._fig.clear()
-            time.sleep(1e-5)
             fig = self._fig
         else:
             fig = plt.figure()
         self._plot_function(fig, copy_state(state))
-        plt.draw_all()
+        plt.tight_layout()
+        fig.canvas.draw()
         if self.interactive:
-            time.sleep(1e-5)  # necessary to draw, pause can be arbitrarily small
+            pass
         else:
             plt.show()
