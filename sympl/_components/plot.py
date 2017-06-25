@@ -1,7 +1,6 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import DependencyError
 from .._core.array import DataArray
-import time
 
 
 def copy_state(state):
@@ -64,13 +63,12 @@ class PlotFunctionMonitor(Monitor):
         """
         if self.interactive:
             self._fig.clear()
-            time.sleep(1e-5)
             fig = self._fig
         else:
             fig = plt.figure()
+
         self._plot_function(fig, copy_state(state))
-        plt.draw_all()
-        if self.interactive:
-            time.sleep(1e-5)  # necessary to draw, pause can be arbitrarily small
-        else:
+
+        fig.canvas.draw()
+        if not self.interactive:
             plt.show()
