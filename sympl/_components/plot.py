@@ -66,8 +66,9 @@ class PlotFunctionMonitor(Monitor):
             fig = self._fig
         else:
             fig = plt.figure()
+
         self._plot_function(fig, copy_state(state))
-        plt.tight_layout()
+
         fig.canvas.draw()
         if not self.interactive:
             plt.show()
