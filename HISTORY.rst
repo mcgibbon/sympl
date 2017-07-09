@@ -5,6 +5,9 @@ What's New
 Latest
 ------
 
+0.2.0
+-----
+
 * Added some more physical constants.
 * Added readthedocs support.
 * Overhaul of documentation.
