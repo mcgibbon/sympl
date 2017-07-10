@@ -5,6 +5,8 @@ What's New
 Latest
 ------
 
+* Fixed value of planetary radius, added specific heat of water vapor.
+
 0.2.0
 -----
 
