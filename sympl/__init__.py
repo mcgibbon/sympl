@@ -21,7 +21,7 @@ from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
 
-__version__ = '0.1.1'
+__version__ = '0.2.0'
 __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite,
