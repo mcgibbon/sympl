@@ -63,7 +63,7 @@ target temperature.
             tendencies = restore_data_arrays_with_properties(
                 raw_tendencies, self.tendency_properties,
                 state, self.input_properties)
-            return diagnostics, tendencies
+            return tendencies, diagnostics
 
 Imports
 *******
