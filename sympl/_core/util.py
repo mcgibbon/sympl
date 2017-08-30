@@ -155,8 +155,13 @@ def get_numpy_arrays_with_properties(state, property_dictionary):
                 'Multiple arrays with output name {}'.format(out_name))
         try:
             quantity_array = state[quantity_name].to_units(properties['units'])
-        except ValueError as err:
-            raise ValueError(err.args[0] + ' for quantity {}'.format(quantity_name))
+        except ValueError:
+            raise ValueError(
+                'Invalid target units {} for quantity {} '
+                'with units {}'.format(
+                    properties['units'],
+                    quantity_name,
+                    state[quantity_name].attrs['units']))
         try:
             if ('match_dims_like' in properties.keys() and
                     properties['match_dims_like'] in matches):
