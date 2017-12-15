@@ -5,6 +5,8 @@ What's New
 Latest
 ------
 
+* added some more constants to default_constants.
+
 0.2.1
 -----
 
