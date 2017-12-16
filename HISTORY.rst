@@ -7,6 +7,7 @@ Latest
 
 * Modified component class checking to look at the presence of *properties
   attributes instead of checking type when verifying component class.
+* Removed Python 3.4 from Travis CI testing
 
 0.2.1
 -----
