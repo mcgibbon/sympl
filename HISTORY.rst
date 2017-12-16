@@ -5,6 +5,9 @@ What's New
 Latest
 ------
 
+* Modified component class checking to look at the presence of *properties
+  attributes instead of checking type when verifying component class.
+
 0.2.1
 -----
 
