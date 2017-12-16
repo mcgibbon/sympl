@@ -358,9 +358,16 @@ class ComponentComposite(object):
 
 def ensure_components_have_class(components, component_class):
     for component in components:
-        if not isinstance(component, component_class):
-            raise TypeError(
-                "require components of type {}".format(component_class))
+        for attr in ('input_properties', 'output_properties',
+                     'diagnostic_properties', 'tendency_properties'):
+            if hasattr(component_class, attr) and not hasattr(component, attr):
+                raise TypeError(
+                    'Component should have attribute {} but does not'.format(
+                        attr))
+            elif hasattr(component, attr) and not hasattr(component_class, attr):
+                raise TypeError(
+                    'Component should not have attribute {}, but does'.format(
+                        attr))
 
 
 class PrognosticComposite(ComponentComposite):
