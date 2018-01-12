@@ -8,7 +8,7 @@ from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError)
 from ._core.array import DataArray
-from ._core.constants import default_constants
+from ._core.constants import default_constants, set_constant
 from ._core.util import (
     UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
@@ -29,7 +29,7 @@ __all__ = (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError,
     DataArray,
-    default_constants,
+    default_constants, set_constant
     UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,

@@ -21,3 +21,6 @@ default_constants = {
     'loschmidt_constant': DataArray(2.6516467e25, attrs={'units': 'm^-3'}),
     'universal_gas_constant': DataArray(8.3144598, attrs={'units': 'J mole^-1 K^-1'}),
 }
+
+def set_constant(name, value, units):
+    default_constants[name] = DataArray(value, attrs={'units': units})

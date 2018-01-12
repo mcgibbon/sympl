@@ -9,6 +9,10 @@ Latest
 -----
 
 * Fixed value of planetary radius, added specific heat of water vapor.
+* Added function set_constant which provides an easy interface for setting
+  values in the default_constants dictionary. Users can already set them
+  manually by creating DataArray objects. This automates the DataArray
+  creation, which should make user code cleaner.
 
 0.2.0
 -----

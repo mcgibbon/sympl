@@ -548,12 +548,12 @@ class UpdateFrequencyWrapper(object):
 
     def __init__(self, prognostic, update_timedelta):
         """
-        Initialize the Delayed object.
+        Initialize the UpdateFrequencyWrapper object.
 
         Args
         ----
         prognostic : Prognostic
-            The object to be wrapped
+            The object to be wrapped.
         update_timedelta : timedelta
             The amount that state['time'] must differ from when output
             was cached before new output is computed.
@@ -606,6 +606,16 @@ class TendencyInDiagnosticsWrapper(object):
         for quantity_name, properties in prognostic.tendency_properties.items():
             diagnostic_name = 'tendency_of_{}_due_to_{}'.format(quantity_name, label)
             self._tendency_diagnostic_properties[diagnostic_name] = properties
+
+    @property
+    def inputs(self):
+        return list(self.diagnostic_properties.keys())
+
+    @property
+    def input_properties(self):
+        return_dict = self._prognostic.input_properties.copy()
+        return_dict.update(self._tendency_diagnostic_properties)
+        return return_dict
 
     @property
     def diagnostics(self):
