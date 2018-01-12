@@ -29,7 +29,7 @@ __all__ = (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError,
     DataArray,
-    default_constants, set_constant
+    default_constants, set_constant,
     UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
     replace_none_with_default, ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
