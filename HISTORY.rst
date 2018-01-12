@@ -5,6 +5,12 @@ What's New
 Latest
 ------
 
+* Modified component class checking to look at the presence of *properties
+  attributes instead of checking type when verifying component class.
+* Removed Python 3.4 from Travis CI testing
+* added some more constants to default_constants related to conductivity of
+  water in all phases and phase changes of water.
+
 0.2.1
 -----
 
