@@ -34,5 +34,6 @@ default_constants = {
     'universal_gas_constant': DataArray(8.3144598, attrs={'units': 'J mole^-1 K^-1'}),
 }
 
+
 def set_constant(name, value, units):
     default_constants[name] = DataArray(value, attrs={'units': units})
