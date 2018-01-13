@@ -40,4 +40,4 @@ def set_constant(name, value, units):
     if is_valid_unit(units):
         default_constants[name] = DataArray(value, attrs={'units': units})
     else:
-        raise TypeError('{} is not a valid unit.'.format(units))
+        raise ValueError('{} is not a valid unit.'.format(units))
