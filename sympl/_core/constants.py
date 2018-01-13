@@ -1,4 +1,5 @@
 from .array import DataArray
+from .units import is_valid_unit
 
 default_constants = {
     'stefan_boltzmann_constant': DataArray(5.670367e-8, attrs={'units': 'W m^-2 K^-4'}),
@@ -36,4 +37,7 @@ default_constants = {
 
 
 def set_constant(name, value, units):
-    default_constants[name] = DataArray(value, attrs={'units': units})
+    if is_valid_unit(units):
+        default_constants[name] = DataArray(value, attrs={'units': units})
+    else:
+        raise ValueError('{} is not a valid unit.'.format(units))
