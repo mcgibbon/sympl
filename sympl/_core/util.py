@@ -638,7 +638,7 @@ class TendencyInDiagnosticsWrapper(object):
         return getattr(self._prognostic, item)
 
 
-class ScaledInputOutputWrapper(object):
+class ScalingWrapper(object):
     """
     Wraps any component and scales either inputs, outputs or tendencies
     by a floating point value.
@@ -660,7 +660,8 @@ class ScaledInputOutputWrapper(object):
                  component,
                  input_scale_factors=None,
                  output_scale_factors=None,
-                 tendency_scale_factors=None):
+                 tendency_scale_factors=None,
+                 diagnostic_scale_factors=None):
         """
         Initializes the ScaledInputOutputWrapper object.
 
@@ -679,6 +680,10 @@ class ScaledInputOutputWrapper(object):
 
         tendency_scale_factors : dict
             a dictionary whose keys are the tendencies that will be scaled
+            and values are floating point scaling factors.
+
+        diagnostic_scale_factors : dict
+            a dictionary whose keys are the diagnostics that will be scaled
             and values are floating point scaling factors.
 
         Returns
@@ -706,8 +711,18 @@ class ScaledInputOutputWrapper(object):
 
             self._input_scale_factors = input_scale_factors
 
+        self._diagnostic_scale_factors = dict()
+        if diagnostic_scale_factors is not None:
+
+            for diagnostic_field in diagnostic_scale_factors.keys():
+                if diagnostic_field not in component.diagnostics:
+                    raise ValueError(
+                        "{} is not a valid diagnostic quantity.".format(diagnostic_field))
+
+            self._diagnostic_scale_factors = diagnostic_scale_factors
+
         if hasattr(component, 'input_properties') and hasattr(component, 'output_properties'):
-           
+
             self._output_scale_factors = dict()
             if output_scale_factors is not None:
 
@@ -732,9 +747,11 @@ class ScaledInputOutputWrapper(object):
                 self._tendency_scale_factors = tendency_scale_factors
             self._component_type = 'Prognostic'
 
+        elif hasattr(component, 'input_properties') and hasattr(component, 'diagnostic_properties'):
+            self._component_type = 'Diagnostic'
         else:
             raise TypeError(
-                "Component must be either of type Implicit or Prognostic")
+                "Component must be either of type Implicit or Prognostic or Diagnostic")
 
         self._component = component
 
@@ -753,7 +770,6 @@ class ScaledInputOutputWrapper(object):
                 scaled_state[input_field] = state[input_field]*float(scale_factor)
             else:
                 scaled_state[input_field] = state[input_field]
-                
 
         if self._component_type == 'Implicit':
             diagnostics, new_state = self._component(scaled_state, timestep)
@@ -761,6 +777,10 @@ class ScaledInputOutputWrapper(object):
             for output_field in self._output_scale_factors.keys():
                 scale_factor = self._output_scale_factors[output_field]
                 new_state[output_field] *= float(scale_factor)
+
+            for diagnostic_field in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[diagnostic_field]
+                diagnostics[diagnostic_field] *= float(scale_factor)
 
             return diagnostics, new_state
         elif self._component_type == 'Prognostic':
@@ -770,7 +790,22 @@ class ScaledInputOutputWrapper(object):
                 scale_factor = self._tendency_scale_factors[tend_field]
                 tendencies[tend_field] *= float(scale_factor)
 
+            for diagnostic_field in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[diagnostic_field]
+                diagnostics[diagnostic_field] *= float(scale_factor)
+
             return tendencies, diagnostics
+        elif self._component_type == 'Diagnostic':
+            diagnostics = self._component(scaled_state)
+
+            for diagnostic_field in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[diagnostic_field]
+                diagnostics[diagnostic_field] *= float(scale_factor)
+
+            return diagnostics
+        else:  # Should never reach this
+            raise ValueError(
+                'Unknown component type, seems to be a bug in ScalingWrapper')
 
 
 def replace_none_with_default(constant_name, value):
