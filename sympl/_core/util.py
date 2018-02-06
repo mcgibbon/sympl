@@ -590,7 +590,7 @@ class TendencyInDiagnosticsWrapper(object):
 
     def __init__(self, prognostic, label):
         """
-        Initialize the Delayed object.
+        Initialize the TendencyInDiagnosticsWrapper object.
 
         Args
         ----
@@ -614,7 +614,6 @@ class TendencyInDiagnosticsWrapper(object):
     @property
     def input_properties(self):
         return_dict = self._prognostic.input_properties.copy()
-        return_dict.update(self._tendency_diagnostic_properties)
         return return_dict
 
     @property
