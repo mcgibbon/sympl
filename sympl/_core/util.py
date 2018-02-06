@@ -638,6 +638,141 @@ class TendencyInDiagnosticsWrapper(object):
         return getattr(self._prognostic, item)
 
 
+class ScaledInputOutputWrapper(object):
+    """
+    Wraps any component and scales either inputs, outputs or tendencies
+    by a floating point value.
+
+    Example
+    -------
+
+    This is how the ScaledInputOutputWrapper can be used to wrap a Prognostic.
+
+    >>> scaled_component = ScaledInputOutputWrapper(
+    >>>     RRTMRadiation(),
+    >>>     input_scale_factors = {
+    >>>         'specific_humidity' = 0.2},
+    >>>     tendency_scale_factors = {
+    >>>         'air_temperature' = 1.5})
+    """
+
+    def __init__(self,
+                 component,
+                 input_scale_factors=None,
+                 output_scale_factors=None,
+                 tendency_scale_factors=None):
+        """
+        Initializes the ScaledInputOutputWrapper object.
+
+        Args
+        ----
+        component : Prognostic, Implicit
+            The component to be wrapped.
+
+        input_scale_factors : dict
+            a dictionary whose keys are the inputs that will be scaled
+            and values are floating point scaling factors.
+
+        output_scale_factors : dict
+            a dictionary whose keys are the outputs that will be scaled
+            and values are floating point scaling factors.
+
+        tendency_scale_factors : dict
+            a dictionary whose keys are the tendencies that will be scaled
+            and values are floating point scaling factors.
+
+        Returns
+        -------
+        scaled_component : ScaledInputOutputWrapper
+            the scaled version of the component
+
+        Raises
+        ------
+        TypeError
+            The component is not of type Implicit or Prognostic.
+
+        ValueError
+            The keys in the scale factors do not correspond to valid
+            input/output/tendency for this component.
+        """
+
+        self._input_scale_factors = dict()
+        if input_scale_factors is not None:
+
+            for input_field in input_scale_factors.keys():
+                if input_field not in component.inputs:
+                    raise ValueError(
+                        "{} is not a valid input quantity.".format(input_field))
+
+            self._input_scale_factors = input_scale_factors
+
+        if hasattr(component, 'input_properties') and hasattr(component, 'output_properties'):
+           
+            self._output_scale_factors = dict()
+            if output_scale_factors is not None:
+
+                for output_field in output_scale_factors.keys():
+                    if output_field not in component.outputs:
+                        raise ValueError(
+                            "{} is not a valid output quantity.".format(output_field))
+
+                self._output_scale_factors = output_scale_factors
+            self._component_type = 'Implicit'
+
+        elif hasattr(component, 'input_properties') and hasattr(component, 'tendency_properties'):
+
+            self._tendency_scale_factors = dict()
+            if tendency_scale_factors is not None:
+
+                for tendency_field in tendency_scale_factors.keys():
+                    if tendency_field not in component.tendencies:
+                        raise ValueError(
+                            "{} is not a valid tendency quantity.".format(tendency_field))
+
+                self._tendency_scale_factors = tendency_scale_factors
+            self._component_type = 'Prognostic'
+
+        else:
+            raise TypeError(
+                "Component must be either of type Implicit or Prognostic")
+
+        self._component = component
+
+    def __getattr__(self, item):
+        return getattr(self._component, item)
+
+    def __call__(self, state, timestep=None):
+
+        scaled_state = {}
+        if 'time' in state:
+            scaled_state['time'] = state['time']
+
+        for input_field in self.inputs:
+            if input_field in self._input_scale_factors:
+                scale_factor = self._input_scale_factors[input_field]
+                scaled_state[input_field] = state[input_field]*float(scale_factor)
+            else:
+                scaled_state[input_field] = state[input_field]
+                
+
+        if self._component_type == 'Implicit':
+            diagnostics, new_state = self._component(scaled_state, timestep)
+
+            for output_field in self._output_scale_factors.keys():
+                scale_factor = self._output_scale_factors[output_field]
+                new_state[output_field] *= float(scale_factor)
+
+            return diagnostics, new_state
+        elif self._component_type == 'Prognostic':
+            tendencies, diagnostics = self._component(scaled_state)
+
+            for tend_field in self._tendency_scale_factors.keys():
+                scale_factor = self._tendency_scale_factors[tend_field]
+                tendencies[tend_field] *= float(scale_factor)
+
+            return tendencies, diagnostics
+
+
 def replace_none_with_default(constant_name, value):
     """If value is None, returns the default constant for the constant name.
     Otherwise, returns value. If the default constant is not defined, raises
