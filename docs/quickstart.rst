@@ -22,7 +22,7 @@ will be looking at:
         ax.set_title('Lowest model level air temperature (K)')
         im = ax.pcolormesh(
             state['air_temperature'].to_units('degK').values[0, :, :],
-            vmin=260.
+            vmin=260.,
             vmax=310.)
         cbar = fig.colorbar(im)
 
@@ -84,7 +84,7 @@ Here we define a plotting function, and use it to create a
         ax.set_title('Lowest model level air temperature (K)')
         im = ax.pcolormesh(
             state['air_temperature'].to_units('degK').values[0, :, :],
-            vmin=260.
+            vmin=260.,
             vmax=310.)
         cbar = fig.colorbar(im)
 
