@@ -10,6 +10,25 @@ Latest
 * Removed Python 3.4 from Travis CI testing
 * added some more constants to default_constants related to conductivity of
   water in all phases and phase changes of water.
+* increased the verbosity of the error output on shape mismatch in
+  restore_data_arrays_with_properties
+* corrected heat capacity of snow and ice to be floats instead of ints
+* Added get_constant function as the way to retrieve constants
+* Added ImplicitPrognostic as a new component type. It is like a Prognostic,
+  but its call signature also requires that a timestep be given.
+* Added set_condensible_name as a way of changing what condensible aliases
+  (for example, density_of_solid_phase) refer to. Default is 'water'.
+* Moved wrappers to their own file (out from util.py).
+* Corrected str representation of Diagnostic to say Diagnostic instead of
+  Implicit
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* Removed default_constants from the public API, use get_constant and
+  set_constant instead.
+* Removed replace_none_with_default. Use get_constant instead.
+* set_dimension_names has been removed, use set_direction_names instead.
 
 0.2.1
 -----
