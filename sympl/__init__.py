@@ -12,12 +12,12 @@ from ._core.constants import get_constant, set_constant, set_condensible_name
 from ._core.util import (
     combine_dimensions,
     ensure_no_shared_keys,
-    get_numpy_array, jit, TendencyInDiagnosticsWrapper,
+    get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     set_direction_names, add_direction_names)
-from sympl._core.wrappers import UpdateFrequencyWrapper, \
-    TendencyInDiagnosticsWrapper
+from sympl._core.wrappers import (
+    UpdateFrequencyWrapper, TendencyInDiagnosticsWrapper)
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
