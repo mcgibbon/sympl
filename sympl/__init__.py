@@ -8,14 +8,16 @@ from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError)
 from ._core.array import DataArray
-from ._core.constants import default_constants, set_constant
+from ._core.constants import get_constant, set_constant, set_condensible_name
 from ._core.util import (
-    UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
-    replace_none_with_default, ensure_no_shared_keys,
+    combine_dimensions,
+    ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     set_direction_names, add_direction_names)
+from sympl._core.wrappers import UpdateFrequencyWrapper, \
+    TendencyInDiagnosticsWrapper
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
@@ -29,9 +31,9 @@ __all__ = (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError,
     DataArray,
-    default_constants, set_constant,
-    UpdateFrequencyWrapper, set_dimension_names, combine_dimensions,
-    replace_none_with_default, ensure_no_shared_keys,
+    get_constant, set_constant, set_condensible_name,
+    UpdateFrequencyWrapper, combine_dimensions,
+    ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
