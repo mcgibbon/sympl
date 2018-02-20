@@ -1,6 +1,41 @@
 from .array import DataArray
 
-default_constants = {
+def get_condensible_map(condensible_name):
+    return {
+        'gas_constant_of_vapor_phase': 'gas_constant_of_{}_vapor'.format(condensible_name),
+        'heat_capacity_of_vapor_phase': 'heat_capacity_of_{}_vapor_at_constant_pressure'.format(condensible_name),
+        'specific_enthalpy_of_vapor_phase': 'specific_enthalpy_of_{}_vapor'.format(condensible_name),
+        'density_of_liquid_phase': 'density_of_liquid_{}'.format(condensible_name),
+        'heat_capacity_of_liquid_phase': 'heat_capacity_of_liquid_{}'.format(condensible_name),
+        'latent_heat_of_vaporization': 'latent_heat_of_vaporization_of_{}'.format(condensible_name),
+        'freezing_temperature_of_liquid_phase': 'freezing_temperature_of_liquid_{}'.format(condensible_name),
+        'thermal_conductivity_of_liquid_phase': 'thermal_conductivity_of_liquid_{}'.format(condensible_name),
+        'latent_heat_of_fusion': 'latent_heat_of_fusion_of_{}'.format(condensible_name),
+        'density_of_solid_phase_as_ice': 'density_of_solid_{}_as_ice'.format(condensible_name),
+        'density_of_solid_phase_as_snow': 'density_of_solid_{}_as_snow'.format(condensible_name),
+        'heat_capacity_of_solid_phase_as_ice': 'heat_capacity_of_solid_{}_as_ice'.format(condensible_name),
+        'heat_capacity_of_solid_phase_as_snow': 'heat_capacity_of_solid_{}_as_snow'.format(condensible_name),
+        'thermal_conductivity_of_solid_phase_as_ice': 'thermal_conductivity_of_solid_{}_as_ice'.format(condensible_name),
+        'thermal_conductivity_of_solid_phase_as_snow': 'thermal_conductivity_of_solid_{}_as_snow'.format(condensible_name),
+    }
+
+
+constant_aliases = {
+    'latent_heat_of_condensation': 'latent_heat_of_vaporization',
+    'enthalpy_of_fusion': 'latent_heat_of_fusion',
+    'stellar_irradiance': 'solar_constant',
+    'heat_capacity_of_ice': 'heat_capacity_of_solid_phase_as_ice',
+    'heat_capacity_of_snow': 'heat_capacity_of_solid_phase_as_snow',
+    'thermal_conductivity_of_ice': 'thermal_conductivity_of_solid_phase_as_ice',
+    'thermal_conductivity_of_snow': 'thermal_conductivity_of_solid_phase_as_snow',
+    'density_of_ice': 'density_of_solid_phase_as_ice',
+    'density_of_snow': 'density_of_solid_phase_as_snow',
+}
+
+constant_aliases.update(get_condensible_map('water'))
+
+
+constants = {
     'stefan_boltzmann_constant': DataArray(5.670367e-8, attrs={'units': 'W m^-2 K^-4'}),
     'gravitational_acceleration': DataArray(9.80665, attrs={'units': 'm s^-2'}),
     'heat_capacity_of_dry_air_at_constant_pressure': DataArray(1004.64, attrs={'units': 'J kg^-1 K^-1'}),
@@ -9,9 +44,9 @@ default_constants = {
     'heat_capacity_of_liquid_water': DataArray(4185.5, attrs={'units': 'J kg^-1 K^-1'}),
     'freezing_temperature_of_liquid_water': DataArray(273.0, attrs={'units': 'K'}),
     'thermal_conductivity_of_liquid_water': DataArray(0.57, attrs={'units': 'W m^-1 K^-1'}),
-    'heat_capacity_of_ice': DataArray(2108, attrs={'units': 'J kg^-1 K^-1'}),
+    'heat_capacity_of_ice': DataArray(2108., attrs={'units': 'J kg^-1 K^-1'}),
     'thermal_conductivity_of_ice': DataArray(2.22, attrs={'units': 'W m^-1 K^-1'}),
-    'heat_capacity_of_snow': DataArray(2108, attrs={'units': 'J kg^-1 K^-1'}),
+    'heat_capacity_of_snow': DataArray(2108., attrs={'units': 'J kg^-1 K^-1'}),
     'thermal_conductivity_of_snow': DataArray(0.2, attrs={'units': 'W m^-1 K^-1'}),
     'reference_air_pressure': DataArray(1.0132e5, attrs={'units': 'Pa'}),
     'thermal_conductivity_of_dry_air': DataArray(0.026, attrs={'units': 'W m^-1 K^-1'}),
@@ -35,5 +70,53 @@ default_constants = {
 }
 
 
+def get_alias(name):
+    n_iterations = 0
+    while name in constant_aliases.keys() and n_iterations < 100:
+        name = constant_aliases[name]
+        n_iterations += 1
+    if name in constant_aliases.keys():
+        raise RuntimeError(
+            'Circular aliases exist for constant name {}. '
+            'Max iterations exceeded.'.format(name))
+    return name
+
+
+
 def set_constant(name, value, units):
-    default_constants[name] = DataArray(value, attrs={'units': units})
+    """
+    Sets the value of a constant.
+
+    Parameters
+    ----------
+    name : str
+        The name of the constant.
+    value : float
+        The value to which the constant should be set.
+    units : str
+        The units of the value given.
+    """
+    constants[get_alias(name)] = DataArray(value, attrs={'units': units})
+
+
+def get_constant(name, units):
+    """
+    Retrieves the value of a constant.
+
+    Parameters
+    ----------
+    name : str
+        The name of the constant.
+    units : str
+        The units requested for the returned value.
+
+    Returns
+    -------
+    value : float
+        The value of the constant in the requested units.
+    """
+    return constants[get_alias(name)].to_units(units).values.item()
+
+
+def set_condensible_name(name):
+    constant_aliases.update(get_condensible_map(name))
