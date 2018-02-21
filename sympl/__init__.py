@@ -18,7 +18,7 @@ from ._core.util import (
     set_direction_names, add_direction_names)
 from ._core.wrappers import (
     UpdateFrequencyWrapper, TendencyInDiagnosticsWrapper,
-    ImplicitPrognosticWrapper)
+    ImplicitPrognosticWrapper, ScalingWrapper)
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,

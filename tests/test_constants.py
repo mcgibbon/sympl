@@ -18,21 +18,21 @@ def test_constants_have_valid_units():
 def test_setting_existing_constant():
 
     set_constant('seconds_per_day', 100000, 'seconds/day')
-
-    new_constant = constants['seconds_per_day']
-    assert new_constant.values == 100000
-    assert new_constant.units == 'seconds/day'
+    new_constant = get_constant('seconds_per_day', units='seconds/day')
+    assert new_constant == 100000
 
 
 def test_setting_new_constant():
 
     set_constant('my_own_constant', 10., 'W m^-1 degK^-1')
+    new_constant = get_constant('my_own_constant', units='W m^-1 degK^-1')
+    assert new_constant == 10.
 
-    assert 'my_own_constant' in default_constants
 
-    new_constant = constants['my_own_constant']
-    assert new_constant.values == 10.
-    assert new_constant.units == 'W m^-1 degK^-1'
+def test_converting_existing_constant():
+    g_m_per_second = get_constant('gravitational_acceleration', 'm s^-2')
+    g_km_per_second = get_constant('gravitational_acceleration', 'km s^-2')
+    assert g_km_per_second == g_m_per_second * 0.001
 
 
 def test_setting_wrong_units():
