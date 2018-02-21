@@ -6,6 +6,10 @@ Latest
 ------
 
 * Modified component class checking to look at the presence of properties
+* Added ScalingWrapper
+* Fixed bug in TendencyInDiagnosticsWrapper where tendency_diagnostics_properties were
+  being copied into input_properties
+* Modified component class checking to look at the presence of properties
   attributes instead of checking type when verifying component class.
 * Removed Python 3.4 from Travis CI testing
 * added some more constants to default_constants related to conductivity of

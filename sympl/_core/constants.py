@@ -1,4 +1,5 @@
 from .array import DataArray
+from .units import is_valid_unit
 
 
 def get_condensible_map(condensible_name):
@@ -214,7 +215,10 @@ def set_constant(name, value, units):
     units : str
         The units of the value given.
     """
-    constants[get_alias(name)] = DataArray(value, attrs={'units': units})
+    if is_valid_unit(units):
+        constants[get_alias(name)] = DataArray(value, attrs={'units': units})
+    else:
+        raise ValueError('{} is not a valid unit.'.format(units))
 
 
 def get_constant(name, units):
@@ -253,3 +257,4 @@ def set_condensible_name(name):
 
 class ConstantList(object):
     __doc__ = constants._repr(sphinx=True)
+    
