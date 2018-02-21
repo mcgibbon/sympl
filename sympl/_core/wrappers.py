@@ -119,14 +119,20 @@ class ImplicitPrognosticWrapper(ImplicitPrognostic):
         diagnostics, new_state = self._implicit(state, timestep)
         tendencies = {}
         timestep_seconds = timestep.total_seconds()
-        for varname, data_array in new_state:
+        for varname, data_array in new_state.items():
             if isinstance(data_array, DataArray):
-                tendency = data_array / timestep_seconds
-                if data_array.attrs['units'] == '':
-                    tendency.attrs['units'] = 's^-1'
-                else:
-                    tendency.attrs['units'] = data_array.attrs['units'] + ' s^-1'
-                tendencies[varname] = tendency
+                if varname in self._implicit.output_properties.keys():
+                    if varname not in state.keys():
+                        raise RuntimeError(
+                            'Cannot calculate tendency for {} because it is not'
+                            ' present in the input state.'.format(varname))
+                    tendency = (data_array - state[varname].to_units(data_array.attrs['units'])) / timestep_seconds
+                    if data_array.attrs['units'] == '':
+                        tendency.attrs['units'] = 's^-1'
+                    else:
+                        tendency.attrs['units'] = data_array.attrs['units'] + ' s^-1'
+                    tendencies[varname] = tendency.to_units(
+                        self._implicit.output_properties[varname]['units'] + ' s^-1')
             elif varname != 'time':
                 raise ValueError(
                     'Wrapped implicit gave an output {} of type {}, but should'
