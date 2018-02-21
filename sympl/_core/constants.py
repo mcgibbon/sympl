@@ -257,4 +257,3 @@ def set_condensible_name(name):
 
 class ConstantList(object):
     __doc__ = constants._repr(sphinx=True)
-    
