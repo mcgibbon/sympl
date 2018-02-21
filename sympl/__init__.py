@@ -16,8 +16,9 @@ from ._core.util import (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     set_direction_names, add_direction_names)
-from sympl._core.wrappers import (
-    UpdateFrequencyWrapper, TendencyInDiagnosticsWrapper)
+from ._core.wrappers import (
+    UpdateFrequencyWrapper, TendencyInDiagnosticsWrapper,
+    ImplicitPrognosticWrapper)
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,

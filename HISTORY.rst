@@ -5,7 +5,7 @@ What's New
 Latest
 ------
 
-* Modified component class checking to look at the presence of *properties
+* Modified component class checking to look at the presence of properties
   attributes instead of checking type when verifying component class.
 * Removed Python 3.4 from Travis CI testing
 * added some more constants to default_constants related to conductivity of
@@ -20,7 +20,7 @@ Latest
   (for example, density_of_solid_phase) refer to. Default is 'water'.
 * Moved wrappers to their own file (out from util.py).
 * Corrected str representation of Diagnostic to say Diagnostic instead of
-  Implicit
+  Implicit.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
