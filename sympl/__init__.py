@@ -18,7 +18,7 @@ from ._core.util import (
     set_direction_names, add_direction_names)
 from ._core.wrappers import (
     UpdateFrequencyWrapper, TendencyInDiagnosticsWrapper,
-    ImplicitPrognosticWrapper, ScalingWrapper)
+    TimeDifferencingWrapper, ScalingWrapper)
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
@@ -33,7 +33,7 @@ __all__ = (
     InvalidPropertyDictError,
     DataArray,
     get_constant, set_constant, set_condensible_name,
-    UpdateFrequencyWrapper, ImplicitPrognosticWrapper, combine_dimensions,
+    UpdateFrequencyWrapper, TimeDifferencingWrapper, combine_dimensions,
     ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,

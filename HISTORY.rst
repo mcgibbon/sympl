@@ -20,6 +20,8 @@ Latest
 * Added get_constant function as the way to retrieve constants
 * Added ImplicitPrognostic as a new component type. It is like a Prognostic,
   but its call signature also requires that a timestep be given.
+* Added TimeDifferencingWrapper, which turns an Implicit into an
+  ImplicitPrognostic by applying first-order time differencing.
 * Added set_condensible_name as a way of changing what condensible aliases
   (for example, density_of_solid_phase) refer to. Default is 'water'.
 * Moved wrappers to their own file (out from util.py).

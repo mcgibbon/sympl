@@ -270,7 +270,18 @@ class TendencyInDiagnosticsWrapper(object):
         return getattr(self._prognostic, item)
 
 
-class ImplicitPrognosticWrapper(ImplicitPrognostic):
+class TimeDifferencingWrapper(ImplicitPrognostic):
+    """
+    Wraps an Implicit object and turns it into an ImplicitPrognostic by applying
+    simple first-order time differencing to determine tendencies.
+
+    Example
+    -------
+    This how the wrapper should be used on an Implicit class
+    called GridScaleCondensation.
+
+    >>> component = TimeDifferencingWrapper(GridScaleCondensation())
+    """
 
     def __init__(self, implicit):
         self._implicit = implicit

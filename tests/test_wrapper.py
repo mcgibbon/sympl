@@ -2,7 +2,7 @@ from datetime import timedelta, datetime
 import unittest
 from sympl import (
     Prognostic, Implicit, Diagnostic, UpdateFrequencyWrapper, ScalingWrapper,
-    TendencyInDiagnosticsWrapper, ImplicitPrognosticWrapper, DataArray
+    TendencyInDiagnosticsWrapper, TimeDifferencingWrapper, DataArray
 )
 import pytest
 from numpy.testing import assert_allclose
@@ -102,11 +102,11 @@ class MockDiagnosticThatExpects(Diagnostic):
         return state
 
 
-class ImplicitPrognosticTests(unittest.TestCase):
+class TimeDifferencingTests(unittest.TestCase):
 
     def setUp(self):
         self.implicit = MockImplicit()
-        self.wrapped = ImplicitPrognosticWrapper(self.implicit)
+        self.wrapped = TimeDifferencingWrapper(self.implicit)
         self.state = {
             'value': DataArray([0], attrs={'units': 'm'})
         }
