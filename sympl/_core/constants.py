@@ -247,6 +247,7 @@ def get_constants_string():
     """
     return repr(constants)
 
+
 def set_condensible_name(name):
     constant_aliases.update(get_condensible_map(name))
 
