@@ -33,7 +33,7 @@ __all__ = (
     InvalidPropertyDictError,
     DataArray,
     get_constant, set_constant, set_condensible_name,
-    UpdateFrequencyWrapper, combine_dimensions,
+    UpdateFrequencyWrapper, ImplicitPrognosticWrapper, combine_dimensions,
     ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,

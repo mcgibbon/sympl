@@ -1,6 +1,7 @@
 from .base_components import ImplicitPrognostic
 from .array import DataArray
 
+
 class UpdateFrequencyWrapper(object):
     """
     Wraps a prognostic object so that when it is called, it only computes new

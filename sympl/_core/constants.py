@@ -45,8 +45,7 @@ class ConstantDict(dict):
         return_string = ''
         for category, name_list in constant_names_by_category.items():
             if len(name_list) > 0:
-                return_string += category.title()
-                return_string += '\n'# + '-'*len(category) + '\n'
+                return_string += category.title() + '\n'
             for name in name_list:
                 units = self[name].attrs['units']
                 units = units.replace('dimensionless', '')
