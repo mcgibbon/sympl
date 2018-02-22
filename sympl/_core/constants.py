@@ -2,41 +2,6 @@ from .array import DataArray
 from .units import is_valid_unit
 
 
-def get_condensible_map(condensible_name):
-    return {
-        'gas_constant_of_vapor_phase': 'gas_constant_of_{}_vapor'.format(condensible_name),
-        'heat_capacity_of_vapor_phase': 'heat_capacity_of_{}_vapor_at_constant_pressure'.format(condensible_name),
-        'specific_enthalpy_of_vapor_phase': 'specific_enthalpy_of_{}_vapor'.format(condensible_name),
-        'density_of_liquid_phase': 'density_of_liquid_{}'.format(condensible_name),
-        'heat_capacity_of_liquid_phase': 'heat_capacity_of_liquid_{}'.format(condensible_name),
-        'latent_heat_of_vaporization': 'latent_heat_of_vaporization_of_{}'.format(condensible_name),
-        'freezing_temperature_of_liquid_phase': 'freezing_temperature_of_liquid_{}'.format(condensible_name),
-        'thermal_conductivity_of_liquid_phase': 'thermal_conductivity_of_liquid_{}'.format(condensible_name),
-        'latent_heat_of_fusion': 'latent_heat_of_fusion_of_{}'.format(condensible_name),
-        'density_of_solid_phase_as_ice': 'density_of_solid_{}_as_ice'.format(condensible_name),
-        'density_of_solid_phase_as_snow': 'density_of_solid_{}_as_snow'.format(condensible_name),
-        'heat_capacity_of_solid_phase_as_ice': 'heat_capacity_of_solid_{}_as_ice'.format(condensible_name),
-        'heat_capacity_of_solid_phase_as_snow': 'heat_capacity_of_solid_{}_as_snow'.format(condensible_name),
-        'thermal_conductivity_of_solid_phase_as_ice': 'thermal_conductivity_of_solid_{}_as_ice'.format(condensible_name),
-        'thermal_conductivity_of_solid_phase_as_snow': 'thermal_conductivity_of_solid_{}_as_snow'.format(condensible_name),
-    }
-
-
-constant_aliases = {
-    'latent_heat_of_condensation': 'latent_heat_of_vaporization',
-    'enthalpy_of_fusion': 'latent_heat_of_fusion',
-    'stellar_irradiance': 'solar_constant',
-    'heat_capacity_of_ice': 'heat_capacity_of_solid_phase_as_ice',
-    'heat_capacity_of_snow': 'heat_capacity_of_solid_phase_as_snow',
-    'thermal_conductivity_of_ice': 'thermal_conductivity_of_solid_phase_as_ice',
-    'thermal_conductivity_of_snow': 'thermal_conductivity_of_solid_phase_as_snow',
-    'density_of_ice': 'density_of_solid_phase_as_ice',
-    'density_of_snow': 'density_of_solid_phase_as_snow',
-}
-
-constant_aliases.update(get_condensible_map('water'))
-
-
 class ConstantDict(dict):
 
     def __repr__(self):
@@ -101,7 +66,22 @@ class ConstantDict(dict):
             return super(ConstantDict, self).__getitem__(item)
 
 
-constants = ConstantDict({
+constants = None
+constant_aliases = None
+
+default_constant_aliases = {
+    'latent_heat_of_condensation': 'latent_heat_of_vaporization',
+    'enthalpy_of_fusion': 'latent_heat_of_fusion',
+    'stellar_irradiance': 'solar_constant',
+    'heat_capacity_of_ice': 'heat_capacity_of_solid_phase_as_ice',
+    'heat_capacity_of_snow': 'heat_capacity_of_solid_phase_as_snow',
+    'thermal_conductivity_of_ice': 'thermal_conductivity_of_solid_phase_as_ice',
+    'thermal_conductivity_of_snow': 'thermal_conductivity_of_solid_phase_as_snow',
+    'density_of_ice': 'density_of_solid_phase_as_ice',
+    'density_of_snow': 'density_of_solid_phase_as_snow',
+}
+
+default_constants = ConstantDict({
     'stefan_boltzmann_constant': DataArray(5.670367e-8, attrs={'units': 'W m^-2 K^-4'}),
     'gravitational_acceleration': DataArray(9.80665, attrs={'units': 'm s^-2'}),
     'heat_capacity_of_dry_air_at_constant_pressure': DataArray(1004.64, attrs={'units': 'J kg^-1 K^-1'}),
@@ -190,6 +170,26 @@ constant_names_by_category = {
 }
 
 
+def get_condensible_map(condensible_name):
+    return {
+        'gas_constant_of_vapor_phase': 'gas_constant_of_{}_vapor'.format(condensible_name),
+        'heat_capacity_of_vapor_phase': 'heat_capacity_of_{}_vapor_at_constant_pressure'.format(condensible_name),
+        'specific_enthalpy_of_vapor_phase': 'specific_enthalpy_of_{}_vapor'.format(condensible_name),
+        'density_of_liquid_phase': 'density_of_liquid_{}'.format(condensible_name),
+        'heat_capacity_of_liquid_phase': 'heat_capacity_of_liquid_{}'.format(condensible_name),
+        'latent_heat_of_vaporization': 'latent_heat_of_vaporization_of_{}'.format(condensible_name),
+        'freezing_temperature_of_liquid_phase': 'freezing_temperature_of_liquid_{}'.format(condensible_name),
+        'thermal_conductivity_of_liquid_phase': 'thermal_conductivity_of_liquid_{}'.format(condensible_name),
+        'latent_heat_of_fusion': 'latent_heat_of_fusion_of_{}'.format(condensible_name),
+        'density_of_solid_phase_as_ice': 'density_of_solid_{}_as_ice'.format(condensible_name),
+        'density_of_solid_phase_as_snow': 'density_of_solid_{}_as_snow'.format(condensible_name),
+        'heat_capacity_of_solid_phase_as_ice': 'heat_capacity_of_solid_{}_as_ice'.format(condensible_name),
+        'heat_capacity_of_solid_phase_as_snow': 'heat_capacity_of_solid_{}_as_snow'.format(condensible_name),
+        'thermal_conductivity_of_solid_phase_as_ice': 'thermal_conductivity_of_solid_{}_as_ice'.format(condensible_name),
+        'thermal_conductivity_of_solid_phase_as_snow': 'thermal_conductivity_of_solid_{}_as_snow'.format(condensible_name),
+    }
+
+
 def get_alias(name):
     n_iterations = 0
     while name in constant_aliases.keys() and n_iterations < 100:
@@ -253,6 +253,24 @@ def get_constants_string():
 
 def set_condensible_name(name):
     constant_aliases.update(get_condensible_map(name))
+
+
+def reset_constants():
+    """
+    Reverts constants to their state when Sympl was originally imported. This
+    includes removing any new constants, setting the original constants to
+    their original values, and setting the condensible quantity to water.
+    """
+    global constants
+    global constant_aliases
+    constants = ConstantDict()
+    constants.update(default_constants)
+    constant_aliases = {}
+    constant_aliases.update(default_constant_aliases)
+    constant_aliases.update(get_condensible_map('water'))
+
+
+reset_constants()
 
 
 class ConstantList(object):

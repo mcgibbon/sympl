@@ -16,9 +16,14 @@ You can retrieve and set constants using :py:func:`~sympl.get_constant` and
 allow you to set constants regardless of whether a value is already defined
 for that constant, allowing you to add new constants we haven't thought of.
 
+The constant library can be reverted to its original state when Sympl is
+imported by calling `~sympl.reset_constants`.
+
 .. autofunction:: sympl.get_constant
 
 .. autofunction:: sympl.set_constant
+
+.. autofunction:: sympl.reset_constants
 
 Condensible Quantities
 ----------------------

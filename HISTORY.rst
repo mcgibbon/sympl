@@ -27,6 +27,8 @@ Latest
 * Moved wrappers to their own file (out from util.py).
 * Corrected str representation of Diagnostic to say Diagnostic instead of
   Implicit.
+* Added a function reset_constants to reset the constants library to its
+  initial state.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

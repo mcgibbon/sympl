@@ -8,7 +8,8 @@ from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError)
 from ._core.array import DataArray
-from ._core.constants import get_constant, set_constant, set_condensible_name
+from ._core.constants import (
+    get_constant, set_constant, set_condensible_name, reset_constants)
 from ._core.util import (
     combine_dimensions,
     ensure_no_shared_keys,
@@ -32,7 +33,7 @@ __all__ = (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError,
     DataArray,
-    get_constant, set_constant, set_condensible_name,
+    get_constant, set_constant, set_condensible_name, reset_constants,
     UpdateFrequencyWrapper, TimeDifferencingWrapper, combine_dimensions,
     ensure_no_shared_keys,
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
