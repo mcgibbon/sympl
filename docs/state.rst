@@ -91,7 +91,7 @@ a model developer, we have a set of guidelines for naming quantities.
 All quantity names should be verbose, and fully descriptive. Within a
 component you can set a quantity to an abbreviated variable, such as
 
-.. code-block::python
+.. code-block:: python
 
     theta = state['air_potential_temperature']
 
