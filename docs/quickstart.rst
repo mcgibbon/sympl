@@ -40,7 +40,7 @@ will be looking at:
 
     timestep = timedelta(minutes=30)
     while state['time'] < datetime(2010, 1, 1):
-        physics_diagnostics, state_after_physics = physics_stepper(state)
+        physics_diagnostics, state_after_physics = physics_stepper(state, timestep)
         dynamics_diagnostics, next_state = implicit_dynamics(state_after_physics)
         state_after_physics.update(physics_diagnostics)
         state_after_physics.update(dynamics_diagnostics)
@@ -161,7 +161,7 @@ computation is done -- the main loop:
 
     timestep = timedelta(minutes=30)
     while state['time'] < datetime(2010, 1, 1):
-        physics_diagnostics, state_after_physics = physics_stepper(state)
+        physics_diagnostics, state_after_physics = physics_stepper(state, timestep)
         dynamics_diagnostics, next_state = implicit_dynamics(state_after_physics)
         state_after_physics.update(physics_diagnostics)
         state_after_physics.update(dynamics_diagnostics)
