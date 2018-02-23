@@ -12,6 +12,9 @@ objects will take in a timestep along with the state, and then return the
 next state as well as modifying the current state to include more diagnostics
 (it is similar to a :py:class:`~sympl.TimeStepper` in how it is called).
 
+In specific cases, it may be necessary to use a :py:class:`~sympl.ImplicitPrognostic`
+object, which is discussed at the end of this section.
+
 These classes themselves (listed in the previous paragraph) are not ones you
 can initialize (e.g. there is no one 'prognostic' scheme), but instead should
 be subclassed to contain computational code relevant to the model you're
@@ -266,7 +269,7 @@ equal to:
 
 .. code-block:: python
 
-    tendency_properties = {
+    diagnostic_properties = {
         'cloud_fraction': {
             'dims_like': 'air_temperature',
             'units': '',
@@ -275,5 +278,43 @@ equal to:
 
 that the object will output ``cloud_fraction`` in its diagnostics on the
 same grid as ``air_temperature``, in dimensionless units.
+
+ImplicitPrognostic
+------------------
+
+.. warning:: This component type should be avoided unless you know you need it,
+             for reasons discussed in this section.
+
+In addition to the component types described above, computation may be performed by a
+:py:class:`~sympl.ImplicitPrognostic`. This class should be avoided unless you
+know what you are doing, but it may be necessary in certain cases. An
+:py:class:`~sympl.ImplicitPrognostic`, like a :py:class:`~sympl.Prognostic`,
+calculates tendencies, but it does so using both the model state and a timestep.
+Certain components, like ones handling advection using a spectral method, may
+need to derive tendencies from an :py:class:`~sympl.Implicit` object by
+representing it using an :py:class:`~sympl.ImplicitPrognostic`.
+
+The reason to avoid using an :py:class:`~sympl.ImplicitPrognostic` is that if
+a component requires a timestep, it is making internal assumptions about how
+you are timestepping. For example, it may use the timestep to ensure that all
+supersaturated water is condensed by the end of the timestep using an assumption
+about the timestepping. However, if you use a :py:class:`~sympl.TimeStepper`
+which does not obey those assumptions, you may get unintended behavior, such as
+some supersaturated water remaining, or too much water being condensed.
+
+For this reason, the :py:class:`~sympl.TimeStepper` objects included in Sympl
+do not wrap :py:class:`~sympl.ImplicitPrognostic` components. If you would like
+to use this type of component, and know what you are doing, it is pretty easy
+to write your own :py:class:`~sympl.TimeStepper` to do so (you can base the code
+off of the code in Sympl), or the model you are using might already have
+components to do this for you.
+
+If you are wrapping a parameterization and notice that it needs a timestep to
+compute its tendencies, that is likely *not* a good reason to write an
+:py:class:`~sympl.ImplicitPrognostic`. If at all possible you should modify the
+code to compute the value at the next timestep, and write an
+:py:class:`~sympl.Implicit` component. You are welcome to reach out to the
+developers of Sympl if you would like advice on your specific situation! We're
+always excited about new wrapped components.
 
 .. _Python documentation for dicts: https://docs.python.org/3/tutorial/datastructures.html#dictionaries

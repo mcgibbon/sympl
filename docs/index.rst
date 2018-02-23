@@ -23,6 +23,7 @@ Documentation
    faq
    installation
    state
+   constants
    timestepping
    computation
    monitors

@@ -1,15 +1,13 @@
+import unittest
+from copy import deepcopy
+
+import numpy as np
 import pytest
 from sympl import (
-    UpdateFrequencyWrapper, Prognostic, replace_none_with_default,
-    default_constants, ensure_no_shared_keys, SharedKeyError, DataArray,
-    combine_dimensions, set_dimension_names, Implicit, Diagnostic,
-    TendencyInDiagnosticsWrapper, get_numpy_array,
-    restore_dimensions, ScalingWrapper)
+    Prognostic, ensure_no_shared_keys, SharedKeyError, DataArray,
+    combine_dimensions, set_direction_names, Implicit, Diagnostic)
 from sympl._core.util import update_dict_by_adding_another
-from datetime import datetime, timedelta
-from copy import deepcopy
-import numpy as np
-import unittest
+
 
 def same_list(list1, list2):
     return (len(list1) == len(list2) and all(
@@ -24,147 +22,6 @@ class MockPrognostic(Prognostic):
     def __call__(self, state):
         self._num_updates += 1
         return {}, {'num_updates': self._num_updates}
-
-
-class MockImplicitThatExpects(Implicit):
-
-    input_properties = {'expected_field': {}}
-    output_properties = {'expected_field': {}}
-    diagnostic_properties = {'expected_field': {}}
-
-    def __init__(self, expected_value):
-        self._expected_value = expected_value
-
-    def __call__(self, state, timestep):
-
-        input_value = state['expected_field']
-        if input_value != self._expected_value:
-            raise ValueError(
-                'Expected {}, but got {}'.format(self._expected_value, input_value))
-
-        return deepcopy(state), state
-
-
-class MockPrognosticThatExpects(Prognostic):
-
-    input_properties = {'expected_field': {}}
-    tendency_properties = {'expected_field': {}}
-    diagnostic_properties = {'expected_field': {}}
-
-    def __init__(self, expected_value):
-        self._expected_value = expected_value
-
-    def __call__(self, state):
-
-        input_value = state['expected_field']
-        if input_value != self._expected_value:
-            raise ValueError(
-                'Expected {}, but got {}'.format(self._expected_value, input_value))
-
-        return deepcopy(state), state
-
-
-class MockDiagnosticThatExpects(Diagnostic):
-
-    input_properties = {'expected_field': {}}
-    diagnostic_properties = {'expected_field': {}}
-
-    def __init__(self, expected_value):
-        self._expected_value = expected_value
-
-    def __call__(self, state):
-
-        input_value = state['expected_field']
-        if input_value != self._expected_value:
-            raise ValueError(
-                'Expected {}, but got {}'.format(self._expected_value, input_value))
-
-        return state
-
-
-def test_set_prognostic_update_frequency_calls_initially():
-    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
-    state = {'time': timedelta(hours=0)}
-    tendencies, diagnostics = prognostic(state)
-    assert len(diagnostics) == 1
-    assert diagnostics['num_updates'] == 1
-
-
-def test_set_prognostic_update_frequency_caches_result():
-    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
-    state = {'time': timedelta(hours=0)}
-    tendencies, diagnostics = prognostic(state)
-    tendencies, diagnostics = prognostic(state)
-    assert len(diagnostics) == 1
-    assert diagnostics['num_updates'] == 1
-
-
-def test_set_prognostic_update_frequency_caches_result_with_datetime():
-    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
-    state = {'time': datetime(2000, 1, 1)}
-    tendencies, diagnostics = prognostic(state)
-    tendencies, diagnostics = prognostic(state)
-    assert len(diagnostics) == 1
-    assert diagnostics['num_updates'] == 1
-
-
-def test_set_prognostic_update_frequency_updates_result_when_equal():
-    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
-    state = {'time': timedelta(hours=0)}
-    tendencies, diagnostics = prognostic({'time': timedelta(hours=0)})
-    tendencies, diagnostics = prognostic({'time': timedelta(hours=1)})
-    assert len(diagnostics) == 1
-    assert diagnostics['num_updates'] == 2
-
-
-def test_set_prognostic_update_frequency_updates_result_when_greater():
-    prognostic = UpdateFrequencyWrapper(MockPrognostic(), timedelta(hours=1))
-    state = {'time': timedelta(hours=0)}
-    tendencies, diagnostics = prognostic({'time': timedelta(hours=0)})
-    tendencies, diagnostics = prognostic({'time': timedelta(hours=2)})
-    assert len(diagnostics) == 1
-    assert diagnostics['num_updates'] == 2
-
-
-def test_replace_none_with_default_replaces_none():
-    value = replace_none_with_default('gas_constant_of_dry_air', None)
-    assert value is not None
-
-
-def test_replace_none_with_default_does_not_replace_value():
-    value = replace_none_with_default('gas_constant_of_dry_air', -1.)
-    assert value == -1.
-
-
-def test_replace_none_with_default_uses_new_default_constant():
-    try:
-        default_constants['foo'] = 5.
-        value = replace_none_with_default('foo', None)
-        assert value == 5.
-    finally:  # make sure we restore default_constants after
-        default_constants.pop('foo')
-
-
-def test_replace_none_with_default_uses_replaced_default_constant():
-    old_value = default_constants['gas_constant_of_dry_air']
-    try:
-        default_constants['gas_constant_of_dry_air'] = -5.
-        value = replace_none_with_default('gas_constant_of_dry_air', None)
-        assert value == -5.
-    finally:  # make sure we restore default_constants after
-        default_constants['gas_constant_of_dry_air'] = old_value
-
-
-def test_replace_none_with_default_raises_keyerror_on_missing_value():
-    assert 'arglebargle' not in default_constants
-    try:
-        value = replace_none_with_default('arglebargle', None)
-    except KeyError:
-        pass
-    except Exception as err:
-        raise err
-    else:
-        raise AssertionError('No error was raised, but expected KeyError')
 
 
 def test_update_dict_by_adding_another_adds_shared_arrays():
@@ -228,11 +85,11 @@ class CombineDimensionsTests(unittest.TestCase):
         self.array_2d = DataArray(np.zeros((2, 2)), dims=['lat', 'lon'])
         self.array_3d = DataArray(np.zeros((2, 2, 2)),
                                   dims=['lon', 'lat', 'interface_levels'])
-        set_dimension_names(
+        set_direction_names(
             x=['lon'], y=['lat'], z=['mid_levels', 'interface_levels'])
 
     def tearDown(self):
-        set_dimension_names(x=[], y=[], z=[])
+        set_direction_names(x=[], y=[], z=[])
 
     def test_combine_dimensions_2d_and_3d(self):
         dims = combine_dimensions(
@@ -277,211 +134,6 @@ class CombineDimensionsTests(unittest.TestCase):
         else:
             raise AssertionError('No exception raised but expected ValueError.')
 
-
-def test_put_prognostic_tendency_in_diagnostics_no_tendencies():
-    class MockPrognostic(Prognostic):
-        def __call__(self, state):
-            return {}, {}
-
-    prognostic = TendencyInDiagnosticsWrapper(MockPrognostic(), 'scheme')
-    tendencies, diagnostics = prognostic({})
-    assert len(tendencies) == 0
-    assert len(diagnostics) == 0
-
-
-def test_put_prognostic_tendency_in_diagnostics_one_tendency():
-    class MockPrognostic(Prognostic):
-        tendency_properties = {'quantity': {}}
-        def __call__(self, state):
-            return {'quantity': 1.}, {}
-
-    prognostic = TendencyInDiagnosticsWrapper(MockPrognostic(), 'scheme')
-    tendencies, diagnostics = prognostic({})
-    assert 'tendency_of_quantity_due_to_scheme' in prognostic.diagnostics
-    tendencies, diagnostics = prognostic({})
-    assert 'tendency_of_quantity_due_to_scheme' in diagnostics.keys()
-    assert len(diagnostics) == 1
-    assert tendencies['quantity'] == 1.
-    assert diagnostics['tendency_of_quantity_due_to_scheme'] == 1.
-
-
-def test_scaled_component_wrong_type():
-    class WrongType(object):
-        def __init__(self):
-            self.a = 1
-
-    wrong_component = WrongType()
-
-    with pytest.raises(TypeError) as excinfo:
-        component = ScalingWrapper(wrong_component)
-
-    assert 'either of type Implicit' in str(excinfo.value)
-
-
-def test_scaled_implicit_inputs():
-    
-    implicit = ScalingWrapper(
-        MockImplicitThatExpects(2.0),
-        input_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    diagnostics, new_state = implicit(state)
-
-    assert new_state['expected_field'] == 2.0
-    assert diagnostics['expected_field'] == 2.0
-    
-
-def test_scaled_implicit_outputs():
-    
-    implicit = ScalingWrapper(
-        MockImplicitThatExpects(4.0),
-        output_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    diagnostics, new_state = implicit(state)
-
-    assert new_state['expected_field'] == 2.0
-    assert diagnostics['expected_field'] == 4.0
-
-
-def test_scaled_implicit_diagnostics():
-    
-    implicit = ScalingWrapper(
-        MockImplicitThatExpects(4.0),
-        diagnostic_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    diagnostics, new_state = implicit(state)
-
-    assert diagnostics['expected_field'] == 2.0
-    assert new_state['expected_field'] == 4.0
-
-
-def test_scaled_implicit_created_with_wrong_input_field():
-
-    with pytest.raises(ValueError) as excinfo:
-        implicit = ScalingWrapper(
-                       MockImplicitThatExpects(2.0),
-                       input_scale_factors = {'abcd': 0.5})
-
-    assert 'not a valid input' in str(excinfo.value)
-
-
-def test_scaled_implicit_created_with_wrong_output_field():
-
-    with pytest.raises(ValueError) as excinfo:
-        implicit = ScalingWrapper(
-                       MockImplicitThatExpects(2.0),
-                       output_scale_factors = {'abcd': 0.5})
-
-    assert 'not a valid output' in str(excinfo.value)
-
-
-def test_scaled_implicit_created_with_wrong_diagnostic_field():
-
-    with pytest.raises(ValueError) as excinfo:
-        implicit = ScalingWrapper(
-                       MockImplicitThatExpects(2.0),
-                       diagnostic_scale_factors = {'abcd': 0.5})
-
-    assert 'not a valid diagnostic' in str(excinfo.value)
-
-
-def test_scaled_prognostic_inputs():
-    
-    prognostic = ScalingWrapper(
-        MockPrognosticThatExpects(2.0),
-        input_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    tendencies, diagnostics = prognostic(state)
-
-    assert tendencies['expected_field'] == 2.0
-    assert diagnostics['expected_field'] == 2.0
-    
-
-def test_scaled_prognostic_tendencies():
-    
-    prognostic = ScalingWrapper(
-        MockPrognosticThatExpects(4.0),
-        tendency_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    tendencies, diagnostics = prognostic(state)
-
-    assert tendencies['expected_field'] == 2.0
-    assert diagnostics['expected_field'] == 4.0
-
-
-def test_scaled_prognostic_diagnostics():
-    
-    prognostic = ScalingWrapper(
-        MockPrognosticThatExpects(4.0),
-        diagnostic_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    tendencies, diagnostics = prognostic(state)
-
-    assert tendencies['expected_field'] == 4.0
-    assert diagnostics['expected_field'] == 2.0
-
-
-def test_scaled_prognostic_with_wrong_tendency_field():
-
-    with pytest.raises(ValueError) as excinfo:
-        prognostic = ScalingWrapper(
-            MockPrognosticThatExpects(4.0),
-            tendency_scale_factors = {'abcd': 0.5})
-
-    assert 'not a valid tendency' in str(excinfo.value)
-    
-
-def test_scaled_diagnostic_inputs():
-    
-    diagnostic = ScalingWrapper(
-        MockDiagnosticThatExpects(2.0),
-        input_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    diagnostics = diagnostic(state)
-
-    assert diagnostics['expected_field'] == 2.0
-    
-
-def test_scaled_diagnostic_diagnostics():
-    
-    diagnostic = ScalingWrapper(
-        MockDiagnosticThatExpects(4.0),
-        diagnostic_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    diagnostics = diagnostic(state)
-
-    assert diagnostics['expected_field'] == 2.0
-
-
-def test_scaled_component_type_wrongly_modified():
-    
-    diagnostic = ScalingWrapper(
-        MockDiagnosticThatExpects(4.0),
-        diagnostic_scale_factors = {'expected_field': 0.5})
-
-    state = {'expected_field': 4.0}
-
-    diagnostic._component_type = 'abcd'
-
-    with pytest.raises(ValueError) as excinfo:
-        diagnostics = diagnostic(state)
-
-    assert 'bug in ScalingWrapper' in str(excinfo.value)
 
 if __name__ == '__main__':
     pytest.main([__file__])

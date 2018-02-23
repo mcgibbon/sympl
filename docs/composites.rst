@@ -22,12 +22,14 @@ call a single component. For example, *instead* of writing:
         tendencies, diagnostics = prognostic_component(state)
         # this should actually check to make sure nothing is overwritten,
         # but this code does not
-        all_tendencies.update(tendencies)
-        for key in tendencies.keys():
-            if key not in total_tendencies:
-                total_tendencies[key] = tendencies[key]
+        total_tendencies.update(tendencies)
+        for name, value in tendencies.keys():
+            if name not in total_tendencies:
+                total_tendencies[name] = value
             else:
-                total_tendencies[key] += tendencies[key]
+                total_tendencies[name] += value
+        for name, value in diagnostics.items():
+            all_diagnostics[name] = value
 
 You could write:
 
@@ -45,6 +47,9 @@ multiple components are trying to write out the same diagnostic, and raise
 an exception if that is the case (so no results are being silently
 overwritten). You can get similar simplifications for
 :py:class:`~sympl.Diagnostic` and :py:class:`~sympl.Monitor`.
+
+.. note:: PrognosticComposites are mainly useful inside of TimeSteppers, so
+          if you're only writing a model script it's unlikely you'll need them.
 
 API Reference
 -------------
