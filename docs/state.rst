@@ -66,15 +66,21 @@ Choice of Datetime
 
 The built-in ``datetime`` object in Python (as used above) assumes the
 proleptic Gregorian calendar, which extends the Gregorian calendar back
-infinitely. If you want to use a different type of calendar, you should use
-a different datetime object, but one which has the same interface as the Python
-object. To repeat, the calendar your model is using depends entirely on what
-object you're using to store time in the state dictionary, and the default one
-uses the proleptic Gregorian calendar.
+infinitely. Sympl provides a :py:func:`~sympl.datetime` function which returns
+a datetime-like object, and allows a variety of different calendars. If a
+calendar other than 'proleptic_gregorian' is specified, one of the classes from
+the netcdftime_ package will be used. Of course, this requires that it is
+installed! If it's not, you will get an error, and should ``pip install netcdftime``.
+Sympl also includes :py:class:`~sympl.timedelta` for convenience. This is just
+the default Python ``timedelta``.
 
-We think and hope the netcdftime_ package will have objects with this
-functionality. Once it's available on pypi and documented, update this doc
-page to describe how to use it! Or write your own package and let us know!
+To repeat, the calendar your model is using depends entirely on what
+object you're using to store time in the state dictionary, and the default one
+uses the proleptic Gregorian calendar used by the default Python ``datetime``.
+
+.. autofunction:: sympl.datetime
+
+.. autoclass:: sympl.timedelta
 
 .. _netcdftime: https://github.com/Unidata/netcdftime
 

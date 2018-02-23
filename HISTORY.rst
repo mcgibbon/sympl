@@ -29,6 +29,11 @@ Latest
   Implicit.
 * Added a function reset_constants to reset the constants library to its
   initial state.
+* Added a function datetime which accepts calendar as a keyword argument, and
+  returns datetimes from netcdftime when non-default calendars are used. The
+  dependency on netcdftime is optional, the other calendars just won't work if
+  it isn't installed
+* Added a reference to the built-in timedelta for convenience.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

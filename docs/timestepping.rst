@@ -35,10 +35,24 @@ This means you will sometimes want to pass ``state`` to your
 :py:class:`~sympl.Monitor` objects *after* calling
 the :py:class:`~sympl.TimeStepper` and getting ``next_state``.
 
+.. warning:: :py:class:`~sympl.TimeStepper` objects do not, and should not,
+    update 'time' in the model state.
+
 Keep in mind that for split-time models, multiple :py:class:`~sympl.TimeStepper`
-objects might be called in in a single pass of the main loop. There are also
+objects might be called in in a single pass of the main loop. If each one
+updated ``state['time']``, the time would be moved forward more than it should.
+For that reason, :py:class:`~sympl.TimeStepper` objects do not update
+``state['time']``.
+
+There are also
 :py:class:`~sympl.Implicit` objects which evolve the state forward in time
-without the use of Prognostic objects.
+without the use of Prognostic objects. These function exactly the same as a
+:py:class:`~sympl.TimeStepper` once they are created, but do not accept
+:py:class:`~sympl.Prognostic` objects when you create them. One example might
+be a component that condenses all supersaturated moisture over some time period.
+:py:class:`~sympl.Implicit` objects are generally used for parameterizations
+that work by determining the target model state in some way, or involve
+limiters, and cannot be represented as a :py:class:`~sympl.Prognostic`.
 
 .. autoclass:: sympl.TimeStepper
     :members:
