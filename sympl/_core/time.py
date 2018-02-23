@@ -5,6 +5,7 @@ try:
 except ImportError:
     nt = None
 
+
 def datetime(
         year, month, day, hour=0, minute=0, second=0, microsecond=0,
         tzinfo=None, calendar='proleptic_gregorian'):
@@ -60,3 +61,6 @@ def datetime(
         return nt.DatetimeJulian(**kwargs)
     elif calendar.lower() == 'gregorian':
         return nt.DatetimeGregorian(**kwargs)
+
+
+__all__ = (datetime, timedelta)
