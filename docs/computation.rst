@@ -269,7 +269,7 @@ equal to:
 
 .. code-block:: python
 
-    tendency_properties = {
+    diagnostic_properties = {
         'cloud_fraction': {
             'dims_like': 'air_temperature',
             'units': '',
