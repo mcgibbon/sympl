@@ -28,7 +28,6 @@ env:
 - TOXENV=py27
 install:
     - pip install -U tox
-    - pip install -U cython
 language: python
 notifications:
   email:
