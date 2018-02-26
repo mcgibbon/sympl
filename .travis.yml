@@ -24,7 +24,6 @@ deploy:
 env:
 - TOXENV=cov
 - TOXENV=flake8
-- TOXENV=py36
 - TOXENV=py35
 - TOXENV=py27
 install:
