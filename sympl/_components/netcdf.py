@@ -32,7 +32,7 @@ else:
 
         def __init__(
                 self, filename, time_units='seconds', store_names=None,
-                write_on_store=False):
+                write_on_store=False, aliases={}):
             """
             Args
             ----
@@ -50,11 +50,17 @@ else:
                 This can result in many file open/close operations.
                 Default is to write only when the write() method is
                 called directly.
+            aliases : dict
+                A dictionary used to rename variables to their aliases.
+                keys = variable name; values = alias name
+                The function sympl.get_component_aliases() can be used to
+                get variable aliases from a list of Components
             """
             self._cached_state_dict = {}
             self._filename = filename
             self._time_units = time_units
             self._write_on_store = write_on_store
+            self._aliases = aliases
             if store_names is None:
                 self._store_names = None
             else:
@@ -81,6 +87,12 @@ else:
                 cache_state = {name: state[name] for name in name_list}
             else:
                 cache_state = state.copy()
+
+            # replace cached variable names with their aliases
+            for oldname, newname in self._aliases.items():
+                if oldname in cache_state.keys():
+                    cache_state[newname] = cache_state.pop(oldname)
+
             cache_state.pop('time')  # stored as key, not needed in state dict
             if state['time'] in self._cached_state_dict.keys():
                 self._cached_state_dict[state['time']].update(cache_state)

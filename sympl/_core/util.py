@@ -2,6 +2,7 @@ from datetime import datetime
 
 import numpy as np
 from six import string_types
+import itertools
 
 from .array import DataArray
 from .exceptions import (
@@ -652,3 +653,42 @@ def get_final_shape(data_array, out_dims, direction_to_names):
                 np.product([len(data_array.coords[name])
                             for name in direction_to_names[direction]]))
     return final_shape
+
+
+def get_component_aliases(components):
+    """
+    Returns aliases for variables in the properties of Components (e.g., Prognostics).
+
+    Args
+    ----
+    components : iterable of Component
+        Components from which to fetch variable aliases from the input_properties,
+        diagnostic_properties, and tendency_properties dictionaries
+
+    Returns
+    -------
+    aliases : dict
+        A dictionary with keys containing old variable names and values containing
+        new variable names
+    """
+
+    aliases = {'grid_latitude': 'latitude', 'grid_longitude': 'longitude'}
+
+    # First handle the input_properties and the diagnostic_properties
+    component_properties = [{**comp.diagnostic_properties, **comp.input_properties}
+                            for comp in components]
+    for variable_dict in component_properties:
+        for varname, properties in variable_dict.items():
+            if 'alias' in properties.keys():
+                aliases.update({varname: properties['alias']})
+
+    # Now get aliases for the tendencies, if any have been added to the diagnostics
+    diagnostics = {}   # dictionary of all the components' diagnostics
+    for comp in components:
+        diagnostics.update(comp.diagnostic_properties)
+    for diagname, varname in itertools.product(diagnostics.keys(), aliases.keys()):
+        if 'tendency' in diagname and varname in diagname:
+            tend_source = diagname.split('_')[-1]  # e.g., 'dynamics' or 'diffusion'
+            aliases.update({diagname: 'tend_{}_{}'.format(aliases[varname], tend_source)})
+
+    return aliases
