@@ -1,5 +1,6 @@
 How to release, in case you forget:
 
+git checkout master
 git pull to make sure you have all changes
 update HISTORY.rst with the new version
 bumpversion [major/minor/patch] will increase version, commit, and make a new tag
