@@ -17,7 +17,7 @@ allow you to set constants regardless of whether a value is already defined
 for that constant, allowing you to add new constants we haven't thought of.
 
 The constant library can be reverted to its original state when Sympl is
-imported by calling `~sympl.reset_constants`.
+imported by calling :py:func:`~sympl.reset_constants`.
 
 .. autofunction:: sympl.get_constant
 
