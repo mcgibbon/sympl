@@ -2,7 +2,7 @@
 What's New
 ==========
 
-Latest
+v0.3.0
 ------
 
 * Modified component class checking to look at the presence of properties
