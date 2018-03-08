@@ -31,20 +31,20 @@ will be looking at:
     state = get_initial_state(nx=256, ny=128, nz=64)
     state['time'] = datetime(2000, 1, 1)
 
-    physics_stepper = AdamsBashforth(
+    physics_stepper = AdamsBashforth([
         UpdateFrequencyWrapper(Radiation(), timedelta(hours=2)),
         BoundaryLayer(),
         DeepConvection(),
-    )
+    ])
     implicit_dynamics = ImplicitDynamics()
 
     timestep = timedelta(minutes=30)
     while state['time'] < datetime(2010, 1, 1):
         physics_diagnostics, state_after_physics = physics_stepper(state, timestep)
         dynamics_diagnostics, next_state = implicit_dynamics(state_after_physics, timestep)
-        state_after_physics.update(physics_diagnostics)
-        state_after_physics.update(dynamics_diagnostics)
-        plot_monitor.store(state_after_physics)
+        state.update(physics_diagnostics)
+        state.update(dynamics_diagnostics)
+        plot_monitor.store(state)
         next_state['time'] = state['time'] + timestep
         state = next_state
 
@@ -130,11 +130,11 @@ Those are the "components":
 
 .. code-block:: python
 
-    physics_stepper = AdamsBashforth(
+    physics_stepper = AdamsBashforth([
         UpdateFrequencyWrapper(Radiation(), timedelta(hours=2)),
         BoundaryLayer(),
         DeepConvection(),
-    )
+    ])
     implicit_dynamics = ImplicitDynamics()
 
 :py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.TimeStepper`, which is
@@ -170,9 +170,9 @@ computation is done -- the main loop:
     while state['time'] < datetime(2010, 1, 1):
         physics_diagnostics, state_after_physics = physics_stepper(state, timestep)
         dynamics_diagnostics, next_state = implicit_dynamics(state_after_physics, timestep)
-        state_after_physics.update(physics_diagnostics)
-        state_after_physics.update(dynamics_diagnostics)
-        plot_monitor.store(state_after_physics)
+        state.update(physics_diagnostics)
+        state.update(dynamics_diagnostics)
+        plot_monitor.store(state)
         next_state['time'] = state['time'] + timestep
         state = next_state
 
