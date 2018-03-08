@@ -2,6 +2,11 @@
 What's New
 ==========
 
+Latest
+------
+
+No changes yet!
+
 v0.3.0
 ------
 
