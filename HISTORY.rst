@@ -2,10 +2,10 @@
 What's New
 ==========
 
-Latest
+v0.3.1
 ------
 
-No changes yet!
+* Fixed botched deployment, see v0.3.0 for the real changes
 
 v0.3.0
 ------
