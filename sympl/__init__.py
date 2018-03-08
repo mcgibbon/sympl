@@ -26,7 +26,7 @@ from ._components import (
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
 from ._core.time import datetime, timedelta
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite, ImplicitPrognostic,

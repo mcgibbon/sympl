@@ -22,7 +22,7 @@ test_requirements = [
 
 setup(
     name='sympl',
-    version='0.3.0',
+    version='0.3.1',
     description='Sympl is a Toolkit for building Earth system models in Python.',
     long_description=readme + '\n\n' + history,
     author="Jeremy McGibbon",
