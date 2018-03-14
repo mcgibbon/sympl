@@ -32,7 +32,7 @@ else:
 
         def __init__(
                 self, filename, time_units='seconds', store_names=None,
-                write_on_store=False, aliases={}):
+                write_on_store=False, aliases=None):
             """
             Args
             ----
@@ -60,7 +60,20 @@ else:
             self._filename = filename
             self._time_units = time_units
             self._write_on_store = write_on_store
-            self._aliases = aliases
+            if aliases is None:
+                self._aliases = {}
+            else:
+                self._aliases = aliases
+            popkeys = []
+            for key, val in self._aliases.items():
+                if type(key) != str:
+                    popkeys.append(key)
+                elif type(val) != str:
+                    popkeys.append(key)
+                elif len(val) == 0:
+                    popkeys.append(key)
+            for key in popkeys:
+                _ = self._aliases.pop(key)
             if store_names is None:
                 self._store_names = None
             else:
@@ -89,9 +102,15 @@ else:
                 cache_state = state.copy()
 
             # replace cached variable names with their aliases
-            for oldname, newname in self._aliases.items():
-                if oldname in cache_state.keys():
-                    cache_state[newname] = cache_state.pop(oldname)
+            for longname, shortname in self._aliases.items():
+                for full_var_name in cache_state.keys():
+                    # replace any string in the full variable name that matches longname
+                    # example: if longname is "temperature", shortname is "T", and
+                    #    full_var_name is "temperature_tendency_from_radiation", the
+                    #    alias_name for the variable would be: "T_tendency_from_radiation"
+                    if longname in full_var_name:
+                        alias_name = full_var_name.replace(longname, shortname)
+                        cache_state[alias_name] = cache_state.pop(full_var_name)
 
             cache_state.pop('time')  # stored as key, not needed in state dict
             if state['time'] in self._cached_state_dict.keys():

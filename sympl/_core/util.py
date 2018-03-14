@@ -655,15 +655,26 @@ def get_final_shape(data_array, out_dims, direction_to_names):
     return final_shape
 
 
-def get_component_aliases(components):
+def get_component_aliases(*args):
     """
     Returns aliases for variables in the properties of Components (e.g., Prognostics).
 
+    Notes
+    -----
+     -  If a variable shows up in the input_properties or diagnostic_properties
+        of two or more different Components, make sure they have the same 'alias'
+        keyword in all Components.
+     -  This function will also produces aliases for tendency diagnostics in
+        Prognostic objects that have been wrapped with a TendencyInDiagnosticsWrapper.
+        Tendency aliases are of the form "<variable_name>_tend_from_<tendency_source>",
+        where <variable_name> is the aliased (shorter) name of the model variable and
+        <tendency_source> is where the tendency come from (e.g., "dynamics" or "diffusion")
+
     Args
     ----
-    components : iterable of Component
+    *args : Component
         Components from which to fetch variable aliases from the input_properties,
-        diagnostic_properties, and tendency_properties dictionaries
+        output_properties, diagnostic_properties, and tendency_properties dictionaries
 
     Returns
     -------
@@ -672,23 +683,22 @@ def get_component_aliases(components):
         new variable names
     """
 
-    aliases = {'grid_latitude': 'latitude', 'grid_longitude': 'longitude'}
+    aliases = {}
 
-    # First handle the input_properties and the diagnostic_properties
-    component_properties = [{**comp.diagnostic_properties, **comp.input_properties}
-                            for comp in components]
-    for variable_dict in component_properties:
-        for varname, properties in variable_dict.items():
-            if 'alias' in properties.keys():
-                aliases.update({varname: properties['alias']})
+    # Update the aliases dict with the properties in each provided Component
+    for component in args:
+        # combine the input, output, diagnostic, and tendency variables into one dict
+        for prop_type in ['input_properties', 'output_properties',
+                          'diagnostic_properties', 'tendency_properties']:
+            if hasattr(component, prop_type):
+                component_properties = getattr(component, prop_type)
+                # save the alias (if there is one) for each variable
+                for varname, properties in component_properties.items():
+                    if 'alias' in properties.keys():
+                        aliases.update({varname: properties['alias']})
 
-    # Now get aliases for the tendencies, if any have been added to the diagnostics
-    diagnostics = {}   # dictionary of all the components' diagnostics
-    for comp in components:
-        diagnostics.update(comp.diagnostic_properties)
-    for diagname, varname in itertools.product(diagnostics.keys(), aliases.keys()):
-        if 'tendency' in diagname and varname in diagname:
-            tend_source = diagname.split('_')[-1]  # e.g., 'dynamics' or 'diffusion'
-            aliases.update({diagname: 'tend_{}_{}'.format(aliases[varname], tend_source)})
+    # If any variables were renamed, let's also shorten the "tendency" diagnostics
+    if len(aliases.keys()) > 0:
+        aliases.update({'tendency': 'tend'})
 
     return aliases

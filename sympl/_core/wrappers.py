@@ -235,7 +235,7 @@ class TendencyInDiagnosticsWrapper(object):
         self._tendency_label = label
         self._tendency_diagnostic_properties = {}
         for quantity_name, properties in prognostic.tendency_properties.items():
-            diagnostic_name = 'tendency_of_{}_due_to_{}'.format(quantity_name, label)
+            diagnostic_name = '{}_tendency_from_{}'.format(quantity_name, label)
             self._tendency_diagnostic_properties[diagnostic_name] = properties
 
     @property
@@ -261,7 +261,7 @@ class TendencyInDiagnosticsWrapper(object):
     def __call__(self, state, **kwargs):
         tendencies, diagnostics = self._prognostic(state, **kwargs)
         for quantity_name in tendencies.keys():
-            diagnostic_name = 'tendency_of_{}_due_to_{}'.format(
+            diagnostic_name = '{}_tendency_from_{}'.format(
                 quantity_name, self._tendency_label)
             diagnostics[diagnostic_name] = tendencies[quantity_name]
         return tendencies, diagnostics

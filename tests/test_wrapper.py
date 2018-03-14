@@ -204,12 +204,12 @@ def test_put_prognostic_tendency_in_diagnostics_one_tendency():
 
     prognostic = TendencyInDiagnosticsWrapper(MockPrognostic(), 'scheme')
     tendencies, diagnostics = prognostic({})
-    assert 'tendency_of_quantity_due_to_scheme' in prognostic.diagnostics
+    assert 'quantity_tendency_from_scheme' in prognostic.diagnostics
     tendencies, diagnostics = prognostic({})
-    assert 'tendency_of_quantity_due_to_scheme' in diagnostics.keys()
+    assert 'quantity_tendency_from_scheme' in diagnostics.keys()
     assert len(diagnostics) == 1
     assert tendencies['quantity'] == 1.
-    assert diagnostics['tendency_of_quantity_due_to_scheme'] == 1.
+    assert diagnostics['quantity_tendency_from_scheme'] == 1.
 
 
 def test_scaled_component_wrong_type():
