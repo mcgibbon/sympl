@@ -4,7 +4,7 @@ from glob import glob
 import xarray as xr
 from .util import same_list
 from .base_components import Diagnostic, Prognostic, Implicit
-from .timestepping import TimeStepper
+from sympl._core.base_components import TimeStepper
 import numpy as np
 from .units import is_valid_unit
 from datetime import timedelta
