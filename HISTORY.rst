@@ -5,7 +5,11 @@ What's New
 Latest
 ------
 
-* No changes yet!
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* inputs, outputs, diagnotsics, and tendencies are no longer attributes of components.
+  In order to get these, you should use e.g. input_properties.keys()
 
 v0.3.1
 ------
