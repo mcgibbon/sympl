@@ -10,6 +10,12 @@ Breaking changes
 
 * inputs, outputs, diagnotsics, and tendencies are no longer attributes of components.
   In order to get these, you should use e.g. input_properties.keys()
+* properties dictionaries are now abstract methods, so subclasses must define them.
+  Previously they defaulted to empty dictionaries.
+* Components should now be written using a new array_call method rather than __call__.
+  __call__ will automatically unwrap DataArrays to numpy arrays to be passed into
+  array_call based on the component's properties dictionaries, and re-wrap to
+  DataArrays when done.
 
 v0.3.1
 ------

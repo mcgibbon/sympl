@@ -1,5 +1,6 @@
-from sympl._core.timestepper import TimeStepper
+from .._core.timestepper import TimeStepper
 from .._core.array import DataArray
+from .._core.state import copy_untouched_quantities, add, multiply
 
 
 class SSPRungeKutta(TimeStepper):
@@ -71,30 +72,6 @@ class SSPRungeKutta(TimeStepper):
         return diagnostics, out_state
 
 
-def add(state_1, state_2):
-    out_state = {}
-    if 'time' in state_1.keys():
-        out_state['time'] = state_1['time']
-    for key in state_1.keys():
-        if key != 'time':
-            out_state[key] = state_1[key] + state_2[key]
-            if hasattr(out_state[key], 'attrs'):
-                out_state[key].attrs = state_1[key].attrs
-    return out_state
-
-
-def multiply(scalar, state):
-    out_state = {}
-    if 'time' in state.keys():
-        out_state['time'] = state['time']
-    for key in state.keys():
-        if key != 'time':
-            out_state[key] = scalar * state[key]
-            if hasattr(out_state[key], 'attrs'):
-                out_state[key].attrs = state[key].attrs
-    return out_state
-
-
 class AdamsBashforth(TimeStepper):
     """A TimeStepper using the Adams-Bashforth scheme."""
 
@@ -153,7 +130,7 @@ class AdamsBashforth(TimeStepper):
         convert_tendencies_units_for_state(tendencies, state)
         self._tendencies_list.append(tendencies)
         new_state = self._perform_step(state, timestep)
-        self._copy_untouched_quantities(state, new_state)
+        copy_untouched_quantities(state, new_state)
         if len(self._tendencies_list) == self._order:
             self._tendencies_list.pop(0)  # remove the oldest entry
         return diagnostics, new_state
@@ -280,7 +257,7 @@ class Leapfrog(TimeStepper):
             state, new_state = step_leapfrog(
                 self._old_state, state, tendencies, timestep,
                 asselin_strength=self._asselin_strength, alpha=self._alpha)
-        self._copy_untouched_quantities(state, new_state)
+        copy_untouched_quantities(state, new_state)
         self._old_state = state
         for key in original_state.keys():
             original_state[key] = state[key]  # allow filtering to be applied

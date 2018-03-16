@@ -1,4 +1,6 @@
 import abc
+from util import (
+    get_numpy_arrays_with_properties, restore_data_arrays_with_properties)
 
 
 class Implicit(object):
@@ -22,9 +24,17 @@ class Implicit(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    input_properties = {}
-    diagnostic_properties = {}
-    output_properties = {}
+    @abc.abstractproperty
+    def input_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def diagnostic_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def output_properties(self):
+        return {}
 
     def __str__(self):
         return (
@@ -48,7 +58,6 @@ class Implicit(object):
             self._making_repr = False
             return return_value
 
-    @abc.abstractmethod
     def __call__(self, state, timestep):
         """
         Gets diagnostics from the current model state and steps the state
@@ -57,9 +66,7 @@ class Implicit(object):
         Args
         ----
         state : dict
-            A model state dictionary. Will be updated with any
-            diagnostic quantities produced by this object for the time of
-            the input state.
+            A model state dictionary.
         timestep : timedelta
             The amount of time to step forward.
 
@@ -80,6 +87,40 @@ class Implicit(object):
             If state is not a valid input for the Implicit instance
             for other reasons.
         """
+        state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_diagnostics, raw_new_state = self.array_call(state, timestep)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties)
+        new_state = restore_data_arrays_with_properties(
+            raw_new_state, self.output_properties)
+        return diagnostics, new_state
+
+
+    @abc.abstractmethod
+    def array_call(self, state, timestep):
+        """
+        Gets diagnostics from the current model state and steps the state
+        forward in time according to the timestep.
+
+        Args
+        ----
+        state : dict
+            A numpy array state dictionary. Instead of data arrays, should
+            include numpy arrays that satisfy the input properties of this
+            object.
+        timestep : timedelta
+            The amount of time to step forward.
+
+        Returns
+        -------
+        diagnostics : dict
+            Diagnostics from the timestep of the input state, as numpy arrays.
+        new_state : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            at the timestep after input state, as numpy arrays.
+        """
+        pass
 
 
 class Prognostic(object):
@@ -101,9 +142,17 @@ class Prognostic(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    input_properties = {}
-    tendency_properties = {}
-    diagnostic_properties = {}
+    @abc.abstractproperty
+    def input_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def tendency_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def diagnostic_properties(self):
+        return {}
 
     def __str__(self):
         return (
@@ -127,7 +176,6 @@ class Prognostic(object):
             self._making_repr = False
             return return_value
 
-    @abc.abstractmethod
     def __call__(self, state):
         """
         Gets tendencies and diagnostics from the passed model state.
@@ -156,6 +204,40 @@ class Prognostic(object):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_tendencies, raw_diagnostics = self.array_call(raw_state)
+        tendencies = restore_data_arrays_with_properties(
+            raw_tendencies, self.tendency_properties)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties)
+        return tendencies, diagnostics
+
+    @abc.abstractmethod
+    def array_call(self, state):
+        """
+        Gets tendencies and diagnostics from the passed model state.
+
+        Args
+        ----
+        state : dict
+            A model state dictionary. Instead of data arrays, should
+            include numpy arrays that satisfy the input properties of this
+            object.
+
+        Returns
+        -------
+        tendencies : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the time derivative of those
+            quantities in units/second at the time of the input state, as
+            numpy arrays.
+
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            at the time of the input state, as numpy arrays.
+        """
+        pass
 
 
 class ImplicitPrognostic(object):
@@ -177,9 +259,17 @@ class ImplicitPrognostic(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    input_properties = {}
-    tendency_properties = {}
-    diagnostic_properties = {}
+    @abc.abstractproperty
+    def input_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def tendency_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def diagnostic_properties(self):
+        return {}
 
     def __str__(self):
         return (
@@ -203,7 +293,6 @@ class ImplicitPrognostic(object):
             self._making_repr = False
             return return_value
 
-    @abc.abstractmethod
     def __call__(self, state, timestep):
         """
         Gets tendencies and diagnostics from the passed model state.
@@ -234,6 +323,41 @@ class ImplicitPrognostic(object):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
+        tendencies = restore_data_arrays_with_properties(
+            raw_tendencies, self.tendency_properties)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties)
+        return tendencies, diagnostics
+
+    @abc.abstractmethod
+    def array_call(self, state, timestep):
+        """
+        Gets tendencies and diagnostics from the passed model state.
+
+        Args
+        ----
+        state : dict
+            A model state dictionary. Instead of data arrays, should
+            include numpy arrays that satisfy the input properties of this
+            object.
+        timestep : timedelta
+            The time over which the model is being stepped.
+
+        Returns
+        -------
+        tendencies : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the time derivative of those
+            quantities in units/second at the time of the input state, as
+            numpy arrays.
+
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            at the time of the input state, as numpy arrays.
+        """
 
 
 class Diagnostic(object):
@@ -251,8 +375,13 @@ class Diagnostic(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    input_properties = {}
-    diagnostic_properties = {}
+    @abc.abstractproperty
+    def input_properties(self):
+        return {}
+
+    @abc.abstractproperty
+    def diagnostic_properties(self):
+        return {}
 
     def __str__(self):
         return (
@@ -275,7 +404,6 @@ class Diagnostic(object):
             self._making_repr = False
             return return_value
 
-    @abc.abstractmethod
     def __call__(self, state):
         """
         Gets diagnostics from the passed model state.
@@ -298,6 +426,31 @@ class Diagnostic(object):
             If a required quantity is missing from the state.
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
+        """
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_diagnostics = self.array_call(raw_state)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties)
+        return diagnostics
+
+    @abc.abstractmethod
+    def array_call(self, state):
+        """
+        Gets diagnostics from the passed model state.
+
+        Args
+        ----
+        state : dict
+            A model state dictionary. Instead of data arrays, should
+            include numpy arrays that satisfy the input properties of this
+            object.
+
+        Returns
+        -------
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            at the time of the input state, as numpy arrays.
         """
 
 
