@@ -1,65 +1,43 @@
-from .base_components import PrognosticComposite
-import abc
-from .array import DataArray
+from sympl._core.base_components import TimeStepper
+from .._core.array import DataArray
 
 
-class TimeStepper(object):
-    """An object which integrates model state forward in time.
-
-    It uses Prognostic and Diagnostic objects to update the current model state
-    with diagnostics, and to return the model state at the next timestep.
-
-    Attributes
-    ----------
-    inputs : tuple of str
-        The quantities required in the state when the object is called.
-    diagnostics: tuple of str
-        The quantities for which values for the old state are returned
-        when the object is called.
-    outputs: tuple of str
-        The quantities for which values for the new state are returned
-        when the object is called.
+class SSPRungeKutta(TimeStepper):
+    """
+    A TimeStepper using the Strong Stability Preserving Runge-Kutta scheme,
+    as in Numerical Methods for Fluid Dynamics by Dale Durran (2nd ed) and
+    as proposed by Shu and Osher (1988).
     """
 
-    __metaclass__ = abc.ABCMeta
+    def __init__(self, prognostic_list, stages=3):
+        """
+        Initialize a strong stability preserving Runge-Kutta time stepper.
 
-    def __str__(self):
-        return (
-            'instance of {}(TimeStepper)\n'
-            '    inputs: {}\n'
-            '    outputs: {}\n'
-            '    diagnostics: {}\n'
-            '    Prognostic components: {}'.format(
-                self.__class__, self.inputs, self.outputs, self.diagnostics,
-                str(self._prognostic))
-        )
+        Args
+        ----
+        prognostic_list : iterable of Prognostic
+            Objects used to get tendencies for time stepping.
+        stages: int
+            Number of stages to use. Should be 2 or 3.
+        """
+        if stages not in (2, 3):
+            raise ValueError(
+                'stages must be one of 2 or 3, received {}'.format(stages))
+        self._stages = stages
+        self._euler_stepper = AdamsBashforth(prognostic_list, order=1)
+        super(SSPRungeKutta, self).__init__(prognostic_list)
 
-    def __repr__(self):
-        if hasattr(self, '_making_repr') and self._making_repr:
-            return '{}(recursive reference)'.format(self.__class__)
-        else:
-            self._making_repr = True
-            return_value = '{}({})'.format(
-                self.__class__,
-                '\n'.join('{}: {}'.format(repr(key), repr(value))
-                          for key, value in self.__dict__.items()
-                          if key != '_making_repr'))
-            self._making_repr = False
-            return return_value
 
-    def __init__(self, prognostic_list, **kwargs):
-        self._prognostic = PrognosticComposite(*prognostic_list)
-
-    @abc.abstractmethod
     def __call__(self, state, timestep):
         """
-        Retrieves any diagnostics and returns a new state corresponding
+        Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
 
         Args
         ----
         state : dict
-            The current model state.
+            The current model state. Will be updated in-place by
+            the call with any diagnostics from the current timestep.
         timestep : timedelta
             The amount of time to step forward.
 
@@ -70,23 +48,42 @@ class TimeStepper(object):
         new_state : dict
             The model state at the next timestep.
         """
+        if self._stages == 2:
+            return self._step_2_stages(state, timestep)
+        elif self._stages == 3:
+            return self._step_3_stages(state, timestep)
 
-    def _copy_untouched_quantities(self, old_state, new_state):
-        for key in old_state.keys():
-            if key not in new_state:
-                new_state[key] = old_state[key]
+    def _step_3_stages(self, state, timestep):
+        diagnostics, state_1 = self._euler_stepper(state, timestep)
+        _, state_1_5 = self._euler_stepper(state_1, timestep)
+        state_2 = add(multiply(0.75, state), multiply(0.25, state_1_5))
+        _, state_2_5 = self._euler_stepper(state_2, timestep)
+        out_state = add(multiply(1./3, state), multiply(2./3, state_2_5))
+        return out_state
 
-    @property
-    def inputs(self):
-        return self._prognostic.inputs
 
-    @property
-    def outputs(self):
-        return self._prognostic.tendencies
+    def _step_2_stages(self, state, timestep):
+        diagnostics, state_1 = self._euler_stepper(state, timestep)
+        _, state_2 = self._euler_stepper(state_1, timestep)
+        out_state = multiply(0.5, add(state, state_2))
+        return out_state
 
-    @property
-    def diagnostics(self):
-        return self._prognostic.diagnostics
+
+def add(state_1, state_2):
+    out_state = {'time': state_1['time']}
+    for key in state.keys():
+        if key != 'time':
+            out_state[key] = state[key] + state_2[key]
+            out_state[key].attrs = state_1[key].attrs
+
+
+def multiply(scalar, state):
+    out_state = {'time': state['time']}
+    for key in state.keys():
+        if key != 'time':
+            out_state[key] = scalar * state[key]
+            out_state[key].attrs = state[key].attrs
+    return out_state
 
 
 class AdamsBashforth(TimeStepper):

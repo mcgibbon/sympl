@@ -1,6 +1,6 @@
 import abc
-from .util import ensure_no_shared_keys, update_dict_by_adding_another
-from .exceptions import SharedKeyError
+
+from sympl._core.composite import PrognosticComposite
 
 
 class Implicit(object):
@@ -410,204 +410,87 @@ class Monitor(object):
         """
 
 
-class ComponentComposite(object):
+class TimeStepper(object):
+    """An object which integrates model state forward in time.
 
-    component_class = None
+    It uses Prognostic and Diagnostic objects to update the current model state
+    with diagnostics, and to return the model state at the next timestep.
+
+    Attributes
+    ----------
+    inputs : tuple of str
+        The quantities required in the state when the object is called.
+    diagnostics: tuple of str
+        The quantities for which values for the old state are returned
+        when the object is called.
+    outputs: tuple of str
+        The quantities for which values for the new state are returned
+        when the object is called.
+    """
+
+    __metaclass__ = abc.ABCMeta
 
     def __str__(self):
-        return '{}(\n{}\n)'.format(
-            self.__class__,
-            ',\n'.join(str(component) for component in self._components))
+        return (
+            'instance of {}(TimeStepper)\n'
+            '    inputs: {}\n'
+            '    outputs: {}\n'
+            '    diagnostics: {}\n'
+            '    Prognostic components: {}'.format(
+                self.__class__, self.inputs, self.outputs, self.diagnostics,
+                str(self._prognostic))
+        )
 
     def __repr__(self):
-        return '{}(\n{}\n)'.format(
-            self.__class__,
-            ',\n'.join(repr(component) for component in self._components))
+        if hasattr(self, '_making_repr') and self._making_repr:
+            return '{}(recursive reference)'.format(self.__class__)
+        else:
+            self._making_repr = True
+            return_value = '{}({})'.format(
+                self.__class__,
+                '\n'.join('{}: {}'.format(repr(key), repr(value))
+                          for key, value in self.__dict__.items()
+                          if key != '_making_repr'))
+            self._making_repr = False
+            return return_value
 
-    def __init__(self, *args):
+    def __init__(self, prognostic_list, **kwargs):
+        self._prognostic = PrognosticComposite(*prognostic_list)
+
+    @abc.abstractmethod
+    def __call__(self, state, timestep):
         """
-        Args
-        ----
-        *args
-            The components that should be wrapped by this object.
-
-        Raises
-        ------
-        SharedKeyError
-            If two components compute the same diagnostic quantity.
-        """
-        if self.component_class is not None:
-            ensure_components_have_class(args, self.component_class)
-        self._components = args
-        if hasattr(self, 'diagnostics'):
-            if (len(self.diagnostics) !=
-                    sum([len(comp.diagnostics) for comp in self._components])):
-                raise SharedKeyError(
-                    'Two components in a composite should not compute '
-                    'the same diagnostic')
-
-    def _combine_attribute(self, attr):
-        return_attr = []
-        for component in self._components:
-            return_attr.extend(getattr(component, attr))
-        return tuple(set(return_attr))  # set to deduplicate
-
-
-def ensure_components_have_class(components, component_class):
-    for component in components:
-        for attr in ('input_properties', 'output_properties',
-                     'diagnostic_properties', 'tendency_properties'):
-            if hasattr(component_class, attr) and not hasattr(component, attr):
-                raise TypeError(
-                    'Component should have attribute {} but does not'.format(
-                        attr))
-            elif hasattr(component, attr) and not hasattr(component_class, attr):
-                raise TypeError(
-                    'Component should not have attribute {}, but does'.format(
-                        attr))
-
-
-class PrognosticComposite(ComponentComposite):
-    """
-    Attributes
-    ----------
-    inputs : tuple of str
-        The quantities required in the state when the object is called.
-    tendencies : tuple of str
-        The quantities for which tendencies are returned when
-        the object is called.
-    diagnostics : tuple of str
-        The diagnostic quantities returned when the object is called.
-    """
-
-    component_class = Prognostic
-
-    def __call__(self, state):
-        """
-        Gets tendencies and diagnostics from the passed model state.
+        Retrieves any diagnostics and returns a new state corresponding
+        to the next timestep.
 
         Args
         ----
         state : dict
-            A model state dictionary.
+            The current model state.
+        timestep : timedelta
+            The amount of time to step forward.
 
         Returns
         -------
-        tendencies : dict
-            A dictionary whose keys are strings indicating
-            state quantities and values are the time derivative of those
-            quantities in units/second at the time of the input state.
         diagnostics : dict
-            A dictionary whose keys are strings indicating
-            state quantities and values are the value of those quantities
-            at the time of the input state.
-
-        Raises
-        ------
-        SharedKeyError
-            If multiple Prognostic objects contained in the
-            collection return the same diagnostic quantity.
-        KeyError
-            If a required quantity is missing from the state.
-        InvalidStateError
-            If state is not a valid input for a Prognostic instance.
+            Diagnostics from the timestep of the input state.
+        new_state : dict
+            The model state at the next timestep.
         """
-        return_tendencies = {}
-        return_diagnostics = {}
-        for prognostic in self._components:
-            tendencies, diagnostics = prognostic(state)
-            update_dict_by_adding_another(return_tendencies, tendencies)
-            return_diagnostics.update(diagnostics)
-        return return_tendencies, return_diagnostics
+
+    def _copy_untouched_quantities(self, old_state, new_state):
+        for key in old_state.keys():
+            if key not in new_state:
+                new_state[key] = old_state[key]
 
     @property
     def inputs(self):
-        return self._combine_attribute('inputs')
+        return self._prognostic.inputs
+
+    @property
+    def outputs(self):
+        return self._prognostic.tendencies
 
     @property
     def diagnostics(self):
-        return self._combine_attribute('diagnostics')
-
-    @property
-    def tendencies(self):
-        return self._combine_attribute('tendencies')
-
-
-class DiagnosticComposite(ComponentComposite):
-    """
-    Attributes
-    ----------
-    inputs : tuple of str
-        The quantities required in the state when the object is called.
-    diagnostics : tuple of str
-        The diagnostic quantities returned when the object is called.
-    """
-
-    component_class = Diagnostic
-
-    def __call__(self, state):
-        """
-        Gets diagnostics from the passed model state.
-
-        Args
-        ----
-        state : dict
-            A model state dictionary.
-
-        Returns
-        -------
-        diagnostics: dict
-            A dictionary whose keys are strings indicating
-            state quantities and values are the value of those quantities
-            at the time of the input state.
-
-        Raises
-        ------
-        SharedKeyError
-            If multiple Diagnostic objects contained in the
-            collection return the same diagnostic quantity.
-        KeyError
-            If a required quantity is missing from the state.
-        InvalidStateError
-            If state is not a valid input for a Diagnostic instance.
-        """
-        return_diagnostics = {}
-        for diagnostic_component in self._components:
-            diagnostics = diagnostic_component(state)
-            # ensure two diagnostics don't compute the same quantity
-            ensure_no_shared_keys(return_diagnostics, diagnostics)
-            return_diagnostics.update(diagnostics)
-        return return_diagnostics
-
-    @property
-    def inputs(self):
-        return self._combine_attribute('inputs')
-
-    @property
-    def diagnostics(self):
-        return self._combine_attribute('diagnostics')
-
-
-class MonitorComposite(ComponentComposite):
-
-    component_class = Monitor
-
-    def store(self, state):
-        """
-        Stores the given state in the Monitor and performs class-specific
-        actions.
-
-        Args
-        ----
-        state : dict
-            A model state dictionary.
-
-        Raises
-        ------
-        KeyError
-            If a required quantity is missing from the state.
-        InvalidStateError
-            If state is not a valid input for a Monitor instance.
-        """
-        for monitor in self._components:
-            monitor.store(state)
+        return self._prognostic.diagnostics
