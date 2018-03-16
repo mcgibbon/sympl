@@ -152,9 +152,9 @@ def test_prognostic_composite_includes_attributes():
     prognostic.diagnostic_properties = {'diagnostic1': {'units': 'm/s'}}
     prognostic.tendency_properties = {'tendency1': {}}
     composite = PrognosticComposite(prognostic)
-    assert composite.inputs == ('input1',)
-    assert composite.diagnostics == ('diagnostic1',)
-    assert composite.tendencies == ('tendency1',)
+    assert same_list(composite.input_properties.keys(), ('input1',))
+    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1',))
+    assert same_list(composite.tendency_properties.keys(), ('tendency1',))
 
 
 def test_prognostic_composite_includes_attributes_from_two():
@@ -167,9 +167,9 @@ def test_prognostic_composite_includes_attributes_from_two():
     prognostic2.diagnostic_properties = {'diagnostic2': {'units': 'm/s'}}
     prognostic2.tendency_properties = {'tendency2': {}}
     composite = PrognosticComposite(prognostic1, prognostic2)
-    assert same_list(composite.inputs, ('input1', 'input2'))
-    assert same_list(composite.diagnostics, ('diagnostic1', 'diagnostic2'))
-    assert same_list(composite.tendencies, ('tendency1', 'tendency2'))
+    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
+    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
+    assert same_list(composite.tendency_properties.keys(), ('tendency1', 'tendency2'))
 
 
 def test_prognostic_merges_attributes():
@@ -182,9 +182,9 @@ def test_prognostic_merges_attributes():
     prognostic2.diagnostic_properties = {'diagnostic2': {}}
     prognostic2.tendency_properties = {'tendency2': {}}
     composite = PrognosticComposite(prognostic1, prognostic2)
-    assert same_list(composite.inputs, ('input1', 'input2'))
-    assert same_list(composite.diagnostics, ('diagnostic1', 'diagnostic2'))
-    assert same_list(composite.tendencies, ('tendency1', 'tendency2'))
+    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
+    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
+    assert same_list(composite.tendency_properties.keys(), ('tendency1', 'tendency2'))
 
 
 def test_prognostic_composite_ensures_valid_state():
@@ -224,8 +224,8 @@ def test_diagnostic_composite_includes_attributes():
     diagnostic.input_properties = {'input1': {}}
     diagnostic.diagnostic_properties = {'diagnostic1': {}}
     composite = DiagnosticComposite(diagnostic)
-    assert composite.inputs == ('input1',)
-    assert composite.diagnostics == ('diagnostic1',)
+    assert same_list(composite.input_properties.keys(), ('input1',))
+    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1',))
 
 
 def test_diagnostic_composite_includes_attributes_from_two():
@@ -236,8 +236,8 @@ def test_diagnostic_composite_includes_attributes_from_two():
     diagnostic2.input_properties = {'input2': {}}
     diagnostic2.diagnostic_properties = {'diagnostic2': {}}
     composite = DiagnosticComposite(diagnostic1, diagnostic2)
-    assert same_list(composite.inputs, ('input1', 'input2'))
-    assert same_list(composite.diagnostics, ('diagnostic1', 'diagnostic2'))
+    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
+    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
 
 
 def test_diagnostic_composite_merges_attributes():
@@ -248,8 +248,8 @@ def test_diagnostic_composite_merges_attributes():
     diagnostic2.input_properties = {'input1': {}, 'input2': {}}
     diagnostic2.diagnostic_properties = {'diagnostic2': {}}
     composite = DiagnosticComposite(diagnostic1, diagnostic2)
-    assert same_list(composite.inputs, ('input1', 'input2'))
-    assert same_list(composite.diagnostics, ('diagnostic1', 'diagnostic2'))
+    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
+    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
 
 
 def test_diagnostic_composite_ensures_valid_state():

@@ -1,4 +1,4 @@
-from sympl._core.base_components import TimeStepper
+from sympl._core.timestepper import TimeStepper
 from .._core.array import DataArray
 
 
@@ -59,30 +59,39 @@ class SSPRungeKutta(TimeStepper):
         state_2 = add(multiply(0.75, state), multiply(0.25, state_1_5))
         _, state_2_5 = self._euler_stepper(state_2, timestep)
         out_state = add(multiply(1./3, state), multiply(2./3, state_2_5))
-        return out_state
+        return diagnostics, out_state
 
 
     def _step_2_stages(self, state, timestep):
+        assert state is not None
         diagnostics, state_1 = self._euler_stepper(state, timestep)
+        assert state_1 is not None
         _, state_2 = self._euler_stepper(state_1, timestep)
         out_state = multiply(0.5, add(state, state_2))
-        return out_state
+        return diagnostics, out_state
 
 
 def add(state_1, state_2):
-    out_state = {'time': state_1['time']}
-    for key in state.keys():
+    out_state = {}
+    if 'time' in state_1.keys():
+        out_state['time'] = state_1['time']
+    for key in state_1.keys():
         if key != 'time':
-            out_state[key] = state[key] + state_2[key]
-            out_state[key].attrs = state_1[key].attrs
+            out_state[key] = state_1[key] + state_2[key]
+            if hasattr(out_state[key], 'attrs'):
+                out_state[key].attrs = state_1[key].attrs
+    return out_state
 
 
 def multiply(scalar, state):
-    out_state = {'time': state['time']}
+    out_state = {}
+    if 'time' in state.keys():
+        out_state['time'] = state['time']
     for key in state.keys():
         if key != 'time':
             out_state[key] = scalar * state[key]
-            out_state[key].attrs = state[key].attrs
+            if hasattr(out_state[key], 'attrs'):
+                out_state[key].attrs = state[key].attrs
     return out_state
 
 

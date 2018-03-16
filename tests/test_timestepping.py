@@ -1,7 +1,7 @@
 import pytest
 import mock
 from sympl import (
-    Prognostic, Leapfrog, AdamsBashforth, DataArray)
+    Prognostic, Leapfrog, AdamsBashforth, DataArray, SSPRungeKutta)
 from datetime import timedelta
 import numpy as np
 
@@ -33,7 +33,7 @@ class TimesteppingBase(object):
         prog1 = MockPrognostic()
         prog1.input_properties = {'input1': {}}
         time_stepper = self.timestepper_class([prog1])
-        assert same_list(time_stepper.inputs, ('input1',))
+        assert same_list(time_stepper.input_properties.keys(), ('input1',))
 
     def test_timestepper_combines_inputs(self):
         prog1 = MockPrognostic()
@@ -41,7 +41,7 @@ class TimesteppingBase(object):
         prog2 = MockPrognostic()
         prog2.input_properties = {'input2': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
-        assert same_list(time_stepper.inputs, ('input1', 'input2'))
+        assert same_list(time_stepper.input_properties.keys(), ('input1', 'input2'))
 
     def test_timestepper_doesnt_duplicate_inputs(self):
         prog1 = MockPrognostic()
@@ -49,13 +49,13 @@ class TimesteppingBase(object):
         prog2 = MockPrognostic()
         prog2.input_properties = {'input1': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
-        assert same_list(time_stepper.inputs, ('input1',))
+        assert same_list(time_stepper.input_properties.keys(), ('input1',))
 
     def test_timestepper_reveals_outputs(self):
         prog1 = MockPrognostic()
         prog1.tendency_properties = {'output1': {}}
         time_stepper = self.timestepper_class([prog1])
-        assert same_list(time_stepper.outputs, ('output1',))
+        assert same_list(time_stepper.output_properties.keys(), ('output1',))
 
     def test_timestepper_combines_outputs(self):
         prog1 = MockPrognostic()
@@ -63,7 +63,7 @@ class TimesteppingBase(object):
         prog2 = MockPrognostic()
         prog2.tendency_properties = {'output2': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
-        assert same_list(time_stepper.outputs, ('output1', 'output2'))
+        assert same_list(time_stepper.output_properties.keys(), ('output1', 'output2'))
 
     def test_timestepper_doesnt_duplicate_outputs(self):
         prog1 = MockPrognostic()
@@ -71,7 +71,7 @@ class TimesteppingBase(object):
         prog2 = MockPrognostic()
         prog2.tendency_properties = {'output1': {}}
         time_stepper = self.timestepper_class([prog1, prog2])
-        assert same_list(time_stepper.outputs, ('output1',))
+        assert same_list(time_stepper.output_properties.keys(), ('output1',))
 
     @mock.patch.object(MockPrognostic, '__call__')
     def test_float_no_change_one_step(self, mock_prognostic_call):
@@ -339,6 +339,17 @@ class TimesteppingBase(object):
         assert (new_state['air_temperature'] == np.ones((3, 3))*276.).all()
         assert len(new_state['air_temperature'].attrs) == 1
         assert new_state['air_temperature'].attrs['units'] == 'K'
+
+
+class TestSSPRungeKuttaTwoStep(TimesteppingBase):
+
+    def timestepper_class(self, *args):
+        return SSPRungeKutta(*args, stages=2)
+
+
+class TestSSPRungeKuttaThreeStep(TimesteppingBase):
+    def timestepper_class(self, *args):
+        return SSPRungeKutta(*args, stages=3)
 
 
 class TestLeapfrog(TimesteppingBase):

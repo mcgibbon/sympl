@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 from ._core.base_components import (
-    Prognostic, Diagnostic, Implicit, Monitor, DiagnosticComposite, MonitorComposite, ImplicitPrognostic
+    Prognostic, Diagnostic, Implicit, Monitor, ImplicitPrognostic
 )
-from sympl._core.composite import PrognosticComposite, DiagnosticComposite, \
+from ._core.composite import PrognosticComposite, DiagnosticComposite, \
     MonitorComposite
-from sympl._core.base_components import TimeStepper
-from sympl._components.timesteppers import AdamsBashforth, Leapfrog
+from ._core.timestepper import TimeStepper
+from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
 from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError)

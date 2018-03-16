@@ -4,7 +4,7 @@ from glob import glob
 import xarray as xr
 from .util import same_list
 from .base_components import Diagnostic, Prognostic, Implicit
-from sympl._core.base_components import TimeStepper
+from sympl._core.timestepper import TimeStepper
 import numpy as np
 from .units import is_valid_unit
 from datetime import timedelta
@@ -151,15 +151,15 @@ class ComponentTestBase(object):
         component = self.get_component_instance()
         if isinstance(component, Diagnostic):
             diagnostics = component(state)
-            assert same_list(component.diagnostics, diagnostics.keys())
+            assert same_list(component.diagnostic_properties.keys(), diagnostics.keys())
         elif isinstance(component, Prognostic):
             tendencies, diagnostics = component(state)
-            assert same_list(component.tendencies, tendencies.keys())
-            assert same_list(component.diagnostics, diagnostics.keys())
+            assert same_list(component.tendency_properties.keys(), tendencies.keys())
+            assert same_list(component.diagnostic_properties.keys(), diagnostics.keys())
         elif isinstance(component, Implicit):
             diagnostics, new_state = component(state)
-            assert same_list(component.diagnostics, diagnostics.keys())
-            assert same_list(component.outputs, new_state.keys())
+            assert same_list(component.diagnostic_properties.keys(), diagnostics.keys())
+            assert same_list(component.output_properties.keys(), new_state.keys())
 
     def test_modifies_attribute_is_accurate(self):
         state = self.get_input_state()

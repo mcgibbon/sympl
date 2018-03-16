@@ -1,6 +1,6 @@
-from sympl import SharedKeyError, Prognostic, Diagnostic, ensure_no_shared_keys, \
-    Monitor
-from sympl._core.util import update_dict_by_adding_another
+from .exceptions import SharedKeyError
+from .base_components import Prognostic, Diagnostic, Monitor
+from sympl._core.util import update_dict_by_adding_another, ensure_no_shared_keys
 
 
 class ComponentComposite(object):
