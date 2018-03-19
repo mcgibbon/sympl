@@ -4,6 +4,10 @@ import unittest
 import pytz
 try:
     import netcdftime as nt
+    if not all(hasattr(nt, attr) for attr in [
+            'DatetimeNoLeap', 'DatetimeProlepticGregorian', 'DatetimeAllLeap',
+            'Datetime360Day', 'DatetimeJulian', 'DatetimeGregorian']):
+        nt = None
 except ImportError:
     nt = None
 
@@ -46,7 +50,6 @@ class DatetimeBase(object):
         assert max_args_dt.minute == 8
         assert max_args_dt.second == 9
         assert max_args_dt.microsecond == 10
-
 
 
 class ProlepticGregorianTests(unittest.TestCase, DatetimeBase):

@@ -2,6 +2,10 @@ from datetime import datetime as real_datetime, timedelta
 from .exceptions import DependencyError
 try:
     import netcdftime as nt
+    if not all(hasattr(nt, attr) for attr in [
+            'DatetimeNoLeap', 'DatetimeProlepticGregorian', 'DatetimeAllLeap',
+            'Datetime360Day', 'DatetimeJulian', 'DatetimeGregorian']):
+        nt = None
 except ImportError:
     nt = None
 

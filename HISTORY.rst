@@ -11,11 +11,14 @@ Latest
   TendencyInDiagnosticsWrapper is now to be used in Implicit and TimeStepper objects.
 * Composites now have a component_list attribute which contains the components being
   composited.
+* Added a check for netcdftime having the required objects, to fall back on not
+  using netcdftime when those are missing. This is because most objects are missing in
+  older versions of netcdftime (that come packaged with netCDF4).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
-* inputs, outputs, diagnotsics, and tendencies are no longer attributes of components.
+* inputs, outputs, diagnostics, and tendencies are no longer attributes of components.
   In order to get these, you should use e.g. input_properties.keys()
 * properties dictionaries are now abstract methods, so subclasses must define them.
   Previously they defaulted to empty dictionaries.
