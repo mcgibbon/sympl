@@ -12,8 +12,8 @@ will be looking at:
         get_initial_state, Radiation, BoundaryLayer, DeepConvection,
         ImplicitDynamics)
     from sympl import (
-        AdamsBashforth, PlotFunctionMonitor, UpdateFrequencyWrapper)
-    from datetime import datetime, timedelta
+        AdamsBashforth, PlotFunctionMonitor, UpdateFrequencyWrapper,
+        datetime, timedelta)
 
     def my_plot_function(fig, state):
         ax = fig.add_subplot(1, 1, 1)
@@ -31,20 +31,20 @@ will be looking at:
     state = get_initial_state(nx=256, ny=128, nz=64)
     state['time'] = datetime(2000, 1, 1)
 
-    physics_stepper = AdamsBashforth(
+    physics_stepper = AdamsBashforth([
         UpdateFrequencyWrapper(Radiation(), timedelta(hours=2)),
         BoundaryLayer(),
         DeepConvection(),
-    )
+    ])
     implicit_dynamics = ImplicitDynamics()
 
     timestep = timedelta(minutes=30)
     while state['time'] < datetime(2010, 1, 1):
         physics_diagnostics, state_after_physics = physics_stepper(state, timestep)
         dynamics_diagnostics, next_state = implicit_dynamics(state_after_physics, timestep)
-        state_after_physics.update(physics_diagnostics)
-        state_after_physics.update(dynamics_diagnostics)
-        plot_monitor.store(state_after_physics)
+        state.update(physics_diagnostics)
+        state.update(dynamics_diagnostics)
+        plot_monitor.store(state)
         next_state['time'] = state['time'] + timestep
         state = next_state
 
@@ -59,8 +59,8 @@ At the beginning of the script we have import statements:
         get_initial_state, Radiation, BoundaryLayer, DeepConvection,
         ImplicitDynamics)
     from sympl import (
-        AdamsBashforth, PlotFunctionMonitor, UpdateFrequencyWrapper)
-    from datetime import datetime, timedelta
+        AdamsBashforth, PlotFunctionMonitor, UpdateFrequencyWrapper,
+        datetime, timedelta)
 
 These grant access to the objects that will be used to construct the model,
 and are dependent on the model package you are using. Here, the names
@@ -113,7 +113,14 @@ An initialized `state` is a dictionary whose keys are strings (like
 'air_temperature') and values are :py:class:`~sympl.DataArray` objects, which
 store not only the data but also metadata like units. The one exception
 is the "time" quantity which is either a `datetime`-like or `timedelta`-like
-object. You can read more about the `state` in :ref:`Model State`.
+object. Here we are calling :py:func:`sympl.datetime` to initialize time,
+rather than directly creating a Python datetime. This is because
+:py:func:`sympl.datetime` can support a number of calendars using the
+`netcdftime` package, if installed, unlike the built-in `datetime` which only
+supports the Proleptic Gregorian calendar.
+
+You can read more about the `state`, including :py:func:`sympl.datetime` in
+:ref:`Model State`.
 
 Initialize Components
 ---------------------
@@ -123,11 +130,11 @@ Those are the "components":
 
 .. code-block:: python
 
-    physics_stepper = AdamsBashforth(
+    physics_stepper = AdamsBashforth([
         UpdateFrequencyWrapper(Radiation(), timedelta(hours=2)),
         BoundaryLayer(),
         DeepConvection(),
-    )
+    ])
     implicit_dynamics = ImplicitDynamics()
 
 :py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.TimeStepper`, which is
@@ -163,12 +170,16 @@ computation is done -- the main loop:
     while state['time'] < datetime(2010, 1, 1):
         physics_diagnostics, state_after_physics = physics_stepper(state, timestep)
         dynamics_diagnostics, next_state = implicit_dynamics(state_after_physics, timestep)
-        state_after_physics.update(physics_diagnostics)
-        state_after_physics.update(dynamics_diagnostics)
-        plot_monitor.store(state_after_physics)
+        state.update(physics_diagnostics)
+        state.update(dynamics_diagnostics)
+        plot_monitor.store(state)
         next_state['time'] = state['time'] + timestep
         state = next_state
 
 In the main loop, a series of component calls update the state, and the figure
 presented by ``plot_monitor`` is updated. The code is meant to be as
-self-explanatory as possible.
+self-explanatory as possible. It is necessary to manually set the time of the
+next state at the end of the loop. This is not done automatically by
+:py:class:`~sympl.TimeStepper` and :py:class:`~sympl.Implicit` objects, because
+in many models you may want to update the state with multiple such objects
+in a sequence over the course of a single time step.

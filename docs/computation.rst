@@ -317,4 +317,9 @@ code to compute the value at the next timestep, and write an
 developers of Sympl if you would like advice on your specific situation! We're
 always excited about new wrapped components.
 
+.. autoclass:: sympl.ImplicitPrognostic
+    :members:
+    :special-members:
+    :exclude-members: __weakref__,__metaclass__
+
 .. _Python documentation for dicts: https://docs.python.org/3/tutorial/datastructures.html#dictionaries
