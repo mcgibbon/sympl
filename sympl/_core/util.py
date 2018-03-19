@@ -2,7 +2,6 @@ from datetime import datetime
 
 import numpy as np
 from six import string_types
-import itertools
 
 from .array import DataArray
 from .exceptions import (

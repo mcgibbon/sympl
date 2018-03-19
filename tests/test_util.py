@@ -104,7 +104,7 @@ def test_get_component_aliases_with_single_component_arg():
 
 
 def test_get_component_aliases_with_two_component_args():
-    components = [Prognostic(), Implicit(), Diagnostic(),
+    components = [MockDiagnostic(), MockImplicit(), MockDiagnostic(),
                   TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
     for comp in components[:3]:
         aliases = get_component_aliases(comp, components[-1])
