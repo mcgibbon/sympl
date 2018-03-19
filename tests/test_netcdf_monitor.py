@@ -58,21 +58,33 @@ class NetCDFMonitorAliasTests(unittest.TestCase):
 
     def test_keys_nonstring_values_string(self):
         aliases = {1.0: 'T'}
-        self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
-        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
+        assert not os.path.isfile(self.ncfile)
+        self.assertRaises(TypeError, NetCDFMonitor, self.ncfile,
+                          aliases=aliases, write_on_store=True)
+        assert not os.path.isfile(self.ncfile)
 
     def test_keys_string_values_nonstring(self):
         aliases = {'air_temperature': 1.0}
-        self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
-        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
+        assert not os.path.isfile(self.ncfile)
+        self.assertRaises(TypeError, NetCDFMonitor, self.ncfile,
+                          aliases=aliases, write_on_store=True)
+        assert not os.path.isfile(self.ncfile)
 
     def test_keys_string_values_emptystring(self):
+        # this SHOULD raise a ValueError
         aliases = {'air_temperature': ''}
+        assert not os.path.isfile(self.ncfile)
+        monitor = NetCDFMonitor(self.ncfile, aliases=aliases,
+                                write_on_store=True)
+        self.assertRaises(ValueError, monitor.store, state)
+        assert not os.path.isfile(self.ncfile)
+
+    def test_keys_partialstring_values_emptystring(self):
+        # this SHOULD NOT raise a ValueError
+        aliases = {'air_': ''}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
-        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
+        self.check_nc_var('temperature', 'degK', 'air_temperature')
+        self.check_nc_var('pressure', 'Pa', 'air_pressure')
 
     def test_empty_aliases(self):
         aliases = {}

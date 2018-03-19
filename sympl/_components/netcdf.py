@@ -8,6 +8,7 @@ import xarray as xr
 import os
 import numpy as np
 from datetime import timedelta
+from six import string_types
 try:
     import netCDF4 as nc4
 except ImportError:
@@ -64,16 +65,11 @@ else:
                 self._aliases = {}
             else:
                 self._aliases = aliases
-            popkeys = []
             for key, val in self._aliases.items():
-                if type(key) != str:
-                    popkeys.append(key)
-                elif type(val) != str:
-                    popkeys.append(key)
-                elif len(val) == 0:
-                    popkeys.append(key)
-            for key in popkeys:
-                _ = self._aliases.pop(key)
+                if not isinstance(key, string_types):
+                    raise TypeError("Bad alias key type: {}. Expected string.".format(type(key)))
+                elif not isinstance(val, string_types):
+                    raise TypeError("Bad alias value type: {}. Expected string.".format(type(val)))
             if store_names is None:
                 self._store_names = None
             else:
@@ -110,6 +106,10 @@ else:
                     #    alias_name for the variable would be: "T_tendency_from_radiation"
                     if longname in full_var_name:
                         alias_name = full_var_name.replace(longname, shortname)
+                        if len(alias_name) == 0:  # raise exception if the alias is an empty str
+                            errstr = 'Tried to alias variable "{}" to an empty string.\n' + \
+                                     'xarray will not allow empty strings as variable names.'
+                            raise ValueError(errstr.format(full_var_name))
                         cache_state[alias_name] = cache_state.pop(full_var_name)
 
             cache_state.pop('time')  # stored as key, not needed in state dict
