@@ -16,12 +16,12 @@ state = {
     'air_temperature': DataArray(
         random.randn(nx, ny, nz),
         dims=['lon', 'lat', 'mid_levels'],
-        attrs={'units': 'degK'},
+        attrs={'units': 'degK', 'long_name': 'air_temperature'},
     ),
     'air_pressure': DataArray(
         random.randn(nx, ny, nz),
         dims=['lon', 'lat', 'mid_levels'],
-        attrs={'units': 'Pa'},
+        attrs={'units': 'Pa', 'long_name': 'air_pressure'},
     ),
 }
 
@@ -42,49 +42,50 @@ class NetCDFMonitorAliasTests(unittest.TestCase):
         monitor.store(state)
         assert os.path.isfile(self.ncfile)
 
-    def check_nc_var(self, varname, varunit):
+    def check_nc_var(self, varname, varunit, longname):
         with xr.open_dataset(self.ncfile) as ds:
             assert len(ds.data_vars.keys()) == 2
             assert varname in ds.data_vars.keys()
             assert ds.data_vars[varname].attrs['units'] == varunit
+            assert ds.data_vars[varname].attrs['long_name'] == longname
             assert tuple(ds.data_vars[varname].shape) == (1, nx, ny, nz)
 
     def test_keys_string_values_string(self):
         aliases = {'air_temperature': 'T'}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('T', 'degK')
-        self.check_nc_var('air_pressure', 'Pa')
+        self.check_nc_var('T', 'degK', 'air_temperature')
+        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
 
     def test_keys_nonstring_values_string(self):
         aliases = {1.0: 'T'}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK')
-        self.check_nc_var('air_pressure', 'Pa')
+        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
+        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
 
     def test_keys_string_values_nonstring(self):
         aliases = {'air_temperature': 1.0}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK')
-        self.check_nc_var('air_pressure', 'Pa')
+        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
+        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
 
     def test_keys_string_values_emptystring(self):
         aliases = {'air_temperature': ''}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK')
-        self.check_nc_var('air_pressure', 'Pa')
+        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
+        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
 
     def test_empty_aliases(self):
         aliases = {}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('air_temperature', 'degK')
-        self.check_nc_var('air_pressure', 'Pa')
+        self.check_nc_var('air_temperature', 'degK', 'air_temperature')
+        self.check_nc_var('air_pressure', 'Pa', 'air_pressure')
 
     def test_two_aliases(self):
         aliases = {'air_temperature': 'T',
                    'air_pressure': 'P'}
         self.store_state_and_check_file(aliases)
-        self.check_nc_var('T', 'degK')
-        self.check_nc_var('P', 'Pa')
+        self.check_nc_var('T', 'degK', 'air_temperature')
+        self.check_nc_var('P', 'Pa', 'air_pressure')
 
 
 def test_netcdf_monitor_initializes():

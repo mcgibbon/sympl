@@ -25,6 +25,24 @@ class MockPrognostic(Prognostic):
         return {}, {'num_updates': self._num_updates}
 
 
+class MockImplicit(Implicit):
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
+class MockDiagnostic(Diagnostic):
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
 def test_update_dict_by_adding_another_adds_shared_arrays():
     old_a = np.array([1., 1.])
     dict1 = {'a': old_a}
@@ -65,31 +83,34 @@ class DummyPrognostic(Prognostic):
         return self._a
 
 
-def test_get_component_aliases_with_different_input_types():
-    # 1) input = nothing
+def test_get_component_aliases_with_no_args():
     aliases = get_component_aliases()
     assert type(aliases) == dict
     assert len(aliases.keys()) == 0
 
-    # 2) a single input Component
-    components = [Prognostic(), Implicit(), Diagnostic(),
+
+def test_get_component_aliases_with_single_component_arg():
+    components = [MockPrognostic(), MockImplicit(), MockDiagnostic(),
                   TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
     for c, comp in enumerate(components):
         aliases = get_component_aliases(comp)
         assert type(aliases) == dict
         if c == 3:
-            assert len(aliases.keys()) == 3
-            for k in ['T', 'P', 'tend']:
+            assert len(aliases.keys()) == 2
+            for k in ['T', 'P']:
                 assert k in list(aliases.values())
         else:
             assert len(aliases.keys()) == 0
 
-    # 3) two input components
+
+def test_get_component_aliases_with_two_component_args():
+    components = [Prognostic(), Implicit(), Diagnostic(),
+                  TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
     for comp in components[:3]:
         aliases = get_component_aliases(comp, components[-1])
         assert type(aliases) == dict
-        assert len(aliases.keys()) == 3
-        for k in ['T', 'P', 'tend']:
+        assert len(aliases.keys()) == 2
+        for k in ['T', 'P']:
             assert k in list(aliases.values())
 
 
@@ -129,11 +150,11 @@ class DummyProg3(Prognostic):
 def test_get_component_aliases_with_different_values():
     # two different aliases in the same Component:
     aliases = get_component_aliases(DummyProg1())
-    assert len(aliases.keys()) == 2
+    assert len(aliases.keys()) == 1
     assert aliases['temperature'] == 'TEMP'
     # two different aliases in different Components:
     aliases = get_component_aliases(DummyProg1(), DummyProg2())
-    assert len(aliases.keys()) == 2
+    assert len(aliases.keys()) == 1
     assert aliases['temperature'] == 't'
     # NO aliases in component
     aliases = get_component_aliases(DummyProg3)

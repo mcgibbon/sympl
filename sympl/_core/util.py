@@ -664,11 +664,6 @@ def get_component_aliases(*args):
      -  If a variable shows up in the input_properties or diagnostic_properties
         of two or more different Components, make sure they have the same 'alias'
         keyword in all Components.
-     -  This function will also produces aliases for tendency diagnostics in
-        Prognostic objects that have been wrapped with a TendencyInDiagnosticsWrapper.
-        Tendency aliases are of the form "<variable_name>_tend_from_<tendency_source>",
-        where <variable_name> is the aliased (shorter) name of the model variable and
-        <tendency_source> is where the tendency come from (e.g., "dynamics" or "diffusion")
 
     Args
     ----
@@ -696,9 +691,5 @@ def get_component_aliases(*args):
                 for varname, properties in component_properties.items():
                     if 'alias' in properties.keys():
                         aliases.update({varname: properties['alias']})
-
-    # If any variables were renamed, let's also shorten the "tendency" diagnostics
-    if len(aliases.keys()) > 0:
-        aliases.update({'tendency': 'tend'})
 
     return aliases
