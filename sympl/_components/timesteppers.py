@@ -126,7 +126,7 @@ class AdamsBashforth(TimeStepper):
         """
         self._ensure_constant_timestep(timestep)
         state = state.copy()
-        tendencies, diagnostics = self._prognostic(state)
+        tendencies, diagnostics = self.prognostic(state)
         convert_tendencies_units_for_state(tendencies, state)
         self._tendencies_list.append(tendencies)
         new_state = self._perform_step(state, timestep)
@@ -249,7 +249,7 @@ class Leapfrog(TimeStepper):
         original_state = state
         state = state.copy()
         self._ensure_constant_timestep(timestep)
-        tendencies, diagnostics = self._prognostic(state)
+        tendencies, diagnostics = self.prognostic(state)
         convert_tendencies_units_for_state(tendencies, state)
         if self._old_state is None:
             new_state = step_forward_euler(state, tendencies, timestep)

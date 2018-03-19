@@ -5,6 +5,13 @@ What's New
 Latest
 ------
 
+* Implicit, Diagnostic, ImplicitPrognostic, and Prognostic base classes were
+  modified to include functionality that was previously in ScalingWrapper,
+  UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper. The functionality of
+  TendencyInDiagnosticsWrapper is now to be used in Implicit and TimeStepper objects.
+* Composites now have a component_list attribute which contains the components being
+  composited.
+
 Breaking changes
 ~~~~~~~~~~~~~~~~
 
@@ -16,6 +23,9 @@ Breaking changes
   __call__ will automatically unwrap DataArrays to numpy arrays to be passed into
   array_call based on the component's properties dictionaries, and re-wrap to
   DataArrays when done.
+* ScalingWrapper, UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper
+  have been removed. The functionality of these wrappers has been moved to the
+  component base types as methods and initialization options.
 
 v0.3.1
 ------

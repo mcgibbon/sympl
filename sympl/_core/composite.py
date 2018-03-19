@@ -1,21 +1,30 @@
 from .exceptions import SharedKeyError
 from .base_components import Prognostic, Diagnostic, Monitor
-from sympl._core.util import update_dict_by_adding_another, ensure_no_shared_keys
+from .util import update_dict_by_adding_another, ensure_no_shared_keys
+import warnings
 
 
 class ComponentComposite(object):
+    """
+    A composite of components that allows them to be called as one object.
+
+    Attributes
+    ----------
+    component_list: list
+        The components being composited by this object.
+    """
 
     component_class = None
 
     def __str__(self):
         return '{}(\n{}\n)'.format(
             self.__class__,
-            ',\n'.join(str(component) for component in self._components))
+            ',\n'.join(str(component) for component in self.component_list))
 
     def __repr__(self):
         return '{}(\n{}\n)'.format(
             self.__class__,
-            ',\n'.join(repr(component) for component in self._components))
+            ',\n'.join(repr(component) for component in self.component_list))
 
     def __init__(self, *args):
         """
@@ -31,17 +40,17 @@ class ComponentComposite(object):
         """
         if self.component_class is not None:
             ensure_components_have_class(args, self.component_class)
-        self._components = args
+        self.component_list = args
         if hasattr(self, 'diagnostics'):
             if (len(self.diagnostics) !=
-                    sum([len(comp.diagnostics) for comp in self._components])):
+                    sum([len(comp.diagnostics) for comp in self.component_list])):
                 raise SharedKeyError(
                     'Two components in a composite should not compute '
                     'the same diagnostic')
 
     def _combine_attribute(self, attr):
         return_attr = []
-        for component in self._components:
+        for component in self.component_list:
             return_attr.extend(getattr(component, attr))
         return tuple(set(return_attr))  # set to deduplicate
 
@@ -61,17 +70,6 @@ def ensure_components_have_class(components, component_class):
 
 
 class PrognosticComposite(ComponentComposite):
-    """
-    Attributes
-    ----------
-    inputs : tuple of str
-        The quantities required in the state when the object is called.
-    tendencies : tuple of str
-        The quantities for which tendencies are returned when
-        the object is called.
-    diagnostics : tuple of str
-        The diagnostic quantities returned when the object is called.
-    """
 
     component_class = Prognostic
 
@@ -107,34 +105,14 @@ class PrognosticComposite(ComponentComposite):
         """
         return_tendencies = {}
         return_diagnostics = {}
-        for prognostic in self._components:
+        for prognostic in self.component_list:
             tendencies, diagnostics = prognostic(state)
             update_dict_by_adding_another(return_tendencies, tendencies)
             return_diagnostics.update(diagnostics)
         return return_tendencies, return_diagnostics
 
-    @property
-    def inputs(self):
-        return self._combine_attribute('inputs')
-
-    @property
-    def diagnostics(self):
-        return self._combine_attribute('diagnostics')
-
-    @property
-    def tendencies(self):
-        return self._combine_attribute('tendencies')
-
 
 class DiagnosticComposite(ComponentComposite):
-    """
-    Attributes
-    ----------
-    inputs : tuple of str
-        The quantities required in the state when the object is called.
-    diagnostics : tuple of str
-        The diagnostic quantities returned when the object is called.
-    """
 
     component_class = Diagnostic
 
@@ -165,20 +143,12 @@ class DiagnosticComposite(ComponentComposite):
             If state is not a valid input for a Diagnostic instance.
         """
         return_diagnostics = {}
-        for diagnostic_component in self._components:
+        for diagnostic_component in self.component_list:
             diagnostics = diagnostic_component(state)
             # ensure two diagnostics don't compute the same quantity
             ensure_no_shared_keys(return_diagnostics, diagnostics)
             return_diagnostics.update(diagnostics)
         return return_diagnostics
-
-    @property
-    def inputs(self):
-        return self._combine_attribute('inputs')
-
-    @property
-    def diagnostics(self):
-        return self._combine_attribute('diagnostics')
 
 
 class MonitorComposite(ComponentComposite):
@@ -202,5 +172,5 @@ class MonitorComposite(ComponentComposite):
         InvalidStateError
             If state is not a valid input for a Monitor instance.
         """
-        for monitor in self._components:
+        for monitor in self.component_list:
             monitor.store(state)
