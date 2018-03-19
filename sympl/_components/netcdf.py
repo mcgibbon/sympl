@@ -54,9 +54,6 @@ else:
             aliases : dict
                 A dictionary of string replacements to apply to state variable
                 names before saving them in netCDF files.
-                keys = variable name; values = alias name
-                The function sympl.get_component_aliases() can be used to
-                get variable aliases from a list of Components
             """
             self._cached_state_dict = {}
             self._filename = filename
