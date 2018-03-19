@@ -5,6 +5,22 @@ What's New
 Latest
 ------
 
+* Shortened the name of tendency diagnostics in TendencyInDiagnosticsWrapper
+* Added "aliases" kwarg to NetCDFMonitor, allowing the monitor to shorten
+  variable names when writing to netCDF
+* Added get_component_aliases() to get a dictionary of quantity aliases from
+  a list of Components (used by NetCDFMonitor to shorten variable
+  names)
+* Added tests for NetCDFMonitor aliases and get_component_aliases()
+
+v0.3.1
+------
+
+* Fixed botched deployment, see v0.3.0 for the real changes
+
+v0.3.0
+------
+
 * Modified component class checking to look at the presence of properties
 * Added ScalingWrapper
 * Fixed bug in TendencyInDiagnosticsWrapper where tendency_diagnostics_properties were
@@ -29,14 +45,11 @@ Latest
   Implicit.
 * Added a function reset_constants to reset the constants library to its
   initial state.
-* Shortened the name of tendency diagnostics in TendencyInDiagnosticsWrapper
-* Added "aliases" kwarg to NetCDFMonitor, allowing the monitor to shorten
-  variable names when writing to netCDF
-* Added get_component_aliases() to get a dictionary of quantity aliases from
-  a list of Components (used by NetCDFMonitor to shorten variable
-  names)
-* Added tests for NetCDFMonitor aliases and get_component_aliases()
-
+* Added a function datetime which accepts calendar as a keyword argument, and
+  returns datetimes from netcdftime when non-default calendars are used. The
+  dependency on netcdftime is optional, the other calendars just won't work if
+  it isn't installed
+* Added a reference to the built-in timedelta for convenience.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

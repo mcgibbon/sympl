@@ -18,3 +18,4 @@ scipy
 numpy>=0.10
 coveralls
 netcdf4
+cython

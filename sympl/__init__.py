@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from ._core.base_components import (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
-    DiagnosticComposite, MonitorComposite
+    DiagnosticComposite, MonitorComposite, ImplicitPrognostic
 )
 from ._core.timestepping import TimeStepper, Leapfrog, AdamsBashforth
 from ._core.exceptions import (
@@ -25,11 +25,12 @@ from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
+from ._core.time import datetime, timedelta
 
-__version__ = '0.2.1'
+__version__ = '0.3.1'
 __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
-    DiagnosticComposite, MonitorComposite,
+    DiagnosticComposite, MonitorComposite, ImplicitPrognostic,
     TimeStepper, Leapfrog, AdamsBashforth,
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError,
@@ -45,4 +46,5 @@ __all__ = (
     ComponentTestBase,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
+    datetime, timedelta
 )
