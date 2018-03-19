@@ -50,6 +50,21 @@ class NetCDFMonitorAliasTests(unittest.TestCase):
             assert ds.data_vars[varname].attrs['long_name'] == longname
             assert tuple(ds.data_vars[varname].shape) == (1, nx, ny, nz)
 
+    def test_state_key_emptystring(self):
+        aliases = {'air_temperature': 'T'}
+        bad_state = {
+                'time': datetime(2013, 7, 20),
+                '': DataArray(
+                    random.randn(nx, ny, nz),
+                    dims=['lon', 'lat', 'mid_levels'],
+                    attrs={'units': 'degK', 'long_name': 'air_temperature'})
+                    }
+        assert not os.path.isfile(self.ncfile)
+        monitor = NetCDFMonitor(self.ncfile, aliases=aliases,
+                                write_on_store=True)
+        self.assertRaises(ValueError, monitor.store, bad_state)
+        assert not os.path.isfile(self.ncfile)
+
     def test_keys_string_values_string(self):
         aliases = {'air_temperature': 'T'}
         self.store_state_and_check_file(aliases)

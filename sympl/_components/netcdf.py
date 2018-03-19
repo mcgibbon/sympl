@@ -52,7 +52,8 @@ else:
                 Default is to write only when the write() method is
                 called directly.
             aliases : dict
-                A dictionary used to rename variables to their aliases.
+                A dictionary of string replacements to apply to state variable
+                names before saving them in netCDF files.
                 keys = variable name; values = alias name
                 The function sympl.get_component_aliases() can be used to
                 get variable aliases from a list of Components
@@ -96,6 +97,11 @@ else:
                 cache_state = {name: state[name] for name in name_list}
             else:
                 cache_state = state.copy()
+
+            # raise an exception if the state has any empty string variables
+            for full_var_name in cache_state.keys():
+                if len(full_var_name) == 0:
+                    raise ValueError('The given state has an empty string as a variable name.')
 
             # replace cached variable names with their aliases
             for longname, shortname in self._aliases.items():
