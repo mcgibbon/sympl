@@ -5,7 +5,13 @@ What's New
 Latest
 ------
 
-* No changes yet!
+* Shortened the name of tendency diagnostics in TendencyInDiagnosticsWrapper
+* Added "aliases" kwarg to NetCDFMonitor, allowing the monitor to shorten
+  variable names when writing to netCDF
+* Added get_component_aliases() to get a dictionary of quantity aliases from
+  a list of Components (used by NetCDFMonitor to shorten variable
+  names)
+* Added tests for NetCDFMonitor aliases and get_component_aliases()
 
 v0.3.1
 ------

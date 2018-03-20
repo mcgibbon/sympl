@@ -16,7 +16,8 @@ from ._core.util import (
     get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
-    set_direction_names, add_direction_names)
+    set_direction_names, add_direction_names,
+    get_component_aliases)
 from ._core.wrappers import (
     UpdateFrequencyWrapper, TendencyInDiagnosticsWrapper,
     TimeDifferencingWrapper, ScalingWrapper)
@@ -40,7 +41,7 @@ __all__ = (
     get_numpy_array, jit, TendencyInDiagnosticsWrapper,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
-    set_direction_names, add_direction_names,
+    set_direction_names, add_direction_names, get_component_aliases,
     ScalingWrapper,
     ComponentTestBase,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
