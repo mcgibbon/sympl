@@ -1,7 +1,6 @@
 from .exceptions import SharedKeyError
 from .base_components import Prognostic, Diagnostic, Monitor
 from .util import update_dict_by_adding_another, ensure_no_shared_keys
-import warnings
 
 
 class ComponentComposite(object):
@@ -45,7 +44,6 @@ class ComponentComposite(object):
             diagnostic_names = []
             for component in self.component_list:
                 diagnostic_names.extend(component.diagnostic_properties.keys())
-            print(diagnostic_names)
             for name in diagnostic_names:
                 if diagnostic_names.count(name) > 1:
                     raise SharedKeyError(
