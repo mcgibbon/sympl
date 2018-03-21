@@ -11,6 +11,10 @@ Latest
   TendencyInDiagnosticsWrapper is now to be used in Implicit and TimeStepper objects.
 * Composites now have a component_list attribute which contains the components being
   composited.
+* TimeSteppers now have a prognostic_list attribute which contains the
+  prognostics used to calculate tendencies. This list should be referenced when
+  determining inputs and outputs, since TimeSteppers do not currently have
+  properties dictionaries as attributes.
 * Added a check for netcdftime having the required objects, to fall back on not
   using netcdftime when those are missing. This is because most objects are missing in
   older versions of netcdftime (that come packaged with netCDF4) (closes #23).
