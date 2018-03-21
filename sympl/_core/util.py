@@ -351,24 +351,36 @@ def restore_data_arrays_with_properties(
                 'requested output {} is not present in raw_arrays'.format(
                     from_name))
         array = raw_arrays[from_name]
-        from_dims = input_properties[dims_like]['dims']
-        result_like = input_state[dims_like]
-        try:
-            out_dict[quantity_name] = restore_dimensions(
-                array,
-                from_dims=from_dims,
-                result_like=result_like,
-                result_attrs=attrs)
-        except ShapeMismatchError:
-            raise InvalidPropertyDictError(
-                'output quantity {} has dims_like input {}, but the '
-                'provided output array for {} has '
-                'a shape {} incompatible with the input shape {} of {}. '
-                'Do they really have the same dimensions?'.format(
-                    quantity_name, dims_like, quantity_name, array.shape,
-                    result_like.shape, dims_like
+        if dims_like in input_properties.keys():
+            from_dims = input_properties[dims_like]['dims']
+            result_like = input_state[dims_like]
+            try:
+                out_dict[quantity_name] = restore_dimensions(
+                    array,
+                    from_dims=from_dims,
+                    result_like=result_like,
+                    result_attrs=attrs)
+            except ShapeMismatchError:
+                raise InvalidPropertyDictError(
+                    'output quantity {} has dims_like input {}, but the '
+                    'provided output array for {} has '
+                    'a shape {} incompatible with the input shape {} of {}. '
+                    'Do they really have the same dimensions?'.format(
+                        quantity_name, dims_like, quantity_name, array.shape,
+                        result_like.shape, dims_like
+                    )
                 )
+        elif 'dims' in properties.keys():
+            out_dict[quantity_name] = DataArray(
+                array,
+                dims=properties['dims'],
+                attrs={'units': properties['units']},
             )
+        else:
+            raise InvalidPropertyDictError(
+                'Could not determine dimensions for {}, make sure dims_like or '
+                'dims is specified in its property dictionary'.format(
+                    quantity_name))
     return out_dict
 
 
