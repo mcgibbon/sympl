@@ -1,8 +1,11 @@
 from .netcdf import NetCDFMonitor, RestartMonitor
 from .plot import PlotFunctionMonitor
-from .basic import ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic
+from .basic import (
+    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
+    TimeDifferencingWrapper)
 
 __all__ = (
     PlotFunctionMonitor,
     NetCDFMonitor, RestartMonitor,
-    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
+    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
+    TimeDifferencingWrapper)

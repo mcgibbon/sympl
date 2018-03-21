@@ -14,6 +14,8 @@ Latest
 * Added a check for netcdftime having the required objects, to fall back on not
   using netcdftime when those are missing. This is because most objects are missing in
   older versions of netcdftime (that come packaged with netCDF4) (closes #23).
+* TimeSteppers should now be called with individual Prognostics as args, rather
+  than a list of components, and will emit a warning when lists are given.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

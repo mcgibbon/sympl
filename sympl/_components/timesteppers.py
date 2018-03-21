@@ -10,14 +10,14 @@ class SSPRungeKutta(TimeStepper):
     as proposed by Shu and Osher (1988).
     """
 
-    def __init__(self, prognostic_list, stages=3):
+    def __init__(self, *args, stages=3):
         """
         Initialize a strong stability preserving Runge-Kutta time stepper.
 
         Args
         ----
-        prognostic_list : iterable of Prognostic
-            Objects used to get tendencies for time stepping.
+        *args : Prognostic
+            Objects to call for tendencies when doing time stepping.
         stages: int
             Number of stages to use. Should be 2 or 3.
         """
@@ -25,8 +25,8 @@ class SSPRungeKutta(TimeStepper):
             raise ValueError(
                 'stages must be one of 2 or 3, received {}'.format(stages))
         self._stages = stages
-        self._euler_stepper = AdamsBashforth(prognostic_list, order=1)
-        super(SSPRungeKutta, self).__init__(prognostic_list)
+        self._euler_stepper = AdamsBashforth(*args, order=1)
+        super(SSPRungeKutta, self).__init__(*args)
 
 
     def __call__(self, state, timestep):
@@ -75,14 +75,14 @@ class SSPRungeKutta(TimeStepper):
 class AdamsBashforth(TimeStepper):
     """A TimeStepper using the Adams-Bashforth scheme."""
 
-    def __init__(self, prognostic_list, order=3):
+    def __init__(self, *args, order=3):
         """
         Initialize an Adams-Bashforth time stepper.
 
         Args
         ----
-        prognostic_list : iterable of Prognostic
-            Objects used to get tendencies for time stepping.
+        *args : Prognostic
+            Objects to call for tendencies when doing time stepping.
         order : int, optional
             The order of accuracy to use. Must be between
             1 and 4. 1 is the same as the Euler method. Default is 3.
@@ -96,7 +96,7 @@ class AdamsBashforth(TimeStepper):
         self._order = order
         self._timestep = None
         self._tendencies_list = []
-        super(AdamsBashforth, self).__init__(prognostic_list)
+        super(AdamsBashforth, self).__init__(*args)
 
     def __call__(self, state, timestep):
         """
@@ -184,16 +184,14 @@ class Leapfrog(TimeStepper):
     $t_{n+1}$, according to Williams (2009)) closer to the mean of the values
     at $t_{n-1}$ and $t_{n+1}$."""
 
-    def __init__(
-            self, prognostic_list, asselin_strength=0.05,
-            alpha=0.5):
+    def __init__(self, *args, asselin_strength=0.05, alpha=0.5):
         """
         Initialize a Leapfrog time stepper.
 
         Args
         ----
-        prognostic_list : iterable of Prognostic
-            Objects used to get tendencies for time stepping.
+        *args : Prognostic
+            Objects to call for tendencies when doing time stepping.
         asselin_strength : float, optional
             The filter parameter used to determine the strength
             of the Asselin filter. Default is 0.05.
@@ -215,7 +213,7 @@ class Leapfrog(TimeStepper):
         self._asselin_strength = asselin_strength
         self._timestep = None
         self._alpha = alpha
-        super(Leapfrog, self).__init__(prognostic_list)
+        super(Leapfrog, self).__init__(*args)
 
     def __call__(self, state, timestep):
         """

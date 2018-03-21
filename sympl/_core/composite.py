@@ -41,12 +41,17 @@ class ComponentComposite(object):
         if self.component_class is not None:
             ensure_components_have_class(args, self.component_class)
         self.component_list = args
-        if hasattr(self, 'diagnostics'):
-            if (len(self.diagnostics) !=
-                    sum([len(comp.diagnostics) for comp in self.component_list])):
-                raise SharedKeyError(
-                    'Two components in a composite should not compute '
-                    'the same diagnostic')
+        if hasattr(self.component_class, 'diagnostic_properties'):
+            diagnostic_names = []
+            for component in self.component_list:
+                diagnostic_names.extend(component.diagnostic_properties.keys())
+            print(diagnostic_names)
+            for name in diagnostic_names:
+                if diagnostic_names.count(name) > 1:
+                    raise SharedKeyError(
+                        'Two components in a composite should not compute '
+                        'the same diagnostic, but multiple passed '
+                        'components compute {}'.format(name))
 
     def _combine_attribute(self, attr):
         return_attr = []
@@ -57,16 +62,10 @@ class ComponentComposite(object):
 
 def ensure_components_have_class(components, component_class):
     for component in components:
-        for attr in ('input_properties', 'output_properties',
-                     'diagnostic_properties', 'tendency_properties'):
-            if hasattr(component_class, attr) and not hasattr(component, attr):
-                raise TypeError(
-                    'Component should have attribute {} but does not'.format(
-                        attr))
-            elif hasattr(component, attr) and not hasattr(component_class, attr):
-                raise TypeError(
-                    'Component should not have attribute {}, but does'.format(
-                        attr))
+        if not isinstance(component, component_class):
+            raise TypeError(
+                'Component should be of type {} but is type {}'.format(
+                    component_class, type(component)))
 
 
 class PrognosticComposite(ComponentComposite):

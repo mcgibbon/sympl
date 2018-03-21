@@ -19,11 +19,11 @@ from ._core.util import (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     set_direction_names, add_direction_names)
-from ._core.wrappers import TimeDifferencingWrapper
 from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
-    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic)
+    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
+    TimeDifferencingWrapper)
 from ._core.time import datetime, timedelta
 
 __version__ = '0.3.1'

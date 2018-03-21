@@ -1,6 +1,7 @@
 import abc
 from .composite import PrognosticComposite
 from .time import timedelta
+import warnings
 
 
 class TimeStepper(object):
@@ -73,20 +74,25 @@ class TimeStepper(object):
             self._making_repr = False
             return return_value
 
-    def __init__(self, prognostic_list, tendencies_in_diagnostics=False):
+    def __init__(self, *args, tendencies_in_diagnostics=False):
         """
         Initialize the TimeStepper.
 
         Parameters
         ----------
-        prognostic_list : list of Prognostic
+        *args : Prognostic
             Objects to call for tendencies when doing time stepping.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
             quantities in its diagnostic output.
         """
+        if len(args) == 1 and isinstance(args[0], list):
+            warnings.warn(
+                'TimeSteppers should be given individual Prognostics rather '
+                'than a list, and will not accept lists in a later version.')
+            args = args[0]
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        self.prognostic = PrognosticComposite(prognostic_list)
+        self.prognostic = PrognosticComposite(*args)
         if tendencies_in_diagnostics:
             self._insert_tendencies_to_diagnostic_properties()
 

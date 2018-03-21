@@ -1764,7 +1764,7 @@ class ImplicitTests(unittest.TestCase):
         assert 'output1_tendency_from_mockimplicit' in diagnostics.keys()
         assert len(
             diagnostics['output1_tendency_from_mockimplicit'].dims) == 1
-        assert 'dim1' in diagnostics['output1_tendency_from_mockimplicit']
+        assert 'dim1' in diagnostics['output1_tendency_from_mockimplicit'].dims
         assert diagnostics['output1_tendency_from_mockimplicit'].attrs['units'] == 'm s^-1'
         assert np.all(
             diagnostics['output1_tendency_from_mockimplicit'].values == 2.)
@@ -1852,10 +1852,9 @@ class ImplicitTests(unittest.TestCase):
         diagnostics, _ = implicit(state, timedelta(seconds=5))
         assert 'output1_tendency_from_component' in diagnostics.keys()
         assert len(diagnostics['output1_tendency_from_component'].dims) == 1
-        assert 'dim1' in diagnostics['output1_tendency_from_component']
+        assert 'dim1' in diagnostics['output1_tendency_from_component'].dims
         assert diagnostics['output1_tendency_from_component'].attrs['units'] == 'm s^-1'
         assert np.all(diagnostics['output1_tendency_from_component'].values == 1.)
-
 
 
 if __name__ == '__main__':

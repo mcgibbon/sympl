@@ -5,6 +5,7 @@ from sympl import (
     MonitorComposite, SharedKeyError, DataArray
 )
 
+
 def same_list(list1, list2):
     return (len(list1) == len(list2) and all(
         [item in list2 for item in list1] + [item in list1 for item in list2]))
@@ -30,7 +31,7 @@ class MockPrognostic2(Prognostic):
     tendency_properties = {}
 
     def __init__(self, **kwargs):
-        super(MockPrognostic, self).__init__(**kwargs)
+        super(MockPrognostic2, self).__init__(**kwargs)
 
     def array_call(self, state):
         return {}, {}
@@ -46,7 +47,6 @@ class MockDiagnostic(Diagnostic):
 
     def array_call(self, state):
         return {}
-
 
 
 class MockMonitor(Monitor):
@@ -167,47 +167,6 @@ def test_diagnostic_composite_call(mock_call):
     assert new_state['foo'] == 5.
 
 
-def test_prognostic_composite_includes_attributes():
-    prognostic = MockPrognostic()
-    prognostic.input_properties = {'input1': {'units': 'K', 'dims':['z', 'y', 'x']}}
-    prognostic.diagnostic_properties = {'diagnostic1': {'units': 'm/s'}}
-    prognostic.tendency_properties = {'tendency1': {}}
-    composite = PrognosticComposite(prognostic)
-    assert same_list(composite.input_properties.keys(), ('input1',))
-    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1',))
-    assert same_list(composite.tendency_properties.keys(), ('tendency1',))
-
-
-def test_prognostic_composite_includes_attributes_from_two():
-    prognostic1 = MockPrognostic()
-    prognostic1.input_properties = {'input1': {'units': 'K', 'dims':['z', 'y', 'x']}}
-    prognostic1.diagnostic_properties = {'diagnostic1': {'units': 'm/s'}}
-    prognostic1.tendency_properties = {'tendency1': {}}
-    prognostic2 = MockPrognostic()
-    prognostic2.input_properties = {'input2': {'units': 'K', 'dims':['z', 'y', 'x']}}
-    prognostic2.diagnostic_properties = {'diagnostic2': {'units': 'm/s'}}
-    prognostic2.tendency_properties = {'tendency2': {}}
-    composite = PrognosticComposite(prognostic1, prognostic2)
-    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
-    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
-    assert same_list(composite.tendency_properties.keys(), ('tendency1', 'tendency2'))
-
-
-def test_prognostic_merges_attributes():
-    prognostic1 = MockPrognostic()
-    prognostic1.input_properties = {'input1': {}}
-    prognostic1.diagnostic_properties = {'diagnostic1': {}}
-    prognostic1.tendency_properties = {'tendency1': {}, 'tendency2': {}}
-    prognostic2 = MockPrognostic()
-    prognostic2.input_properties = {'input1': {}, 'input2': {}}
-    prognostic2.diagnostic_properties = {'diagnostic2': {}}
-    prognostic2.tendency_properties = {'tendency2': {}}
-    composite = PrognosticComposite(prognostic1, prognostic2)
-    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
-    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
-    assert same_list(composite.tendency_properties.keys(), ('tendency1', 'tendency2'))
-
-
 def test_prognostic_composite_ensures_valid_state():
     prognostic1 = MockPrognostic()
     prognostic1.input_properties = {'input1': {}}
@@ -238,39 +197,6 @@ def test_prognostic_component_handles_units_when_combining(mock_call, mock2_call
     composite = PrognosticComposite(prognostic1, prognostic2)
     tendencies, diagnostics = composite({})
     assert tendencies['eastward_wind'].to_units('m/s').values.item() == 1.5
-
-
-def test_diagnostic_composite_includes_attributes():
-    diagnostic = MockDiagnostic()
-    diagnostic.input_properties = {'input1': {}}
-    diagnostic.diagnostic_properties = {'diagnostic1': {}}
-    composite = DiagnosticComposite(diagnostic)
-    assert same_list(composite.input_properties.keys(), ('input1',))
-    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1',))
-
-
-def test_diagnostic_composite_includes_attributes_from_two():
-    diagnostic1 = MockDiagnostic()
-    diagnostic1.input_properties = {'input1': {}}
-    diagnostic1.diagnostic_properties = {'diagnostic1': {}}
-    diagnostic2 = MockDiagnostic()
-    diagnostic2.input_properties = {'input2': {}}
-    diagnostic2.diagnostic_properties = {'diagnostic2': {}}
-    composite = DiagnosticComposite(diagnostic1, diagnostic2)
-    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
-    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
-
-
-def test_diagnostic_composite_merges_attributes():
-    diagnostic1 = MockDiagnostic()
-    diagnostic1.input_properties = {'input1': {}}
-    diagnostic1.diagnostic_properties = {'diagnostic1': {}}
-    diagnostic2 = MockDiagnostic()
-    diagnostic2.input_properties = {'input1': {}, 'input2': {}}
-    diagnostic2.diagnostic_properties = {'diagnostic2': {}}
-    composite = DiagnosticComposite(diagnostic1, diagnostic2)
-    assert same_list(composite.input_properties.keys(), ('input1', 'input2'))
-    assert same_list(composite.diagnostic_properties.keys(), ('diagnostic1', 'diagnostic2'))
 
 
 def test_diagnostic_composite_ensures_valid_state():
