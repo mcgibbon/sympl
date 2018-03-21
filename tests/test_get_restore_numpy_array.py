@@ -1076,6 +1076,26 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
     def tearDown(self):
         set_direction_names(x=(), y=(), z=())
 
+    def test_restores_with_dims(self):
+        raw_arrays = {
+            'output1': np.ones([10]),
+        }
+        output_properties =  {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm'
+            }
+        }
+        output = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, {}, {})
+        assert len(output) == 1
+        assert 'output1' in output.keys()
+        assert isinstance(output['output1'], DataArray)
+        assert len(output['output1'].dims) == 1
+        assert 'dim1' in output['output1'].dims
+        assert 'units' in output['output1'].attrs.keys()
+        assert output['output1'].attrs['units'] == 'm'
+
     def test_returns_simple_value(self):
         input_state = {
             'air_temperature': DataArray(

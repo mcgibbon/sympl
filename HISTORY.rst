@@ -13,7 +13,7 @@ Latest
   composited.
 * Added a check for netcdftime having the required objects, to fall back on not
   using netcdftime when those are missing. This is because most objects are missing in
-  older versions of netcdftime (that come packaged with netCDF4).
+  older versions of netcdftime (that come packaged with netCDF4) (closes #23).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -29,6 +29,9 @@ Breaking changes
 * ScalingWrapper, UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper
   have been removed. The functionality of these wrappers has been moved to the
   component base types as methods and initialization options.
+* 'time' now must be present in the model state dictionary. This is strictly required
+  for calls to Diagnostic, Prognostic, ImplicitPrognostic, and Implicit components,
+  and may be strictly required in other ways in the future
 
 v0.3.1
 ------

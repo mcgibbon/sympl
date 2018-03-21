@@ -2,6 +2,7 @@ import abc
 from util import (
     get_numpy_arrays_with_properties, restore_data_arrays_with_properties)
 from .time import timedelta
+from .exceptions import InvalidPropertyDictError
 
 
 def apply_scale_factors(array_state, scale_factors):
@@ -144,14 +145,14 @@ class Implicit(object):
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         self.update_interval = update_interval
         self._last_update_time = None
-        if self.name is None:
+        if name is None:
             self.name = self.__class__.__name__.lower()
         else:
             self.name = name
         if tendencies_in_diagnostics:
-            self._insert_tendencies_to_diagnostic_properties()
+            self._insert_tendency_properties()
 
-    def _insert_tendencies_to_diagnostic_properties(self):
+    def _insert_tendency_properties(self):
         for name, properties in self.output_properties.items():
             tendency_name = self._get_tendency_name(name)
             if properties['units'] is '':
@@ -162,6 +163,29 @@ class Implicit(object):
                 'units': units,
                 'dims': properties['dims'],
             }
+            if name not in self.input_properties.keys():
+                self.input_properties[name] = {
+                    'dims': properties['dims'],
+                    'units': properties['units'],
+                }
+            elif self.input_properties[name]['dims'] != self.output_properties[name]['dims']:
+                raise InvalidPropertyDictError(
+                    'Can only calculate tendencies when input and output values'
+                    ' have the same dimensions, but dims for {} are '
+                    '{} (input) and {} (output)'.format(
+                        name, self.input_properties[name]['dims'],
+                        self.output_properties[name]['dims']
+                    )
+                )
+            elif self.input_properties[name]['units'] != self.output_properties[name]['units']:
+                raise InvalidPropertyDictError(
+                    'Can only calculate tendencies when input and output values'
+                    ' have the same units, but units for {} are '
+                    '{} (input) and {} (output)'.format(
+                        name, self.input_properties[name]['units'],
+                        self.output_properties[name]['units']
+                    )
+                )
 
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
@@ -201,19 +225,22 @@ class Implicit(object):
         """
         if (self.update_interval is None or
                 self._last_update_time is None or
-                state['time'] > self._last_update_time + self.update_interval):
+                state['time'] >= self._last_update_time + self.update_interval):
             raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+            raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
-            raw_diagnostics, raw_new_state = self.array_call(state, timestep)
+            raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             apply_scale_factors(raw_new_state, self.output_scale_factors)
             if self.tendencies_in_diagnostics:
                 self._insert_tendencies_to_diagnostics(
                     raw_state, raw_new_state, timestep, raw_diagnostics)
             self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties)
+                raw_diagnostics, self.diagnostic_properties,
+                state, self.input_properties)
             self._new_state = restore_data_arrays_with_properties(
-                raw_new_state, self.output_properties)
+                raw_new_state, self.output_properties,
+                state, self.input_properties)
             self._last_update_time = state['time']
         return self._diagnostics, self._new_state
 
@@ -370,7 +397,7 @@ class Prognostic(object):
             self.diagnostic_scale_factors = {}
         self.update_interval = update_interval
         self._last_update_time = None
-        if self.name is None:
+        if name is None:
             self.name = self.__class__.__name__.lower()
         else:
             self.name = name
@@ -405,16 +432,19 @@ class Prognostic(object):
         """
         if (self.update_interval is None or
                 self._last_update_time is None or
-                state['time'] > self._last_update_time + self.update_interval):
+                state['time'] >= self._last_update_time + self.update_interval):
             raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+            raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_tendencies, raw_diagnostics = self.array_call(raw_state)
             apply_scale_factors(raw_tendencies, self.tendency_scale_factors)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             self._tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties)
+                raw_tendencies, self.tendency_properties,
+                state, self.input_properties)
             self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties)
+                raw_diagnostics, self.diagnostic_properties,
+                state, self.input_properties)
             self._last_update_time = state['time']
         return self._tendencies, self._diagnostics
 
@@ -474,9 +504,6 @@ class ImplicitPrognostic(object):
         A (possibly empty) dictionary whose keys are quantity names and
         values are floats by which diagnostic values are scaled before being
         returned by this object.
-    tendencies_in_diagnostics : bool
-        A boolean indicating whether this object will put tendencies of
-        quantities in its diagnostic output.
     update_interval : timedelta
         If not None, the component will only give new output if at least
         a period of update_interval has passed since the last time new
@@ -524,8 +551,7 @@ class ImplicitPrognostic(object):
 
     def __init__(self,
             input_scale_factors=None, tendency_scale_factors=None,
-            diagnostic_scale_factors=None, tendencies_in_diagnostics=False,
-            update_interval=None, name=None):
+            diagnostic_scale_factors=None, update_interval=None, name=None):
         """
         Initializes the Implicit object.
 
@@ -567,10 +593,9 @@ class ImplicitPrognostic(object):
             self.diagnostic_scale_factors = diagnostic_scale_factors
         else:
             self.diagnostic_scale_factors = {}
-        self.tendencies_in_diagnostics = tendencies_in_diagnostics
         self.update_interval = update_interval
         self._last_update_time = None
-        if self.name is None:
+        if name is None:
             self.name = self.__class__.__name__.lower()
         else:
             self.name = name
@@ -607,16 +632,19 @@ class ImplicitPrognostic(object):
         """
         if (self.update_interval is None or
                 self._last_update_time is None or
-                state['time'] > self._last_update_time + self.update_interval):
+                state['time'] >= self._last_update_time + self.update_interval):
             raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+            raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
             apply_scale_factors(raw_tendencies, self.tendency_scale_factors)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             self._tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties)
+                raw_tendencies, self.tendency_properties,
+                state, self.input_properties)
             self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties)
+                raw_diagnostics, self.diagnostic_properties,
+                state, self.input_properties)
             self._last_update_time = state['time']
         return self._tendencies, self._diagnostics
 
@@ -763,13 +791,16 @@ class Diagnostic(object):
         """
         if (self.update_interval is None or
                 self._last_update_time is None or
-                state['time'] > self._last_update_time + self.update_interval):
+                state['time'] >= self._last_update_time + self.update_interval):
             raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+            raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_diagnostics = self.array_call(raw_state)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties)
+                raw_diagnostics, self.diagnostic_properties,
+                state, self.input_properties)
+            self._last_update_time = state['time']
         return self._diagnostics
 
     @abc.abstractmethod
