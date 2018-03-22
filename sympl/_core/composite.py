@@ -1,7 +1,7 @@
-from .exceptions import SharedKeyError, InvalidPropertyDictError
+from .exceptions import SharedKeyError,
 from .base_components import Prognostic, Diagnostic, Monitor
 from .util import (
-    update_dict_by_adding_another, ensure_no_shared_keys, combine_dims,
+    update_dict_by_adding_another, ensure_no_shared_keys,
     combine_component_properties)
 
 
@@ -134,8 +134,11 @@ class PrognosticComposite(ComponentComposite, Prognostic):
             return_diagnostics.update(diagnostics)
         return return_tendencies, return_diagnostics
 
+    def array_call(self, state):
+        raise NotImplementedError()
 
-class DiagnosticComposite(ComponentComposite):
+
+class DiagnosticComposite(ComponentComposite, Diagnostic):
 
     component_class = Diagnostic
 
@@ -177,6 +180,8 @@ class DiagnosticComposite(ComponentComposite):
             return_diagnostics.update(diagnostics)
         return return_diagnostics
 
+    def array_call(self, state):
+        raise NotImplementedError()
 
 class MonitorComposite(ComponentComposite):
 

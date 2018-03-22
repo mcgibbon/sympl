@@ -30,7 +30,7 @@ __version__ = '0.3.1'
 __all__ = (
     Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
     DiagnosticComposite, MonitorComposite, ImplicitPrognostic,
-    TimeStepper, Leapfrog, AdamsBashforth,
+    TimeStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError,
     DataArray,
