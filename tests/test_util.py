@@ -5,7 +5,7 @@ from sympl import (
     Prognostic, ensure_no_shared_keys, SharedKeyError, DataArray,
     combine_array_dimensions, set_direction_names, Implicit, Diagnostic,
     InvalidPropertyDictError)
-from sympl._core.util import update_dict_by_adding_another, combine_dims
+from sympl._core.util import update_dict_by_adding_another, combine_dims, get_component_aliases
 
 
 def same_list(list1, list2):
@@ -21,6 +21,24 @@ class MockPrognostic(Prognostic):
     def __call__(self, state):
         self._num_updates += 1
         return {}, {'num_updates': self._num_updates}
+
+
+class MockImplicit(Implicit):
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
+class MockDiagnostic(Diagnostic):
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
 
 
 def test_update_dict_by_adding_another_adds_shared_arrays():
@@ -49,6 +67,96 @@ def test_update_dict_by_adding_another_adds_shared_arrays_reversed():
     assert np.all(dict2['b'] == np.array([0., 1.]))
     assert len(dict1.keys()) == 1
     assert len(dict2.keys()) == 2
+
+
+class DummyPrognostic(Prognostic):
+    input_properties = {'temperature': {'alias': 'T'}}
+    diagnostic_properties = {'pressure': {'alias': 'P'}}
+    tendency_properties = {'temperature': {}}
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
+def test_get_component_aliases_with_no_args():
+    aliases = get_component_aliases()
+    assert type(aliases) == dict
+    assert len(aliases.keys()) == 0
+
+
+def test_get_component_aliases_with_single_component_arg():
+    components = [MockPrognostic(), MockImplicit(), MockDiagnostic(),
+                  TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
+    for c, comp in enumerate(components):
+        aliases = get_component_aliases(comp)
+        assert type(aliases) == dict
+        if c == 3:
+            assert len(aliases.keys()) == 2
+            for k in ['T', 'P']:
+                assert k in list(aliases.values())
+        else:
+            assert len(aliases.keys()) == 0
+
+
+def test_get_component_aliases_with_two_component_args():
+    components = [MockDiagnostic(), MockImplicit(), MockDiagnostic(),
+                  TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
+    for comp in components[:3]:
+        aliases = get_component_aliases(comp, components[-1])
+        assert type(aliases) == dict
+        assert len(aliases.keys()) == 2
+        for k in ['T', 'P']:
+            assert k in list(aliases.values())
+
+
+class DummyProg1(Prognostic):
+    input_properties = {'temperature': {'alias': 'T'}}
+    tendency_properties = {'temperature': {'alias': 'TEMP'}}
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
+class DummyProg2(Prognostic):
+    input_properties = {'temperature': {'alias': 't'}}
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
+class DummyProg3(Prognostic):
+    input_properties = {'temperature': {}}
+    diagnostic_properties = {'pressure': {}}
+    tendency_properties = {'temperature': {}}
+
+    def __init__(self):
+        self._a = 1
+
+    def __call__(self, state):
+        return self._a
+
+
+def test_get_component_aliases_with_different_values():
+    # two different aliases in the same Component:
+    aliases = get_component_aliases(DummyProg1())
+    assert len(aliases.keys()) == 1
+    assert aliases['temperature'] == 'TEMP'
+    # two different aliases in different Components:
+    aliases = get_component_aliases(DummyProg1(), DummyProg2())
+    assert len(aliases.keys()) == 1
+    assert aliases['temperature'] == 't'
+    # NO aliases in component
+    aliases = get_component_aliases(DummyProg3)
+    assert len(aliases.keys()) == 0
 
 
 def test_ensure_no_shared_keys_empty_dicts():

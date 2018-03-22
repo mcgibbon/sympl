@@ -775,3 +775,43 @@ def combine_properties(*args):
                         'Incompatibility between dims of quantity {}: {}'.format(
                             name, err.args[0]))
     return return_dict
+
+
+def get_component_aliases(*args):
+    """
+    Returns aliases for variables in the properties of Components (e.g., Prognostics).
+
+    Notes
+    -----
+     -  If a variable shows up in the input_properties or diagnostic_properties
+        of two or more different Components, make sure they have the same 'alias'
+        keyword in all Components.
+
+    Args
+    ----
+    *args : Component
+        Components from which to fetch variable aliases from the input_properties,
+        output_properties, diagnostic_properties, and tendency_properties dictionaries
+
+    Returns
+    -------
+    aliases : dict
+        A dictionary with keys containing old variable names and values containing
+        new variable names
+    """
+
+    aliases = {}
+
+    # Update the aliases dict with the properties in each provided Component
+    for component in args:
+        # combine the input, output, diagnostic, and tendency variables into one dict
+        for prop_type in ['input_properties', 'output_properties',
+                          'diagnostic_properties', 'tendency_properties']:
+            if hasattr(component, prop_type):
+                component_properties = getattr(component, prop_type)
+                # save the alias (if there is one) for each variable
+                for varname, properties in component_properties.items():
+                    if 'alias' in properties.keys():
+                        aliases.update({varname: properties['alias']})
+
+    return aliases

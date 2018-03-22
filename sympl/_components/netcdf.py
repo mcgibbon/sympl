@@ -8,6 +8,7 @@ import xarray as xr
 import os
 import numpy as np
 from datetime import timedelta
+from six import string_types
 try:
     import netCDF4 as nc4
 except ImportError:
@@ -32,7 +33,7 @@ else:
 
         def __init__(
                 self, filename, time_units='seconds', store_names=None,
-                write_on_store=False):
+                write_on_store=False, aliases=None):
             """
             Args
             ----
@@ -50,11 +51,23 @@ else:
                 This can result in many file open/close operations.
                 Default is to write only when the write() method is
                 called directly.
+            aliases : dict
+                A dictionary of string replacements to apply to state variable
+                names before saving them in netCDF files.
             """
             self._cached_state_dict = {}
             self._filename = filename
             self._time_units = time_units
             self._write_on_store = write_on_store
+            if aliases is None:
+                self._aliases = {}
+            else:
+                self._aliases = aliases
+            for key, val in self._aliases.items():
+                if not isinstance(key, string_types):
+                    raise TypeError("Bad alias key type: {}. Expected string.".format(type(key)))
+                elif not isinstance(val, string_types):
+                    raise TypeError("Bad alias value type: {}. Expected string.".format(type(val)))
             if store_names is None:
                 self._store_names = None
             else:
@@ -81,6 +94,27 @@ else:
                 cache_state = {name: state[name] for name in name_list}
             else:
                 cache_state = state.copy()
+
+            # raise an exception if the state has any empty string variables
+            for full_var_name in cache_state.keys():
+                if len(full_var_name) == 0:
+                    raise ValueError('The given state has an empty string as a variable name.')
+
+            # replace cached variable names with their aliases
+            for longname, shortname in self._aliases.items():
+                for full_var_name in cache_state.keys():
+                    # replace any string in the full variable name that matches longname
+                    # example: if longname is "temperature", shortname is "T", and
+                    #    full_var_name is "temperature_tendency_from_radiation", the
+                    #    alias_name for the variable would be: "T_tendency_from_radiation"
+                    if longname in full_var_name:
+                        alias_name = full_var_name.replace(longname, shortname)
+                        if len(alias_name) == 0:  # raise exception if the alias is an empty str
+                            errstr = 'Tried to alias variable "{}" to an empty string.\n' + \
+                                     'xarray will not allow empty strings as variable names.'
+                            raise ValueError(errstr.format(full_var_name))
+                        cache_state[alias_name] = cache_state.pop(full_var_name)
+
             cache_state.pop('time')  # stored as key, not needed in state dict
             if state['time'] in self._cached_state_dict.keys():
                 self._cached_state_dict[state['time']].update(cache_state)
