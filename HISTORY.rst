@@ -5,14 +5,23 @@ What's New
 Latest
 ------
 
+v0.3.2
+------
+
 * Exported get_constants_string to the public API
-* Shortened the name of tendency diagnostics in TendencyInDiagnosticsWrapper
 * Added "aliases" kwarg to NetCDFMonitor, allowing the monitor to shorten
   variable names when writing to netCDF
 * Added get_component_aliases() to get a dictionary of quantity aliases from
   a list of Components (used by NetCDFMonitor to shorten variable
   names)
 * Added tests for NetCDFMonitor aliases and get_component_aliases()
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* tendencies in diagnostics are now named as X_tendency_from_Y, instead of
+  tendency_of_X_due_to_Y. The idea is that it's shorter, and can easily be
+  shortened more by aliasing "tendency" to "tend"
 
 v0.3.1
 ------
