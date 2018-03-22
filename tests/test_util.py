@@ -88,8 +88,7 @@ def test_get_component_aliases_with_no_args():
 
 
 def test_get_component_aliases_with_single_component_arg():
-    components = [MockPrognostic(), MockImplicit(), MockDiagnostic(),
-                  TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
+    components = [MockPrognostic(), MockImplicit(), MockDiagnostic()]
     for c, comp in enumerate(components):
         aliases = get_component_aliases(comp)
         assert type(aliases) == dict
@@ -99,17 +98,6 @@ def test_get_component_aliases_with_single_component_arg():
                 assert k in list(aliases.values())
         else:
             assert len(aliases.keys()) == 0
-
-
-def test_get_component_aliases_with_two_component_args():
-    components = [MockDiagnostic(), MockImplicit(), MockDiagnostic(),
-                  TendencyInDiagnosticsWrapper(DummyPrognostic(), 'dummy')]
-    for comp in components[:3]:
-        aliases = get_component_aliases(comp, components[-1])
-        assert type(aliases) == dict
-        assert len(aliases.keys()) == 2
-        for k in ['T', 'P']:
-            assert k in list(aliases.values())
 
 
 class DummyProg1(Prognostic):
