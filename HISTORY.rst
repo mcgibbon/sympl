@@ -5,6 +5,7 @@ What's New
 Latest
 ------
 
+* Exported get_constants_string to the public API
 * Shortened the name of tendency diagnostics in TendencyInDiagnosticsWrapper
 * Added "aliases" kwarg to NetCDFMonitor, allowing the monitor to shorten
   variable names when writing to netCDF
