@@ -96,8 +96,8 @@ class Implicit(object):
             self._making_repr = False
             return return_value
 
-    def __init__(self,
-            input_scale_factors=None, output_scale_factors=None,
+    def __init__(
+            self, input_scale_factors=None, output_scale_factors=None,
             diagnostic_scale_factors=None, tendencies_in_diagnostics=False,
             update_interval=None, name=None):
         """
@@ -311,10 +311,6 @@ class Prognostic(object):
         If not None, the component will only give new output if at least
         a period of update_interval has passed since the last time new
         output was given. Otherwise, it would return that cached output.
-    name : string
-        A label to be used for this object, for example as would be used for
-        Y in the name "X_tendency_from_Y". By default the class name in
-        lowercase is used.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -354,9 +350,9 @@ class Prognostic(object):
             self._making_repr = False
             return return_value
 
-    def __init__(self,
-            input_scale_factors=None, tendency_scale_factors=None,
-            diagnostic_scale_factors=None, update_interval=None, name=None):
+    def __init__(
+            self, input_scale_factors=None, tendency_scale_factors=None,
+            diagnostic_scale_factors=None, update_interval=None):
         """
         Initializes the Implicit object.
 
@@ -378,10 +374,6 @@ class Prognostic(object):
             If given, the component will only give new output if at least
             a period of update_interval has passed since the last time new
             output was given. Otherwise, it would return that cached output.
-        name : string
-            A label to be used for this object, for example as would be used for
-            Y in the name "X_tendency_from_Y". By default the class name in
-            lowercase is used.
         """
         if input_scale_factors is not None:
             self.input_scale_factors = input_scale_factors
@@ -397,10 +389,6 @@ class Prognostic(object):
             self.diagnostic_scale_factors = {}
         self.update_interval = update_interval
         self._last_update_time = None
-        if name is None:
-            self.name = self.__class__.__name__.lower()
-        else:
-            self.name = name
 
     def __call__(self, state):
         """
@@ -549,8 +537,8 @@ class ImplicitPrognostic(object):
             self._making_repr = False
             return return_value
 
-    def __init__(self,
-            input_scale_factors=None, tendency_scale_factors=None,
+    def __init__(
+            self, input_scale_factors=None, tendency_scale_factors=None,
             diagnostic_scale_factors=None, update_interval=None, name=None):
         """
         Initializes the Implicit object.
@@ -733,8 +721,8 @@ class Diagnostic(object):
             self._making_repr = False
             return return_value
 
-    def __init__(self,
-            input_scale_factors=None, diagnostic_scale_factors=None,
+    def __init__(
+            self, input_scale_factors=None, diagnostic_scale_factors=None,
             update_interval=None):
         """
         Initializes the Implicit object.
@@ -859,5 +847,3 @@ class Monitor(object):
         InvalidStateError
             If state is not a valid input for the Diagnostic instance.
         """
-
-

@@ -1,6 +1,5 @@
 from .._core.array import DataArray
 from .._core.base_components import ImplicitPrognostic, Prognostic, Diagnostic
-from .._core.array import DataArray
 from .._core.units import unit_registry as ureg
 
 

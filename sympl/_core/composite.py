@@ -1,6 +1,8 @@
-from .exceptions import SharedKeyError
+from .exceptions import SharedKeyError, InvalidPropertyDictError
 from .base_components import Prognostic, Diagnostic, Monitor
-from .util import update_dict_by_adding_another, ensure_no_shared_keys
+from .util import (
+    update_dict_by_adding_another, ensure_no_shared_keys, combine_dims,
+    combine_component_properties)
 
 
 class ComponentComposite(object):
@@ -14,6 +16,17 @@ class ComponentComposite(object):
     """
 
     component_class = None
+
+    @property
+    def input_properties(self):
+        return combine_component_properties(self.component_list, 'input_properties')
+
+    @property
+    def diagnostic_properties(self):
+        return_dict = {}
+        for component in self.component_list:
+            return_dict.update(component.diagnostic_properties)
+        return return_dict
 
     def __str__(self):
         return '{}(\n{}\n)'.format(
@@ -40,16 +53,17 @@ class ComponentComposite(object):
         if self.component_class is not None:
             ensure_components_have_class(args, self.component_class)
         self.component_list = args
-        if hasattr(self.component_class, 'diagnostic_properties'):
-            diagnostic_names = []
-            for component in self.component_list:
-                diagnostic_names.extend(component.diagnostic_properties.keys())
-            for name in diagnostic_names:
-                if diagnostic_names.count(name) > 1:
-                    raise SharedKeyError(
-                        'Two components in a composite should not compute '
-                        'the same diagnostic, but multiple passed '
-                        'components compute {}'.format(name))
+
+    def ensure_no_diagnostic_output_overlap(self):
+        diagnostic_names = []
+        for component in self.component_list:
+            diagnostic_names.extend(component.diagnostic_properties.keys())
+        for name in diagnostic_names:
+            if diagnostic_names.count(name) > 1:
+                raise SharedKeyError(
+                    'Two components in a composite should not compute '
+                    'the same diagnostic, but multiple passed '
+                    'components compute {}'.format(name))
 
     def _combine_attribute(self, attr):
         return_attr = []
@@ -66,9 +80,21 @@ def ensure_components_have_class(components, component_class):
                     component_class, type(component)))
 
 
-class PrognosticComposite(ComponentComposite):
+class PrognosticComposite(ComponentComposite, Prognostic):
 
     component_class = Prognostic
+
+    @property
+    def tendency_properties(self):
+        return combine_component_properties(self.component_list, 'tendency_properties')
+
+    def __init__(self, *args):
+        super(PrognosticComposite, self).__init__(*args)
+        self.ensure_tendency_outputs_are_compatible()
+        self.ensure_no_diagnostic_output_overlap()
+
+    def ensure_tendency_outputs_are_compatible(self):
+        self.tendency_properties
 
     def __call__(self, state):
         """
@@ -112,6 +138,10 @@ class PrognosticComposite(ComponentComposite):
 class DiagnosticComposite(ComponentComposite):
 
     component_class = Diagnostic
+
+    def __init__(self, *args):
+        super(DiagnosticComposite, self).__init__(*args)
+        self.ensure_no_diagnostic_output_overlap()
 
     def __call__(self, state):
         """

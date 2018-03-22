@@ -13,7 +13,7 @@ from ._core.array import DataArray
 from ._core.constants import (
     get_constant, set_constant, set_condensible_name, reset_constants)
 from ._core.util import (
-    combine_dimensions,
+    combine_array_dimensions,
     ensure_no_shared_keys,
     get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,
@@ -35,7 +35,7 @@ __all__ = (
     InvalidPropertyDictError,
     DataArray,
     get_constant, set_constant, set_condensible_name, reset_constants,
-    TimeDifferencingWrapper, combine_dimensions,
+    TimeDifferencingWrapper, combine_array_dimensions,
     ensure_no_shared_keys,
     get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,

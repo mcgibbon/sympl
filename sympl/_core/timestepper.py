@@ -1,6 +1,8 @@
 import abc
 from .composite import PrognosticComposite
 from .time import timedelta
+from .util import combine_component_properties, combine_properties
+from .units import clean_units
 import warnings
 
 
@@ -37,23 +39,57 @@ class TimeStepper(object):
     time_unit_timedelta: timedelta
         A timedelta corresponding to a single time unit as used for time
         differencing when putting tendencies in diagnostics.
+    name : string
+        A label to be used for this object, for example as would be used for
+        Y in the name "X_tendency_from_Y".
     """
     __metaclass__ = abc.ABCMeta
 
     time_unit_name = 's'
     time_unit_timedelta = timedelta(seconds=1)
 
+    @property
+    def input_properties(self):
+        input_properties = combine_component_properties(
+            self.prognostic_list, 'input_properties')
+        return combine_properties(input_properties, self.output_properties)
+
+    @property
     def diagnostic_properties(self):
         return_value = {}
         for prognostic in self.prognostic_list:
-            return_value.update(prognostic.diagnostics)
-        if self.tendencies_in_diagnostics:
-            self._insert_tendencies_to_diagnostic_properties(return_value)
+            return_value.update(prognostic.diagnostic_properties)
+            if self.tendencies_in_diagnostics:
+                self._insert_tendencies_to_diagnostic_properties(
+                    return_value, prognostic.tendency_properties, prognostic.name)
         return return_value
 
-    @abc.abstractproperty
+    def _insert_tendencies_to_diagnostic_properties(
+            self, diagnostic_properties, tendency_properties, component_name):
+        for quantity_name, properties in tendency_properties.items():
+            tendency_name = self._get_tendency_name(quantity_name, component_name)
+            if properties['units'] is '':
+                units = '{}^-1'.format(self.time_unit_name)
+            else:
+                units = '{} {}^-1'.format(
+                    properties['units'], self.time_unit_name)
+            diagnostic_properties[tendency_name] = {
+                'units': units,
+                'dims': properties['dims'],
+            }
+
+    @property
     def output_properties(self):
-        return {}
+        output_properties = combine_component_properties(
+            self.prognostic_list, 'tendency_properties')
+        for name, properties in output_properties.items():
+            properties['units'] += ' {}'.format(self.time_unit_name)
+            properties['units'] = clean_units(properties['units'])
+        return output_properties
+
+    @property
+    def _tendency_properties(self):
+        return combine_component_properties(self.prognostic_list, 'tendency_properties')
 
     def __str__(self):
         return (
@@ -74,7 +110,7 @@ class TimeStepper(object):
             self._making_repr = False
             return return_value
 
-    def __init__(self, *args, tendencies_in_diagnostics=False):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the TimeStepper.
 
@@ -84,8 +120,14 @@ class TimeStepper(object):
             Objects to call for tendencies when doing time stepping.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
-            quantities in its diagnostic output.
+            quantities in its diagnostic output. Default is False. If set to
+            True, you probably want to give a name also.
+        name : str
+            A label to be used for this object, for example as would be used for
+            Y in the name "X_tendency_from_Y". By default the class name is used.
         """
+        self.name = kwargs.pop('name', self.__class__.__name__)
+        tendencies_in_diagnostics = kwargs.pop('tendencies_in_diagnostics', False)
         if len(args) == 1 and isinstance(args[0], list):
             warnings.warn(
                 'TimeSteppers should be given individual Prognostics rather '
@@ -93,30 +135,6 @@ class TimeStepper(object):
             args = args[0]
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         self.prognostic = PrognosticComposite(*args)
-        if tendencies_in_diagnostics:
-            self._insert_tendencies_to_diagnostic_properties()
-
-    def _insert_tendencies_to_diagnostic_properties(
-            self, diagnostic_properties):
-        for quantity_name, properties in self.output_properties.items():
-            tendency_name = self._get_tendency_name(quantity_name, component_name)
-            if properties['units'] is '':
-                units = '{}^-1'.format(self.time_unit_name)
-            else:
-                units = '{} {}^-1'.format(
-                    properties['units'], self.time_unit_name)
-            diagnostic_properties[tendency_name] = {
-                'units': units,
-                'dims': properties['dims'],
-            }
-
-    def _insert_tendencies_to_diagnostics(
-            self, raw_state, raw_new_state, timestep, raw_diagnostics):
-        for name in self.output_properties.keys():
-            tendency_name = self._get_tendency_name(name)
-            raw_diagnostics[tendency_name] = (
-                (raw_new_state[name] - raw_state[name]) /
-                timestep.total_seconds() * self.time_unit_timedelta.total_seconds())
 
     @property
     def prognostic_list(self):
@@ -126,8 +144,8 @@ class TimeStepper(object):
     def tendencies_in_diagnostics(self):  # value cannot be modified
         return self._tendencies_in_diagnostics
 
-    def _get_tendency_name(self, quantity_name, component_name):
-        return '{}_tendency_from_{}'.format(quantity_name, component_name)
+    def _get_tendency_name(self, quantity_name):
+        return '{}_tendency_from_{}'.format(quantity_name, self.name)
 
     def __call__(self, state, timestep):
         """
@@ -148,6 +166,36 @@ class TimeStepper(object):
         new_state : dict
             The model state at the next timestep.
         """
+        diagnostics, new_state = self._call(state, timestep)
+        if self.tendencies_in_diagnostics:
+            self._insert_tendencies_to_diagnostics(
+                state, new_state, timestep, diagnostics)
+        return diagnostics, new_state
+
+    def _insert_tendencies_to_diagnostics(
+            self, state, new_state, timestep, diagnostics):
+        output_properties = self.output_properties
+        input_properties = self.input_properties
+        for name in output_properties.keys():
+            tendency_name = self._get_tendency_name(name)
+            if tendency_name in diagnostics.keys():
+                raise RuntimeError(
+                    'A Prognostic has output tendencies as a diagnostic and has'
+                    ' caused a name clash when trying to do so from this '
+                    'TimeStepper ({}). You must disable '
+                    'tendencies_in_diagnostics for this TimeStepper.'.format(
+                        tendency_name))
+            base_units = input_properties[name]['units']
+            diagnostics[tendency_name] = (
+                (new_state[name].to_units(base_units) - state[name].to_units(base_units)) /
+                timestep.total_seconds() * self.time_unit_timedelta.total_seconds()
+            )
+            if base_units == '':
+                diagnostics[tendency_name].attrs['units'] = '{}^-1'.format(
+                    self.time_unit_name)
+            else:
+                diagnostics[tendency_name].attrs['units'] = '{} {}^-1'.format(
+                    base_units, self.time_unit_name)
 
     @abc.abstractmethod
     def _call(self, state, timestep):

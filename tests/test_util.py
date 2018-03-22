@@ -1,12 +1,11 @@
 import unittest
-from copy import deepcopy
-
 import numpy as np
 import pytest
 from sympl import (
     Prognostic, ensure_no_shared_keys, SharedKeyError, DataArray,
-    combine_dimensions, set_direction_names, Implicit, Diagnostic)
-from sympl._core.util import update_dict_by_adding_another
+    combine_array_dimensions, set_direction_names, Implicit, Diagnostic,
+    InvalidPropertyDictError)
+from sympl._core.util import update_dict_by_adding_another, combine_dims
 
 
 def same_list(list1, list2):
@@ -78,7 +77,7 @@ def test_ensure_no_shared_keys_with_shared_keys():
             'No exception raised but expected SharedKeyError.')
 
 
-class CombineDimensionsTests(unittest.TestCase):
+class CombineArrayDimensionsTests(unittest.TestCase):
 
     def setUp(self):
         self.array_1d = DataArray(np.zeros((2,)), dims=['lon'])
@@ -92,29 +91,29 @@ class CombineDimensionsTests(unittest.TestCase):
         set_direction_names(x=[], y=[], z=[])
 
     def test_combine_dimensions_2d_and_3d(self):
-        dims = combine_dimensions(
+        dims = combine_array_dimensions(
             [self.array_2d, self.array_3d], out_dims=('x', 'y', 'z'))
         assert same_list(dims, ['lon', 'lat', 'interface_levels'])
 
     def test_combine_dimensions_2d_and_3d_z_y_x(self):
-        dims = combine_dimensions(
+        dims = combine_array_dimensions(
             [self.array_2d, self.array_3d], out_dims=('z', 'y', 'x'))
         assert same_list(dims, ['interface_levels', 'lat', 'lon'])
 
     def combine_dimensions_1d_shared(self):
-        dims = combine_dimensions(
+        dims = combine_array_dimensions(
             [self.array_1d, self.array_1d], out_dims=['x'])
         assert same_list(dims, ['lon'])
 
     def combine_dimensions_1d_not_shared(self):
         array_1d_x = DataArray(np.zeros((2,)), dims=['lon'])
         array_1d_y = DataArray(np.zeros((2,)), dims=['lat'])
-        dims = combine_dimensions([array_1d_x, array_1d_y], out_dims=['x', 'y'])
+        dims = combine_array_dimensions([array_1d_x, array_1d_y], out_dims=['x', 'y'])
         assert same_list(dims, ['lon', 'lat'])
 
     def combine_dimensions_1d_wrong_direction(self):
         try:
-            combine_dimensions(
+            combine_array_dimensions(
                 [self.array_1d, self.array_1d], out_dims=['z'])
         except ValueError:
             pass
@@ -125,7 +124,7 @@ class CombineDimensionsTests(unittest.TestCase):
 
     def combine_dimensions_1d_and_2d_extra_direction(self):
         try:
-            combine_dimensions(
+            combine_array_dimensions(
                 [self.array_1d, self.array_2d], out_dims=['y'])
         except ValueError:
             pass
@@ -133,6 +132,61 @@ class CombineDimensionsTests(unittest.TestCase):
             raise err
         else:
             raise AssertionError('No exception raised but expected ValueError.')
+
+
+class CombineDimsTests(unittest.TestCase):
+
+    def setUp(self):
+        set_direction_names(
+            x=['lon'], y=['lat'], z=['mid_levels', 'interface_levels'])
+
+    def tearDown(self):
+        set_direction_names(x=[], y=[], z=[])
+
+    def test_same_dims(self):
+        assert combine_dims(['dim1'], ['dim1']) == ['dim1']
+
+    def test_one_wildcard(self):
+        assert combine_dims(['*'], ['dim1']) == ['dim1']
+
+    def test_both_wildcard(self):
+        assert combine_dims(['*'], ['*']) == ['*']
+
+    def test_both_wildcard_2d(self):
+        assert set(combine_dims(['*', 'dim1'], ['*', 'dim1'])) == {'*', 'dim1'}
+
+    def test_one_wildcard_2d(self):
+        assert set(combine_dims(['*', 'dim2'], ['dim1', 'dim2'])) == {'dim1', 'dim2'}
+
+    def test_different_dims(self):
+        with self.assertRaises(InvalidPropertyDictError):
+            combine_dims(['dim1'], ['dim2'])
+
+    def test_swapped_dims(self):
+        result = set(combine_dims(['dim1', 'dim2'], ['dim2', 'dim1']))
+        assert result == {'dim1', 'dim2'}
+
+    def test_swapped_dims_with_wildcard(self):
+        result = combine_dims(['*', 'dim1', 'dim2'], ['*', 'dim2', 'dim1'])
+        assert set(result) == {'*', 'dim1', 'dim2'}
+
+    def test_one_directional(self):
+        set_direction_names(x=['lon'])
+        assert combine_dims(['lon'], ['lon']) == ['lon']
+
+    def test_overlapping_directional(self):
+        set_direction_names(x=['lon_mid', 'lon_edge'])
+        with self.assertRaises(InvalidPropertyDictError):
+            combine_dims(['lon_mid'], ['lon_edge'])
+
+    def test_combine_directional_wildcard(self):
+        set_direction_names(x=['lon'])
+        assert combine_dims(['x'], ['lon']) == ['lon']
+
+    def test_combine_multiple_directional_wildcard(self):
+        set_direction_names(x=['lon'])
+        result = combine_dims(['*', 'x', 'y'], ['*', 'lon'])
+        assert set(result) == {'*', 'lon', 'y'}
 
 
 if __name__ == '__main__':

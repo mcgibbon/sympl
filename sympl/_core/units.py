@@ -19,6 +19,18 @@ unit_registry.define('degrees_east = degree_east = degree_E = degrees_E = degree
 unit_registry.define('percent = 0.01*count = %')
 
 
+def units_are_compatible(unit1, unit2):
+    try:
+        unit_registry(unit1).to(unit2)
+        return True
+    except pint.errors.DimensionalityError:
+        return False
+
+
+def clean_units(unit_string):
+    return str(unit_registry(unit_string).to_base_units().units)
+
+
 def is_valid_unit(unit_string):
     """Returns True if the unit string is recognized, and False otherwise."""
     unit_string = unit_string.replace(

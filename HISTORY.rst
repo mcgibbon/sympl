@@ -12,14 +12,17 @@ Latest
 * Composites now have a component_list attribute which contains the components being
   composited.
 * TimeSteppers now have a prognostic_list attribute which contains the
-  prognostics used to calculate tendencies. This list should be referenced when
-  determining inputs and outputs, since TimeSteppers do not currently have
-  properties dictionaries as attributes.
+  prognostics used to calculate tendencies.
 * Added a check for netcdftime having the required objects, to fall back on not
   using netcdftime when those are missing. This is because most objects are missing in
   older versions of netcdftime (that come packaged with netCDF4) (closes #23).
 * TimeSteppers should now be called with individual Prognostics as args, rather
   than a list of components, and will emit a warning when lists are given.
+* TimeSteppers now have input, output, and diagnostic properties as attributes.
+  These are handled entirely by the base class.
+* TimeSteppers now allow you to put tendencies in their diagnostic output. This
+  is done using first-order time differencing.
+* Composites now have properties dictionaries.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -32,6 +35,9 @@ Breaking changes
   __call__ will automatically unwrap DataArrays to numpy arrays to be passed into
   array_call based on the component's properties dictionaries, and re-wrap to
   DataArrays when done.
+* TimeSteppers should now be written using a _call method rather than __call__.
+  __call__ wraps _call to provide some base class functionality, like putting
+  tendencies in diagnostics.
 * ScalingWrapper, UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper
   have been removed. The functionality of these wrappers has been moved to the
   component base types as methods and initialization options.

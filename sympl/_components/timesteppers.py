@@ -10,7 +10,7 @@ class SSPRungeKutta(TimeStepper):
     as proposed by Shu and Osher (1988).
     """
 
-    def __init__(self, *args, stages=3):
+    def __init__(self, *args, **kwargs):
         """
         Initialize a strong stability preserving Runge-Kutta time stepper.
 
@@ -18,18 +18,18 @@ class SSPRungeKutta(TimeStepper):
         ----
         *args : Prognostic
             Objects to call for tendencies when doing time stepping.
-        stages: int
-            Number of stages to use. Should be 2 or 3.
+        stages: int, optional
+            Number of stages to use. Should be 2 or 3. Default is 3.
         """
+        stages = kwargs.pop('stages', 3)
         if stages not in (2, 3):
             raise ValueError(
                 'stages must be one of 2 or 3, received {}'.format(stages))
         self._stages = stages
         self._euler_stepper = AdamsBashforth(*args, order=1)
-        super(SSPRungeKutta, self).__init__(*args)
+        super(SSPRungeKutta, self).__init__(*args, **kwargs)
 
-
-    def __call__(self, state, timestep):
+    def _call(self, state, timestep):
         """
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
@@ -62,7 +62,6 @@ class SSPRungeKutta(TimeStepper):
         out_state = add(multiply(1./3, state), multiply(2./3, state_2_5))
         return diagnostics, out_state
 
-
     def _step_2_stages(self, state, timestep):
         assert state is not None
         diagnostics, state_1 = self._euler_stepper(state, timestep)
@@ -75,7 +74,7 @@ class SSPRungeKutta(TimeStepper):
 class AdamsBashforth(TimeStepper):
     """A TimeStepper using the Adams-Bashforth scheme."""
 
-    def __init__(self, *args, order=3):
+    def __init__(self, *args, **kwargs):
         """
         Initialize an Adams-Bashforth time stepper.
 
@@ -87,6 +86,7 @@ class AdamsBashforth(TimeStepper):
             The order of accuracy to use. Must be between
             1 and 4. 1 is the same as the Euler method. Default is 3.
         """
+        order = kwargs.pop('order', 3)
         if isinstance(order, float) and order.is_integer():
             order = int(order)
         if not isinstance(order, int):
@@ -96,9 +96,9 @@ class AdamsBashforth(TimeStepper):
         self._order = order
         self._timestep = None
         self._tendencies_list = []
-        super(AdamsBashforth, self).__init__(*args)
+        super(AdamsBashforth, self).__init__(*args, **kwargs)
 
-    def __call__(self, state, timestep):
+    def _call(self, state, timestep):
         """
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
@@ -184,7 +184,7 @@ class Leapfrog(TimeStepper):
     $t_{n+1}$, according to Williams (2009)) closer to the mean of the values
     at $t_{n-1}$ and $t_{n+1}$."""
 
-    def __init__(self, *args, asselin_strength=0.05, alpha=0.5):
+    def __init__(self, *args, **kwargs):
         """
         Initialize a Leapfrog time stepper.
 
@@ -210,12 +210,12 @@ class Leapfrog(TimeStepper):
         doi: 10.1175/2009MWR2724.1.
         """
         self._old_state = None
-        self._asselin_strength = asselin_strength
+        self._asselin_strength = kwargs.pop('asselin_strength', 0.05)
         self._timestep = None
-        self._alpha = alpha
-        super(Leapfrog, self).__init__(*args)
+        self._alpha = kwargs.pop('alpha', 0.5)
+        super(Leapfrog, self).__init__(*args, **kwargs)
 
-    def __call__(self, state, timestep):
+    def _call(self, state, timestep):
         """
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
