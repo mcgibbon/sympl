@@ -14,12 +14,10 @@ from ._core.constants import (
     get_constant, set_constant, set_condensible_name, reset_constants,
     get_constants_string)
 from ._core.util import (
-    combine_array_dimensions,
     ensure_no_shared_keys,
     get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
-    set_direction_names, add_direction_names,
     get_component_aliases)
 from ._core.testing import ComponentTestBase
 from ._components import (
@@ -42,7 +40,7 @@ __all__ = (
     get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
-    set_direction_names, add_direction_names, get_component_aliases,
+    get_component_aliases,
     ComponentTestBase,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,

@@ -1,7 +1,5 @@
 from datetime import datetime
-
 import numpy as np
-from six import string_types
 from .units import units_are_compatible
 from .array import DataArray
 from .exceptions import (
@@ -16,8 +14,6 @@ except ImportError:
             return lambda x: x
         else:
             return signature_or_function
-
-dim_names = {'x': ['x'], 'y': ['y'], 'z': ['z']}
 
 # internal exceptions used only within this module
 
@@ -210,8 +206,8 @@ def get_numpy_array(
         which is the flattened collection of all dimensions not explicitly
         listed in out_dims, including any dimensions with unknown direction.
     return_wildcard_matches : bool, optional
-        If True, will additionally return a dictionary whose keys are direciton
-        wildcards ('x', 'y', 'z', or '*') and values are lists of matched
+        If True, will additionally return a dictionary whose keys are direction
+        wildcards (currently only '*') and values are lists of matched
         dimensions in the order they appear.
     require_wildcard_matches : dict, optional
         A dictionary mapping wildcards to matches. If the wildcard is used in
@@ -231,13 +227,15 @@ def get_numpy_array(
         in data_array, or data_array's dimensions are invalid in some way.
 
     """
+    # This function was written when we had directional wildcards, and could
+    # be re-written to be simpler now that we do not.
     if (len(data_array.values.shape) == 0) and (len(out_dims) == 0):
         direction_to_names = {}  # required in case we need wildcard_matches
         return_array = data_array.values  # special case, 0-dimensional scalar array
     else:
-        current_dim_names = dim_names.copy()
+        current_dim_names = {}
         for dim in out_dims:
-            if dim not in ('x', 'y', 'z', '*'):
+            if dim != '*':
                 current_dim_names[dim] = [dim]
         direction_to_names = get_input_array_dim_names(
             data_array, out_dims, current_dim_names)
@@ -266,7 +264,7 @@ def get_numpy_array(
     if return_wildcard_matches:
         wildcard_matches = {
             key: value for key, value in direction_to_names.items()
-            if key in ('x', 'y', 'z', '*')}
+            if key == '*'}
         return return_array, wildcard_matches
     else:
         return return_array
@@ -421,9 +419,9 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
     :py:function:~sympl.get_numpy_array: : Retrieves a numpy array with desired
         dimensions from a given DataArray.
     """
-    current_dim_names = dim_names.copy()
+    current_dim_names = {}
     for dim in from_dims:
-        if dim not in ('x', 'y', 'z', '*'):
+        if dim != '*':
             current_dim_names[dim] = [dim]
     direction_to_names = get_input_array_dim_names(
         result_like, from_dims, current_dim_names)
@@ -460,37 +458,6 @@ def same_list(list1, list2):
         [item in list2 for item in list1] + [item in list1 for item in list2]))
 
 
-def set_direction_names(x=None, y=None, z=None):
-    """
-    Sets the directional wildcards 'x', 'y', and 'z' to match the provided
-    dimension names only.
-    """
-    for key, value in [('x', x), ('y', y), ('z', z)]:
-        if isinstance(value, string_types):
-            dim_names[key] = [key, value]
-        elif value is not None:
-            dim_names[key] = [key] + list(value)
-
-
-def add_direction_names(x=None, y=None, z=None):
-    """
-    Sets the directional wildcards 'x', 'y', and 'z' to match the provided
-    dimension names, in addition to any names they are already matching.
-    """
-    for key, value in [('x', x), ('y', y), ('z', z)]:
-        if isinstance(value, string_types):
-            dim_names[key].append(value)
-        elif value is not None:
-            dim_names[key].extend(value)
-
-
-def get_direction_name(dims, direction):
-    for name in dims:
-        if name in dim_names[direction] or name == direction:
-            return name
-    return None
-
-
 def combine_dims(dims1, dims2):
     """
     Takes in two dims specifications and returns a single specification that
@@ -513,33 +480,12 @@ def combine_dims(dims1, dims2):
     if dims1 == dims2:
         return dims1
     dims_out = []
-    for direction in dim_names.keys():
-        dir1 = get_direction_name(dims1, direction)
-        dir2 = get_direction_name(dims2, direction)
-        if dir1 is None and dir2 is None:
-            pass
-        elif dir1 is None and dir2 is not None:
-            dims_out.append(dir2)
-        elif dir1 is not None and dir2 is None:
-            dims_out.append(dir1)
-        elif dir1 == direction:
-            dims_out.append(dir2)
-        elif dir2 == direction:
-            dims_out.append(dir1)
-        elif dir1 == dir2:
-            dims_out.append(dir1)
-        else:
-            raise InvalidPropertyDictError(
-                'Two dims {} and {} exist for direction {}'.format(
-                    dir1, dir2, direction))
-    dims1 = set(dims1).difference(dims_out)
-    dims2 = set(dims2).difference(dims_out)
+    dims1 = set(dims1)
+    dims2 = set(dims2)
     dims1_wildcard = '*' in dims1
     dims1.discard('*')
-    dims1 = dims1.difference(dim_names.keys())
     dims2_wildcard = '*' in dims2
     dims2.discard('*')
-    dims2 = dims2.difference(dim_names.keys())
     unmatched_dims = set(dims1).union(dims2).difference(dims_out)
     shared_dims = set(dims2).intersection(dims2)
     if dims1_wildcard and dims2_wildcard:
@@ -561,60 +507,6 @@ def combine_dims(dims1, dims2):
                 'dims {} and {} are incompatible'.format(dims1, dims2))
         dims_out.extend(unmatched_dims)
     return dims_out
-
-
-def combine_array_dimensions(arrays, out_dims):
-    """
-    Returns a tuple of dimension names corresponding to
-    dimension names from the DataArray objects given by *args when present.
-    The names returned correspond to the directions in out_dims.
-
-    Args
-    ----
-    arrays : iterable of DataArray
-        Objects from which to deduce dimension names.
-    out_dims : {'x', 'y', 'z'}
-        The desired output directions. Should contain only 'x', 'y', or 'z'.
-        For example, ('y', 'x') is valid.
-
-    Raises
-    ------
-    ValueError
-        If there are multiple names for a single direction, or if
-        an array has a dimension along a direction not present in out_dims.
-
-    Returns
-    -------
-    dimensions : list of str
-        The deduced dimension names, in the order given by out_dims.
-    """
-    _ensure_no_invalid_directions(out_dims)
-    out_names = [None for _ in range(len(out_dims))]
-    all_names = set()
-    for value in arrays:
-        all_names.update(value.dims)
-    for direction, dir_names in dim_names.items():
-        if direction in out_dims:
-            names = all_names.intersection(dir_names)
-            if len(names) > 1:
-                raise ValueError(
-                    'Multiple dimensions along {} direction'.format(direction))
-            elif len(names) == 1:
-                out_names[out_dims.index(direction)] = names.pop()
-            else:
-                out_names[out_dims.index(direction)] = direction
-        elif len(all_names.intersection(dir_names)) > 0:
-            raise ValueError(
-                'Arrays have dimensions along {} direction, which is '
-                'not included in output'.format(direction))
-    return out_names
-
-
-def _ensure_no_invalid_directions(out_dims):
-    invalid_dims = set(out_dims).difference(['x', 'y', 'z'])
-    if len(invalid_dims) != 0:
-        raise ValueError(
-            'Invalid direction(s) in out_dims: {}'.format(invalid_dims))
 
 
 def update_dict_by_adding_another(dict1, dict2):

@@ -44,6 +44,10 @@ Breaking changes
 * 'time' now must be present in the model state dictionary. This is strictly required
   for calls to Diagnostic, Prognostic, ImplicitPrognostic, and Implicit components,
   and may be strictly required in other ways in the future
+* Removed everything to do with directional wildcards. Currently '*' is the
+  only wildcard dimension. 'x', 'y', and 'z' refer to their own names only.
+* Removed the combine_dimensions function, which wasn't used anywhere and no
+  longer has much purpose without directional wildcards
 
 v0.3.2
 ------
