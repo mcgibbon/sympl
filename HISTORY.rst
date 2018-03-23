@@ -23,6 +23,7 @@ Latest
 * TimeSteppers now allow you to put tendencies in their diagnostic output. This
   is done using first-order time differencing.
 * Composites now have properties dictionaries.
+* Updated basic components to use new component API.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -48,6 +49,9 @@ Breaking changes
   only wildcard dimension. 'x', 'y', and 'z' refer to their own names only.
 * Removed the combine_dimensions function, which wasn't used anywhere and no
   longer has much purpose without directional wildcards
+* RelaxationPrognostic no longer allows caching of equilibrium values or
+  timescale. They must be provided through the input state. This is to ensure
+  proper conversion of dimensions and units.
 
 v0.3.2
 ------

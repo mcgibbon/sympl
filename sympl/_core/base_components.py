@@ -105,27 +105,27 @@ class Implicit(object):
 
         Args
         ----
-        input_scale_factors : dict
+        input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which input values are scaled before being used
             by this object.
-        output_scale_factors : dict
+        output_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which output values are scaled before being
             returned by this object.
-        diagnostic_scale_factors : dict
+        diagnostic_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which diagnostic values are scaled before being
             returned by this object.
-        tendencies_in_diagnostics : bool
+        tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
             quantities in its diagnostic output based on first order time
             differencing of output values.
-        update_interval : timedelta
+        update_interval : timedelta, optional
             If given, the component will only give new output if at least
             a period of update_interval has passed since the last time new
             output was given. Otherwise, it would return that cached output.
-        name : string
+        name : string, optional
             A label to be used for this object, for example as would be used for
             Y in the name "X_tendency_from_Y". By default the class name in
             lowercase is used.
@@ -358,19 +358,19 @@ class Prognostic(object):
 
         Args
         ----
-        input_scale_factors : dict
+        input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which input values are scaled before being used
             by this object.
-        tendency_scale_factors : dict
+        tendency_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which tendency values are scaled before being
             returned by this object.
-        diagnostic_scale_factors : dict
+        diagnostic_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which diagnostic values are scaled before being
             returned by this object.
-        update_interval : timedelta
+        update_interval : timedelta, optional
             If given, the component will only give new output if at least
             a period of update_interval has passed since the last time new
             output was given. Otherwise, it would return that cached output.
@@ -545,26 +545,26 @@ class ImplicitPrognostic(object):
 
         Args
         ----
-        input_scale_factors : dict
+        input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which input values are scaled before being used
             by this object.
-        tendency_scale_factors : dict
+        tendency_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which tendency values are scaled before being
             returned by this object.
-        diagnostic_scale_factors : dict
+        diagnostic_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which diagnostic values are scaled before being
             returned by this object.
-        tendencies_in_diagnostics : bool
+        tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
             quantities in its diagnostic output.
-        update_interval : timedelta
+        update_interval : timedelta, optional
             If given, the component will only give new output if at least
             a period of update_interval has passed since the last time new
             output was given. Otherwise, it would return that cached output.
-        name : string
+        name : string, optional
             A label to be used for this object, for example as would be used for
             Y in the name "X_tendency_from_Y". By default the class name in
             lowercase is used.
@@ -729,15 +729,15 @@ class Diagnostic(object):
 
         Args
         ----
-        input_scale_factors : dict
+        input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which input values are scaled before being used
             by this object.
-        diagnostic_scale_factors : dict
+        diagnostic_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which diagnostic values are scaled before being
             returned by this object.
-        update_interval : timedelta
+        update_interval : timedelta, optional
             If given, the component will only give new output if at least
             a period of update_interval has passed since the last time new
             output was given. Otherwise, it would return that cached output.
