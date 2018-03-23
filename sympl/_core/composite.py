@@ -95,7 +95,6 @@ class PrognosticComposite(ComponentComposite, Prognostic):
         self.input_properties
         self.tendency_properties
 
-
     def __call__(self, state):
         """
         Gets tendencies and diagnostics from the passed model state.
