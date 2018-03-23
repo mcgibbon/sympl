@@ -35,7 +35,7 @@ __all__ = (
     InvalidPropertyDictError,
     DataArray,
     get_constant, set_constant, set_condensible_name, reset_constants,
-    get_constants_string,TimeDifferencingWrapper,
+    get_constants_string, TimeDifferencingWrapper,
     ensure_no_shared_keys,
     get_numpy_array, jit,
     restore_dimensions, get_numpy_arrays_with_properties,

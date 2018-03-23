@@ -183,6 +183,7 @@ class DiagnosticComposite(ComponentComposite, Diagnostic):
     def array_call(self, state):
         raise NotImplementedError()
 
+
 class MonitorComposite(ComponentComposite):
 
     component_class = Monitor
