@@ -106,7 +106,7 @@ class OutputMixin(object):
             if 'alias' in properties.keys():
                 wanted_output_aliases[name].append(properties['alias'])
             if (name in self.input_properties.keys() and
-                        'alias' in self.input_properties[name].keys()):
+                    'alias' in self.input_properties[name].keys()):
                 wanted_output_aliases[name].append(
                     self.input_properties[name]['alias'])
         return wanted_output_aliases
@@ -586,7 +586,6 @@ class Prognostic(DiagnosticMixin, TendencyMixin):
                 state, self.input_properties)
             self._last_update_time = state['time']
         return self._tendencies, self._diagnostics
-
 
     @abc.abstractmethod
     def array_call(self, state):

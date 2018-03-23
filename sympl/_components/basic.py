@@ -1,7 +1,6 @@
 from .._core.array import DataArray
 from .._core.base_components import ImplicitPrognostic, Prognostic, Diagnostic
 from .._core.units import unit_registry as ureg
-from .._core.util import combine_dims
 
 
 class ConstantPrognostic(Prognostic):
