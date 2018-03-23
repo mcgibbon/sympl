@@ -3,6 +3,7 @@ from .composite import PrognosticComposite
 from .time import timedelta
 from .util import combine_component_properties, combine_properties
 from .units import clean_units
+from .state import copy_untouched_quantities
 import warnings
 
 
@@ -59,22 +60,19 @@ class TimeStepper(object):
         return_value = {}
         for prognostic in self.prognostic_list:
             return_value.update(prognostic.diagnostic_properties)
-            if self.tendencies_in_diagnostics:
-                self._insert_tendencies_to_diagnostic_properties(
-                    return_value, prognostic.tendency_properties, prognostic.name)
+        if self.tendencies_in_diagnostics:
+            tendency_properties = combine_component_properties(
+                self.prognostic_list, 'tendency_properties')
+            self._insert_tendencies_to_diagnostic_properties(
+                return_value, tendency_properties)
         return return_value
 
     def _insert_tendencies_to_diagnostic_properties(
-            self, diagnostic_properties, tendency_properties, component_name):
+            self, diagnostic_properties, tendency_properties):
         for quantity_name, properties in tendency_properties.items():
-            tendency_name = self._get_tendency_name(quantity_name, component_name)
-            if properties['units'] is '':
-                units = '{}^-1'.format(self.time_unit_name)
-            else:
-                units = '{} {}^-1'.format(
-                    properties['units'], self.time_unit_name)
+            tendency_name = self._get_tendency_name(quantity_name)
             diagnostic_properties[tendency_name] = {
-                'units': units,
+                'units': properties['units'],
                 'dims': properties['dims'],
             }
 
@@ -128,6 +126,10 @@ class TimeStepper(object):
         """
         self.name = kwargs.pop('name', self.__class__.__name__)
         tendencies_in_diagnostics = kwargs.pop('tendencies_in_diagnostics', False)
+        if len(kwargs) > 0:
+            raise TypeError(
+                "TimeStepper.__init__ got an unexpected keyword argument '{}'".format(
+                    kwargs.popitem()[0]))
         if len(args) == 1 and isinstance(args[0], list):
             warnings.warn(
                 'TimeSteppers should be given individual Prognostics rather '
@@ -167,6 +169,7 @@ class TimeStepper(object):
             The model state at the next timestep.
         """
         diagnostics, new_state = self._call(state, timestep)
+        copy_untouched_quantities(state, new_state)
         if self.tendencies_in_diagnostics:
             self._insert_tendencies_to_diagnostics(
                 state, new_state, timestep, diagnostics)
