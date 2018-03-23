@@ -20,7 +20,6 @@ from ._core.util import (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     get_component_aliases)
-from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
@@ -43,7 +42,6 @@ __all__ = (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     get_component_aliases,
-    ComponentTestBase,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
     datetime, timedelta

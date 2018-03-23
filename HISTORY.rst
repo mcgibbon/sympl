@@ -55,6 +55,8 @@ Breaking changes
 * RelaxationPrognostic no longer allows caching of equilibrium values or
   timescale. They must be provided through the input state. This is to ensure
   proper conversion of dimensions and units.
+* Removed ComponentTestBase from package. All of its tests except for output
+  caching are now performed on object initialization or call time.
 
 v0.3.2
 ------
