@@ -671,13 +671,13 @@ def combine_properties(*args):
 
 def get_component_aliases(*args):
     """
-    Returns aliases for variables in the properties of Components (e.g., Prognostics).
+    Returns aliases for variables in the properties of Components (Prognostic,
+    Diagnostic, Implicit, and ImplicitPrognostic objects).
 
-    Notes
-    -----
-     -  If a variable shows up in the input_properties or diagnostic_properties
-        of two or more different Components, make sure they have the same 'alias'
-        keyword in all Components.
+    If multiple aliases are present for the same variable, the following
+    properties have priority in descending order: input, output, diagnostic,
+    tendency. If multiple components give different aliases at the same priority
+    level, one is chosen arbitrarily.
 
     Args
     ----
@@ -688,22 +688,16 @@ def get_component_aliases(*args):
     Returns
     -------
     aliases : dict
-        A dictionary with keys containing old variable names and values containing
-        new variable names
+        A dictionary mapping quantity names to aliases
     """
-
-    aliases = {}
-
-    # Update the aliases dict with the properties in each provided Component
-    for component in args:
-        # combine the input, output, diagnostic, and tendency variables into one dict
-        for prop_type in ['input_properties', 'output_properties',
-                          'diagnostic_properties', 'tendency_properties']:
-            if hasattr(component, prop_type):
-                component_properties = getattr(component, prop_type)
-                # save the alias (if there is one) for each variable
-                for varname, properties in component_properties.items():
+    return_dict = {}
+    for property_type in (
+            'tendency_properties', 'diagnostic_properties', 'output_properties',
+            'input_properties'):
+        for component in args:
+            if hasattr(component, property_type):
+                component_properties = getattr(component, property_type)
+                for name, properties in component_properties.items():
                     if 'alias' in properties.keys():
-                        aliases.update({varname: properties['alias']})
-
-    return aliases
+                        return_dict[name] = properties['alias']
+    return return_dict

@@ -17,17 +17,6 @@ class ComponentComposite(object):
 
     component_class = None
 
-    @property
-    def input_properties(self):
-        return combine_component_properties(self.component_list, 'input_properties')
-
-    @property
-    def diagnostic_properties(self):
-        return_dict = {}
-        for component in self.component_list:
-            return_dict.update(component.diagnostic_properties)
-        return return_dict
-
     def __str__(self):
         return '{}(\n{}\n)'.format(
             self.__class__,
@@ -53,6 +42,7 @@ class ComponentComposite(object):
         if self.component_class is not None:
             ensure_components_have_class(args, self.component_class)
         self.component_list = args
+        super(ComponentComposite, self).__init__()
 
     def ensure_no_diagnostic_output_overlap(self):
         diagnostic_names = []
@@ -85,16 +75,26 @@ class PrognosticComposite(ComponentComposite, Prognostic):
     component_class = Prognostic
 
     @property
+    def input_properties(self):
+        return combine_component_properties(self.component_list, 'input_properties')
+
+    @property
+    def diagnostic_properties(self):
+        return_dict = {}
+        for component in self.component_list:
+            return_dict.update(component.diagnostic_properties)
+        return return_dict
+
+    @property
     def tendency_properties(self):
         return combine_component_properties(self.component_list, 'tendency_properties')
 
     def __init__(self, *args):
         super(PrognosticComposite, self).__init__(*args)
-        self.ensure_tendency_outputs_are_compatible()
         self.ensure_no_diagnostic_output_overlap()
-
-    def ensure_tendency_outputs_are_compatible(self):
+        self.input_properties
         self.tendency_properties
+
 
     def __call__(self, state):
         """
@@ -142,9 +142,21 @@ class DiagnosticComposite(ComponentComposite, Diagnostic):
 
     component_class = Diagnostic
 
+    @property
+    def input_properties(self):
+        return combine_component_properties(self.component_list, 'input_properties')
+
+    @property
+    def diagnostic_properties(self):
+        return_dict = {}
+        for component in self.component_list:
+            return_dict.update(component.diagnostic_properties)
+        return return_dict
+
     def __init__(self, *args):
         super(DiagnosticComposite, self).__init__(*args)
         self.ensure_no_diagnostic_output_overlap()
+        self.input_properties
 
     def __call__(self, state):
         """

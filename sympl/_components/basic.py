@@ -235,6 +235,20 @@ class TimeDifferencingWrapper(ImplicitPrognostic):
     >>> component = TimeDifferencingWrapper(GridScaleCondensation())
     """
 
+    @property
+    def input_properties(self):
+        return self._implicit.input_properties
+
+    @property
+    def tendency_properties(self):
+        return_dict = self._implicit.output_properties.copy()
+        return_dict.update(self._tendency_diagnostic_properties)
+        return return_dict
+
+    @property
+    def diagnostic_properties(self):
+        return self._implicit.diagnostic_propertes
+
     def __init__(self, implicit, **kwargs):
         if len(kwargs) > 0:
             raise TypeError('Received unexpected keyword argument {}'.format(
@@ -268,16 +282,6 @@ class TimeDifferencingWrapper(ImplicitPrognostic):
 
     def array_call(self, state, timestep):
         raise NotImplementedError()
-
-    @property
-    def tendencies(self):
-        return list(self.tendency_properties.keys())
-
-    @property
-    def tendency_properties(self):
-        return_dict = self._implicit.output_properties.copy()
-        return_dict.update(self._tendency_diagnostic_properties)
-        return return_dict
 
     def __getattr__(self, item):
         if item not in ('outputs', 'output_properties'):

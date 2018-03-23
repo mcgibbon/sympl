@@ -27,6 +27,8 @@ Latest
 * Components enforce consistency of output from array_call with properties
   dictionaries, raising ComponentMissingOutputError or ComponentExtraOutputError
   respectively if outputs do not match.
+* Added a priority order of property types for determining which aliases are
+  returned by get_component_aliases
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

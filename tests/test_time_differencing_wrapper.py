@@ -20,6 +20,8 @@ class MockPrognostic(Prognostic):
 
 class MockImplicit(Implicit):
 
+    input_properties = {}
+
     output_properties = {
         'value': {
             'dims': [],
@@ -36,13 +38,15 @@ class MockImplicit(Implicit):
 
     def __init__(self):
         self._num_updates = 0
+        super(MockImplicit, self).__init__()
 
-    def __call__(self, state, timestep):
+    def array_call(self, state, timestep):
         self._num_updates += 1
 
         return (
-            {'num_updates': DataArray([self._num_updates], attrs={'units': ''})},
-            {'value': DataArray([1], attrs={'units': 'm'})})
+            {'num_updates': self._num_updates},
+            {'value': 1}
+        )
 
 
 class MockImplicitThatExpects(Implicit):
@@ -107,6 +111,7 @@ class TimeDifferencingTests(unittest.TestCase):
         self.implicit = MockImplicit()
         self.wrapped = TimeDifferencingWrapper(self.implicit)
         self.state = {
+            'time': timedelta(0),
             'value': DataArray([0], attrs={'units': 'm'})
         }
 
@@ -115,9 +120,9 @@ class TimeDifferencingTests(unittest.TestCase):
 
     def testWrapperCallsImplicit(self):
         tendencies, diagnostics = self.wrapped(self.state, timedelta(seconds=1))
-        assert diagnostics['num_updates'].values[0] == 1
+        assert diagnostics['num_updates'].values == 1
         tendencies, diagnostics = self.wrapped(self.state, timedelta(seconds=1))
-        assert diagnostics['num_updates'].values[0] == 2
+        assert diagnostics['num_updates'].values == 2
         assert len(diagnostics.keys()) == 1
 
     def testWrapperComputesTendency(self):
@@ -130,6 +135,7 @@ class TimeDifferencingTests(unittest.TestCase):
 
     def testWrapperComputesTendencyWithUnitConversion(self):
         state = {
+            'time': timedelta(0),
             'value': DataArray([0.011], attrs={'units': 'km'})
         }
         tendencies, diagnostics = self.wrapped(state, timedelta(seconds=5))
