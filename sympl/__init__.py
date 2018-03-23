@@ -8,7 +8,8 @@ from ._core.timestepper import TimeStepper
 from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
 from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
-    InvalidPropertyDictError)
+    InvalidPropertyDictError, ComponentExtraOutputError,
+    ComponentMissingOutputError)
 from ._core.array import DataArray
 from ._core.constants import (
     get_constant, set_constant, set_condensible_name, reset_constants,
@@ -32,7 +33,8 @@ __all__ = (
     DiagnosticComposite, MonitorComposite, ImplicitPrognostic,
     TimeStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
-    InvalidPropertyDictError,
+    InvalidPropertyDictError, ComponentExtraOutputError,
+    ComponentMissingOutputError,
     DataArray,
     get_constant, set_constant, set_condensible_name, reset_constants,
     get_constants_string, TimeDifferencingWrapper,

@@ -24,6 +24,9 @@ Latest
   is done using first-order time differencing.
 * Composites now have properties dictionaries.
 * Updated basic components to use new component API.
+* Components enforce consistency of output from array_call with properties
+  dictionaries, raising ComponentMissingOutputError or ComponentExtraOutputError
+  respectively if outputs do not match.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

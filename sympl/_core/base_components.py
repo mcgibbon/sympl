@@ -2,7 +2,9 @@ import abc
 from .util import (
     get_numpy_arrays_with_properties, restore_data_arrays_with_properties)
 from .time import timedelta
-from .exceptions import InvalidPropertyDictError
+from .exceptions import (
+    InvalidPropertyDictError, ComponentExtraOutputError,
+    ComponentMissingOutputError)
 
 
 def apply_scale_factors(array_state, scale_factors):
@@ -10,7 +12,135 @@ def apply_scale_factors(array_state, scale_factors):
         array_state[key] *= factor
 
 
-class Implicit(object):
+class TendencyMixin(object):
+
+    @property
+    def _wanted_tendency_aliases(self):
+        wanted_tendency_aliases = {}
+        for name, properties in self.tendency_properties.items():
+            wanted_tendency_aliases[name] = []
+            if 'alias' in properties.keys():
+                wanted_tendency_aliases[name].append(properties['alias'])
+            if (name in self.input_properties.keys() and
+                    'alias' in self.input_properties[name].keys()):
+                wanted_tendency_aliases[name].append(self.input_properties[name]['alias'])
+        return wanted_tendency_aliases
+
+    def _check_missing_tendencies(self, tendency_dict):
+        missing_tendencies = set()
+        for name, aliases in self._wanted_tendency_aliases.items():
+            if (name not in tendency_dict.keys() and
+                    not any(alias in tendency_dict.keys() for alias in aliases)):
+                missing_tendencies.add(name)
+        if len(missing_tendencies) > 0:
+            raise ComponentMissingOutputError(
+                'Component {} did not compute tendencies for {}'.format(
+                    self.__class__.__name__, ', '.join(missing_tendencies)))
+
+    def _check_extra_tendencies(self, tendency_dict):
+        wanted_set = set()
+        wanted_set.update(self._wanted_tendency_aliases.keys())
+        for value_list in self._wanted_tendency_aliases.values():
+            wanted_set.update(value_list)
+        extra_tendencies = set(tendency_dict.keys()).difference(wanted_set)
+        if len(extra_tendencies) > 0:
+            raise ComponentExtraOutputError(
+                'Component {} computed tendencies for {} which are not in '
+                'tendency_properties'.format(
+                    self.__class__.__name__, ', '.join(extra_tendencies)))
+
+    def _check_tendencies(self, tendency_dict):
+        self._check_missing_tendencies(tendency_dict)
+        self._check_extra_tendencies(tendency_dict)
+
+
+class DiagnosticMixin(object):
+
+    @property
+    def _wanted_diagnostic_aliases(self):
+        wanted_diagnostic_aliases = {}
+        for name, properties in self.diagnostic_properties.items():
+            wanted_diagnostic_aliases[name] = []
+            if 'alias' in properties.keys():
+                wanted_diagnostic_aliases[name].append(properties['alias'])
+            if (name in self.input_properties.keys() and
+                    'alias' in self.input_properties[name].keys()):
+                wanted_diagnostic_aliases[name].append(self.input_properties[name]['alias'])
+        return wanted_diagnostic_aliases
+
+    def _check_missing_diagnostics(self, diagnostics_dict):
+        missing_diagnostics = set()
+        for name, aliases in self._wanted_diagnostic_aliases.items():
+            if (name not in diagnostics_dict.keys() and
+                    not any(alias in diagnostics_dict.keys() for alias in aliases)):
+                missing_diagnostics.add(name)
+        if len(missing_diagnostics) > 0:
+            raise ComponentMissingOutputError(
+                'Component {} did not compute diagnostics {}'.format(
+                    self.__class__.__name__, ', '.join(missing_diagnostics)))
+
+    def _check_extra_diagnostics(self, diagnostics_dict):
+        wanted_set = set()
+        wanted_set.update(self._wanted_diagnostic_aliases.keys())
+        for value_list in self._wanted_diagnostic_aliases.values():
+            wanted_set.update(value_list)
+        extra_diagnostics = set(diagnostics_dict.keys()).difference(wanted_set)
+        if len(extra_diagnostics) > 0:
+            raise ComponentExtraOutputError(
+                'Component {} computed diagnostics {} which are not in '
+                'diagnostic_properties'.format(
+                    self.__class__.__name__, ', '.join(extra_diagnostics)))
+
+    def _check_diagnostics(self, diagnostics_dict):
+        self._check_missing_diagnostics(diagnostics_dict)
+        self._check_extra_diagnostics(diagnostics_dict)
+
+
+class OutputMixin(object):
+
+    @property
+    def _wanted_output_aliases(self):
+        wanted_output_aliases = {}
+        for name, properties in self.output_properties.items():
+            wanted_output_aliases[name] = []
+            if 'alias' in properties.keys():
+                wanted_output_aliases[name].append(properties['alias'])
+            if (name in self.input_properties.keys() and
+                        'alias' in self.input_properties[name].keys()):
+                wanted_output_aliases[name].append(
+                    self.input_properties[name]['alias'])
+        return wanted_output_aliases
+
+    def _check_missing_outputs(self, outputs_dict):
+        missing_outputs = set()
+        for name, aliases in self._wanted_output_aliases.items():
+            if (name not in outputs_dict.keys() and
+                    not any(alias in outputs_dict.keys() for alias in
+                            aliases)):
+                missing_outputs.add(name)
+        if len(missing_outputs) > 0:
+            raise ComponentMissingOutputError(
+                'Component {} did not compute outputs {}'.format(
+                    self.__class__.__name__, ', '.join(missing_outputs)))
+
+    def _check_extra_outputs(self, outputs_dict):
+        wanted_set = set()
+        wanted_set.update(self._wanted_output_aliases.keys())
+        for value_list in self._wanted_output_aliases.values():
+            wanted_set.update(value_list)
+        extra_outputs = set(outputs_dict.keys()).difference(wanted_set)
+        if len(extra_outputs) > 0:
+            raise ComponentExtraOutputError(
+                'Component {} computed outputs {} which are not in '
+                'output_properties'.format(
+                    self.__class__.__name__, ', '.join(extra_outputs)))
+
+    def _check_outputs(self, output_dict):
+        self._check_missing_outputs(output_dict)
+        self._check_extra_outputs(output_dict)
+
+
+class Implicit(DiagnosticMixin, OutputMixin):
     """
     Attributes
     ----------
@@ -150,9 +280,12 @@ class Implicit(object):
         else:
             self.name = name
         if tendencies_in_diagnostics:
-            self._insert_tendency_properties()
+            self._added_tendency_properties = self._insert_tendency_properties()
+        else:
+            self._added_tendency_properties = set()
 
     def _insert_tendency_properties(self):
+        added_names = []
         for name, properties in self.output_properties.items():
             tendency_name = self._get_tendency_name(name)
             if properties['units'] is '':
@@ -186,6 +319,20 @@ class Implicit(object):
                         self.output_properties[name]['units']
                     )
                 )
+            added_names.append(tendency_name)
+        return added_names
+
+    def _check_missing_diagnostics(self, diagnostics_dict):
+        missing_diagnostics = set()
+        for name, aliases in self._wanted_diagnostic_aliases.items():
+            if (name not in diagnostics_dict.keys() and
+                    name not in self._added_tendency_properties and
+                    not any(alias in diagnostics_dict.keys() for alias in aliases)):
+                missing_diagnostics.add(name)
+        if len(missing_diagnostics) > 0:
+            raise ComponentMissingOutputError(
+                'Component {} did not compute diagnostics {}'.format(
+                    self.__class__.__name__, ', '.join(missing_diagnostics)))
 
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
@@ -230,6 +377,8 @@ class Implicit(object):
             raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
+            self._check_diagnostics(raw_diagnostics)
+            self._check_outputs(raw_new_state)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             apply_scale_factors(raw_new_state, self.output_scale_factors)
             if self.tendencies_in_diagnostics:
@@ -279,7 +428,7 @@ class Implicit(object):
         pass
 
 
-class Prognostic(object):
+class Prognostic(DiagnosticMixin, TendencyMixin):
     """
     Attributes
     ----------
@@ -425,6 +574,8 @@ class Prognostic(object):
             raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_tendencies, raw_diagnostics = self.array_call(raw_state)
+            self._check_tendencies(raw_tendencies)
+            self._check_diagnostics(raw_diagnostics)
             apply_scale_factors(raw_tendencies, self.tendency_scale_factors)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             self._tendencies = restore_data_arrays_with_properties(
@@ -435,6 +586,7 @@ class Prognostic(object):
                 state, self.input_properties)
             self._last_update_time = state['time']
         return self._tendencies, self._diagnostics
+
 
     @abc.abstractmethod
     def array_call(self, state):
@@ -464,7 +616,7 @@ class Prognostic(object):
         pass
 
 
-class ImplicitPrognostic(object):
+class ImplicitPrognostic(DiagnosticMixin, TendencyMixin):
     """
     Attributes
     ----------
@@ -625,6 +777,8 @@ class ImplicitPrognostic(object):
             raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
+            self._check_tendencies(raw_tendencies)
+            self._check_diagnostics(raw_diagnostics)
             apply_scale_factors(raw_tendencies, self.tendency_scale_factors)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             self._tendencies = restore_data_arrays_with_properties(
@@ -665,7 +819,7 @@ class ImplicitPrognostic(object):
         """
 
 
-class Diagnostic(object):
+class Diagnostic(DiagnosticMixin):
     """
     Attributes
     ----------
@@ -784,6 +938,7 @@ class Diagnostic(object):
             raw_state['time'] = state['time']
             apply_scale_factors(raw_state, self.input_scale_factors)
             raw_diagnostics = self.array_call(raw_state)
+            self._check_diagnostics(raw_diagnostics)
             apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
             self._diagnostics = restore_data_arrays_with_properties(
                 raw_diagnostics, self.diagnostic_properties,
