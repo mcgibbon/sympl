@@ -23,6 +23,12 @@ Latest
 * TimeSteppers now allow you to put tendencies in their diagnostic output. This
   is done using first-order time differencing.
 * Composites now have properties dictionaries.
+* Updated basic components to use new component API.
+* Components enforce consistency of output from array_call with properties
+  dictionaries, raising ComponentMissingOutputError or ComponentExtraOutputError
+  respectively if outputs do not match.
+* Added a priority order of property types for determining which aliases are
+  returned by get_component_aliases
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -48,6 +54,11 @@ Breaking changes
   only wildcard dimension. 'x', 'y', and 'z' refer to their own names only.
 * Removed the combine_dimensions function, which wasn't used anywhere and no
   longer has much purpose without directional wildcards
+* RelaxationPrognostic no longer allows caching of equilibrium values or
+  timescale. They must be provided through the input state. This is to ensure
+  proper conversion of dimensions and units.
+* Removed ComponentTestBase from package. All of its tests except for output
+  caching are now performed on object initialization or call time.
 
 v0.3.2
 ------

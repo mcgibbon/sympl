@@ -8,7 +8,8 @@ from ._core.timestepper import TimeStepper
 from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
 from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
-    InvalidPropertyDictError)
+    InvalidPropertyDictError, ComponentExtraOutputError,
+    ComponentMissingOutputError)
 from ._core.array import DataArray
 from ._core.constants import (
     get_constant, set_constant, set_condensible_name, reset_constants,
@@ -19,7 +20,6 @@ from ._core.util import (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     get_component_aliases)
-from ._core.testing import ComponentTestBase
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
@@ -32,7 +32,8 @@ __all__ = (
     DiagnosticComposite, MonitorComposite, ImplicitPrognostic,
     TimeStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
-    InvalidPropertyDictError,
+    InvalidPropertyDictError, ComponentExtraOutputError,
+    ComponentMissingOutputError,
     DataArray,
     get_constant, set_constant, set_condensible_name, reset_constants,
     get_constants_string, TimeDifferencingWrapper,
@@ -41,7 +42,6 @@ __all__ = (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     get_component_aliases,
-    ComponentTestBase,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
     datetime, timedelta

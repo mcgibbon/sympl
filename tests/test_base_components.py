@@ -4,7 +4,8 @@ import numpy as np
 import unittest
 from sympl import (
     Prognostic, Diagnostic, Monitor, Implicit, ImplicitPrognostic,
-    datetime, timedelta, DataArray, InvalidPropertyDictError
+    datetime, timedelta, DataArray, InvalidPropertyDictError,
+    ComponentMissingOutputError, ComponentExtraOutputError,
 )
 
 def same_list(list1, list2):
@@ -133,6 +134,76 @@ class PrognosticTests(unittest.TestCase):
         assert 'time' in prognostic.state_given.keys()
         assert prognostic.state_given['time'] == timedelta(seconds=0)
         assert prognostic.times_called == 1
+
+    def test_raises_when_tendency_not_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'tend1': {
+                'dims': ['dims1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_output = {}
+        tendency_output = {}
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentMissingOutputError):
+            _, _ = self.call_component(prognostic, state)
+
+    def test_raises_when_extraneous_tendency_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {
+            'tend1': np.zeros([10]),
+        }
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentExtraOutputError):
+            _, _ = self.call_component(prognostic, state)
+
+    def test_raises_when_diagnostic_not_given(self):
+        input_properties = {}
+        diagnostic_properties = {
+            'diag1': {
+                'dims': ['dims1'],
+                'units': 'm',
+            }
+        }
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {}
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentMissingOutputError):
+            _, _ = self.call_component(prognostic, state)
+
+    def test_raises_when_extraneous_diagnostic_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {}
+        diagnostic_output = {
+            'diag1': np.zeros([10])
+        }
+        tendency_output = {}
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentExtraOutputError):
+            _, _ = self.call_component(prognostic, state)
 
     def test_input_no_transformations(self):
         input_properties = {
@@ -737,6 +808,37 @@ class DiagnosticTests(unittest.TestCase):
         assert diagnostic.state_given['time'] == timedelta(seconds=0)
         assert diagnostic.times_called == 1
 
+    def test_raises_when_diagnostic_not_given(self):
+        input_properties = {}
+        diagnostic_properties = {
+            'diag1': {
+                'dims': ['dims1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_output = {}
+        diagnostic = self.component_class(
+            input_properties, diagnostic_properties,
+            diagnostic_output,
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentMissingOutputError):
+            _, _ = self.call_component(diagnostic, state)
+
+    def test_raises_when_extraneous_diagnostic_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        diagnostic_output = {
+            'diag1': np.zeros([10])
+        }
+        diagnostic = self.component_class(
+            input_properties, diagnostic_properties,
+            diagnostic_output,
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentExtraOutputError):
+            _, _ = self.call_component(diagnostic, state)
+
     def test_input_no_transformations(self):
         input_properties = {
             'input1': {
@@ -1138,6 +1240,76 @@ class ImplicitTests(unittest.TestCase):
         assert diagnostics == {}
         assert implicit.timestep_given == timedelta(seconds=5)
         assert implicit.times_called == 1
+
+    def test_raises_when_output_not_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        output_properties = {
+            'output1': {
+                'dims': ['dims1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_output = {}
+        state_output = {}
+        implicit = self.component_class(
+            input_properties, diagnostic_properties, output_properties,
+            diagnostic_output, state_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentMissingOutputError):
+            _, _ = self.call_component(implicit, state)
+
+    def test_raises_when_extraneous_output_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        output_properties = {}
+        diagnostic_output = {}
+        state_output = {
+            'tend1': np.zeros([10]),
+        }
+        implicit = self.component_class(
+            input_properties, diagnostic_properties, output_properties,
+            diagnostic_output, state_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentExtraOutputError):
+            _, _ = self.call_component(implicit, state)
+
+    def test_raises_when_diagnostic_not_given(self):
+        input_properties = {}
+        diagnostic_properties = {
+            'diag1': {
+                'dims': ['dims1'],
+                'units': 'm',
+            }
+        }
+        output_properties = {}
+        diagnostic_output = {}
+        state_output = {}
+        implicit = self.component_class(
+            input_properties, diagnostic_properties, output_properties,
+            diagnostic_output, state_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentMissingOutputError):
+            _, _ = self.call_component(implicit, state)
+
+    def test_raises_when_extraneous_diagnostic_given(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        output_properties = {}
+        diagnostic_output = {
+            'diag1': np.zeros([10])
+        }
+        state_output = {}
+        implicit = self.component_class(
+            input_properties, diagnostic_properties, output_properties,
+            diagnostic_output, state_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentExtraOutputError):
+            _, _ = self.call_component(implicit, state)
 
     def test_input_no_transformations(self):
         input_properties = {

@@ -28,6 +28,7 @@ class DiagnosticPropertiesCompositeMixin(object):
     def diagnostic_properties(self):
         return_dict = {}
         for component in self.component_list:
+            print(component.diagnostic_properties.keys(), return_dict.keys())
             ensure_no_shared_keys(component.diagnostic_properties, return_dict)
             return_dict.update(component.diagnostic_properties)
         return return_dict
@@ -122,7 +123,9 @@ class PrognosticComposite(
             with one another.
         """
         super(PrognosticComposite, self).__init__(*args)
+        self.input_properties
         self.tendency_properties
+        self.diagnostic_properties
 
     def __call__(self, state):
         """

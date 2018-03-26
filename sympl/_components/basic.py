@@ -12,6 +12,30 @@ class ConstantPrognostic(Prognostic):
         it would also modify the values inside this object.
     """
 
+    @property
+    def input_properties(self):
+        return {}
+
+    @property
+    def tendency_properties(self):
+        return_dict = {}
+        for name, data_array in self.__tendencies.items():
+            return_dict[name] = {
+                'dims': data_array.dims,
+                'units': data_array.attrs['units'],
+            }
+        return return_dict
+
+    @property
+    def diagnostic_properties(self):
+        return_dict = {}
+        for name, data_array in self.__diagnostics.items():
+            return_dict[name] = {
+                'dims': data_array.dims,
+                'units': data_array.attrs['units'],
+            }
+        return return_dict
+
     def __init__(self, tendencies, diagnostics=None):
         """
         Args
@@ -25,34 +49,21 @@ class ConstantPrognostic(Prognostic):
             state quantities and values are the value of those quantities
             to be returned by this Prognostic.
         """
-        self._tendencies = tendencies.copy()
+        self.__tendencies = tendencies.copy()
         if diagnostics is not None:
-            self._diagnostics = diagnostics.copy()
+            self.__diagnostics = diagnostics.copy()
         else:
-            self._diagnostics = {}
+            self.__diagnostics = {}
+        super(ConstantPrognostic, self).__init__()
 
-    def __call__(self, state):
-        """
-        Gets tendencies and diagnostics from the passed model state. The
-        returned dictionaries will contain the same values as were passed at
-        initialization.
-
-        Args
-        ----
-        state : dict
-            A model state dictionary.
-
-        Returns
-        -------
-        tendencies : dict
-            A dictionary whose keys are strings indicating
-            state quantities and values are the time derivative of those
-            quantities in units/second.
-        diagnostics : dict
-            A dictionary whose keys are strings indicating
-            state quantities and values are the value of those quantities.
-        """
-        return self._tendencies.copy(), self._diagnostics.copy()
+    def array_call(self, state):
+        tendencies = {}
+        for name, data_array in self.__tendencies.items():
+            tendencies[name] = data_array.values
+        diagnostics = {}
+        for name, data_array in self.__diagnostics.items():
+            diagnostics[name] = data_array.values
+        return tendencies, diagnostics
 
 
 class ConstantDiagnostic(Diagnostic):
@@ -66,6 +77,20 @@ class ConstantDiagnostic(Diagnostic):
     it would also modify the values inside this object.
     """
 
+    @property
+    def input_properties(self):
+        return {}
+
+    @property
+    def diagnostic_properties(self):
+        return_dict = {}
+        for name, data_array in self.__diagnostics.items():
+            return_dict[name] = {
+                'dims': data_array.dims,
+                'units': data_array.attrs['units'],
+            }
+        return return_dict
+
     def __init__(self, diagnostics):
         """
         Args
@@ -76,27 +101,14 @@ class ConstantDiagnostic(Diagnostic):
             The values in the dictionary will be returned when this
             Diagnostic is called.
         """
-        self._diagnostics = diagnostics.copy()
+        self.__diagnostics = diagnostics.copy()
+        super(ConstantDiagnostic, self).__init__()
 
-    def __call__(self, state):
-        """
-        Returns diagnostic values.
-
-        Args
-        ----
-        state : dict
-            A model state dictionary. Is not used, and is only
-            taken in to keep an API consistent with a Diagnostic.
-
-        Returns
-        -------
-        diagnostics : dict
-            A dictionary whose keys are strings indicating
-            state quantities and values are the value of those quantities.
-            The values in the returned dictionary are the same as were
-            passed into this object at initialization.
-        """
-        return self._diagnostics.copy()
+    def array_call(self, state):
+        return_state = {}
+        for name, data_array in self.__diagnostics.items():
+            return_state[name] = data_array.values
+        return return_state
 
 
 class RelaxationPrognostic(Prognostic):
@@ -109,35 +121,77 @@ class RelaxationPrognostic(Prognostic):
     equilibrium value, and :math:`\tau` is the timescale of the relaxation.
     """
 
-    def __init__(self, quantity_name, equilibrium_value=None,
-                 relaxation_timescale=None):
+    @property
+    def input_properties(self):
+        return_dict = {
+            self._quantity_name: {
+                'dims': ['*'],
+                'units': self._units,
+            },
+            'equilibrium_{}'.format(self._quantity_name): {
+                'dims': ['*'],
+                'units': self._units,
+            },
+            '{}_relaxation_timescale'.format(self._quantity_name): {
+                'dims': ['*'],
+                'units': 's',
+            }
+        }
+        return return_dict
+
+    @property
+    def tendency_properties(self):
+        return {
+            self._quantity_name: {
+                'dims': ['*'],
+                'units': str(ureg(self._units) / ureg('s')),
+            }
+        }
+
+    @property
+    def diagnostic_properties(self):
+        return {}
+
+    def __init__(self, quantity_name, units, **kwargs):
         """
         Args
         ----
         quantity_name : str
-            The name of the quantity to which Newtonian
-            relaxation should be applied
-        equilibrium_value : DataArray, optional
-            The equilibrium value to which the quantity is relaxed. If
-            not given, it should be provided in the state when
-            the object is called.
-        relaxation_timescale : DataArray, optional
-            The timescale tau with which the Newtonian relaxation occurs.
-            If not given, it should be provided in the state when
-            the object is called.
+            The name of the quantity to which Newtonian relaxation should be
+            applied.
+        units : str
+            The units of the relaxed quantity as to be used internally when
+            computing tendency. Can be any units convertible from the actual
+            input you plan to use.
+        input_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which input values are scaled before being used
+            by this object.
+        tendency_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which tendency values are scaled before being
+            returned by this object.
+        diagnostic_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which diagnostic values are scaled before being
+            returned by this object.
+        update_interval : timedelta, optional
+            If given, the component will only give new output if at least
+            a period of update_interval has passed since the last time new
+            output was given. Otherwise, it would return that cached output.
         """
         self._quantity_name = quantity_name
-        self._equilibrium_value = equilibrium_value
-        self._tau = relaxation_timescale
+        self._units = units
+        super(RelaxationPrognostic, self).__init__(**kwargs)
 
-    def __call__(self, state):
+    def array_call(self, state):
         """
         Gets tendencies and diagnostics from the passed model state.
 
         Args
         ----
         state : dict
-            A model state dictionary. Below, (quantity_name)
+            A model state dictionary as numpy arrays. Below, (quantity_name)
             refers to the quantity_name passed at initialization. The state
             must contain:
 
@@ -152,33 +206,18 @@ class RelaxationPrognostic(Prognostic):
         tendencies : dict
             A dictionary whose keys are strings indicating
             state quantities and values are the time derivative of those
-            quantities in units/second at the time of the input state.
+            quantities in units/second at the time of the input state, as
+            numpy arrays.
         diagnostics : dict
             A dictionary whose keys are strings indicating
             state quantities and values are the value of those quantities
-            at the time of the input state.
+            at the time of the input state, as numpy arrays.
         """
         value = state[self._quantity_name]
-        if self._equilibrium_value is None:
-            equilibrium = state['equilibrium_' + self._quantity_name].to_units(
-                value.attrs['units'])
-        else:
-            equilibrium = self._equilibrium_value.to_units(
-                value.attrs['units'])
-        if self._tau is None:
-            tau = state[
-                self._quantity_name + '_relaxation_timescale'].to_units(
-                's')
-        else:
-            tau = self._tau.to_units('s')
-        tendency_unit_string = str(
-            ureg(state[self._quantity_name].attrs['units']) / ureg('s'))
+        equilibrium = state['equilibrium_' + self._quantity_name]
+        tau = state[self._quantity_name + '_relaxation_timescale']
         tendencies = {
-            self._quantity_name: DataArray(
-                (equilibrium.values - value.values)/tau.values,
-                dims=value.dims,
-                attrs={'units': tendency_unit_string}
-            )
+            self._quantity_name: (equilibrium - value)/tau
         }
         return tendencies, {}
 
@@ -196,7 +235,24 @@ class TimeDifferencingWrapper(ImplicitPrognostic):
     >>> component = TimeDifferencingWrapper(GridScaleCondensation())
     """
 
-    def __init__(self, implicit):
+    @property
+    def input_properties(self):
+        return self._implicit.input_properties
+
+    @property
+    def tendency_properties(self):
+        return_dict = self._implicit.output_properties.copy()
+        return_dict.update(self._tendency_diagnostic_properties)
+        return return_dict
+
+    @property
+    def diagnostic_properties(self):
+        return self._implicit.diagnostic_propertes
+
+    def __init__(self, implicit, **kwargs):
+        if len(kwargs) > 0:
+            raise TypeError('Received unexpected keyword argument {}'.format(
+                kwargs.popitem()[0]))
         self._implicit = implicit
 
     def __call__(self, state, timestep):
@@ -224,15 +280,8 @@ class TimeDifferencingWrapper(ImplicitPrognostic):
                         varname, type(data_array)))
         return tendencies, diagnostics
 
-    @property
-    def tendencies(self):
-        return list(self.tendency_properties.keys())
-
-    @property
-    def tendency_properties(self):
-        return_dict = self._implicit.output_properties.copy()
-        return_dict.update(self._tendency_diagnostic_properties)
-        return return_dict
+    def array_call(self, state, timestep):
+        raise NotImplementedError()
 
     def __getattr__(self, item):
         if item not in ('outputs', 'output_properties'):
