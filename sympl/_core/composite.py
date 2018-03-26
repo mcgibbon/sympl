@@ -1,4 +1,3 @@
-from .exceptions import SharedKeyError
 from .base_components import Prognostic, Diagnostic, Monitor
 from .util import (
     update_dict_by_adding_another, ensure_no_shared_keys,
