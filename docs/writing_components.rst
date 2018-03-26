@@ -14,7 +14,8 @@ Writing an Example
 ------------------
 
 Let's start with a Prognostic component which relaxes temperature towards some
-target temperature.
+target temperature. We'll go over the sections of this example step-by-step
+below.
 
 .. code-block:: python
 
@@ -45,24 +46,15 @@ target temperature.
             }
         }
 
-        def __init__(self, tau=1., target_temperature=300.):
-            self._tau = tau
-            self._T0 = target_temperature
+        def __init__(self, damping_timescale_seconds=1., target_temperature_K=300.):
+            self._tau = damping_timescale_seconds
+            self._T0 = target_temperature_K
 
-        def __call__(self, state):
-            # we get numpy arrays with specifications from input_properties
-            raw_arrays = get_numpy_arrays_with_properties(
-                state, self.input_properties)
-            T = raw_arrays['air_temperature']
-            # here the actual computation happens
-            raw_tendencies = {
-                'air_temperature': (T - self._T0)/self._tau,
+        def array_call(self, state):
+            tendencies = {
+                'air_temperature': (state['air_temperature'] - self._T0)/self._tau,
             }
-            # now we re-format the data in a way the host model can use
             diagnostics = {}
-            tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties,
-                state, self.input_properties)
             return tendencies, diagnostics
 
 Imports
@@ -142,13 +134,11 @@ or on an instance, as when you do:
 These properties are described in :ref:`Component Types`. They are very useful!
 They clearly document your code. Here we can see that air_temperature will
 be used as a 1-dimensional flattened array in units of degrees Kelvin. Sympl
-can also understand these properties, and use them to automatically
-acquire arrays in the dimensions and units that you need.
-It can also test thatsome of these properties are accurate.
-It's your responsibility, though, to make sure that the input units are the
-units you want to acquire in the numpy array data, and that the output units
-are the units of the values in the raw output arrays that you want to convert
-to :py:class:`~sympl.DataArray` objects.
+uses these properties to automatically acquire arrays in the dimensions and
+units that you need, and to automatically convert your output back into a
+form consistent with the dimensions of the model state. It will warn you if
+you create extra outputs which are not defined in the properties, or if there
+is an output defined in the properties that is missing.
 
 It is possible that some of these attributes won't be known until you
 create the object (they may depend on things passed in on initialization).
@@ -164,14 +154,9 @@ weird name:
 
 .. code-block:: python
 
-        def __init__(self, damping_timescale=1., target_temperature=300.):
-            """
-            damping_timescale is the damping timescale in seconds.
-            target_temperature is the temperature that will be relaxed to,
-            in degrees Kelvin.
-            """
-            self._tau = damping_timescale
-            self._T0 = target_temperature
+        def __init__(self, damping_timescale_seconds=1., target_temperature_K=300.):
+            self._tau = damping_timescale_seconds
+            self._T0 = target_temperature_K
 
 This is the function that is called when you create an instance of your object.
 All methods on objects take in a first argument called ``self``. You don't see
@@ -192,8 +177,8 @@ is also optimal. What these attributes mean is clearly defined in the two lines:
 
 .. code-block:: python
 
-            self._tau = damping_timescale
-            self._T0 = target_temperature
+            self._tau = damping_timescale_seconds
+            self._T0 = target_temperature_K
 
 Obviously ``self._tau`` is the damping timescale, and ``self._T0`` is the
 target temperature for the relaxation. Now you can use these shorter variables
@@ -203,57 +188,45 @@ variables are well-documented.
 The Computation
 ***************
 
-That brings us to the ``__call__`` method. This is what's called when you
-use the object as though it is a function. In Sympl components, this is the
-method which takes in a state dictionary and returns dictionaries with outputs.
+That brings us to the ``array_call`` method. In Sympl components, this is the
+method which takes in a state dictionary as numpy arrays (*not* ``DataArray``s)
+and returns dictionaries with numpy array outputs.
 
 .. code-block:: python
 
-        def __call__(self, state):
-            # we get numpy arrays with specifications from input_properties
-            raw_arrays = get_numpy_arrays_with_properties(
-                state, self.input_properties)
-            T = raw_arrays['air_temperature']
-            # here the actual computation happens
-            raw_tendencies = {
-                'air_temperature': (T - self._T0)/self._tau,
+        def array_call(self, state):
+            tendencies = {
+                'air_temperature': (state['air_temperature'] - self._T0)/self._tau,
             }
-            # now we re-format the data in a way the host model can use
             diagnostics = {}
-            tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties,
-                state, self.input_properties)
-            return diagnostics, tendencies
+            return tendencies, diagnostics
 
-There are two helper functions used in this code that we strongly recommend
-using. They take care of the work of making sure you get variables that are
-in the units your component needs, and have the dimensions your component needs.
-
-:py:func:`~sympl.get_numpy_arrays_with_properties` uses the input_properties
-dictionary you give it to extract numpy arrays with those properties from the
-input state. It will convert units to ensure the numbers are in the specified
+Sympl will automatically handle taking in the input state of ``DataArray``
+objects and converting it to the form defined by the ``input_properties`` of your
+component. It will convert units to ensure the numbers are in the specified
 units, and it will reshape the data to give it the shape specified in ``dims``.
-For example, if dims is ``['*', 'z']`` then it will give you a 2-dimensional array
-whose second axis is the vertical, and first axis is a flattening of any other
-dimensions. If you specify ``['*', 'mid_levels']`` then the result is similar, but
-only 'mid_levels' is an acceptable vertical dimension. The ``match_dims_like``
+For example, if dims is ``['*', 'mid_levels']`` then it will give you a
+2-dimensional array whose second axis is the vertical on mid levels, and first
+axis is a flattening of any other dimensions. The ``match_dims_like``
 property on ``air_pressure`` tells Sympl that any wildcard-matched dimensions
-(ones that match 'x', 'y', 'z', or '*') should be the same between the two
+('*') should be the same between the two
 quantities, meaning they're on the same grid for those wildcards. You can still,
 however, have one be on say 'mid_levels' and another on 'interface_levels' if
-those dimensions are explicitly listed (instead of listing 'z').
+those dimensions are explicitly listed.
 
-:py:func:`~sympl.restore_data_arrays_with_properties` does something fairly
-magical. In this example, it takes the raw_tendencies dictionary and converts
-the value for 'air_temperature' from a numpy array to a DataArray that has
-the same dimensions as ``air_temperature`` had in the input state. That means
-that you could pass this object a state with whatever dimensions you want,
-whether it's (x, y, z), or (z, x, y), or (x, y), or (station_number, z), etc.
+After you return dictionaries of numpy arrays, Sympl will convert these outputs
+back to ``DataArray`` objects. In this example, it takes the tendencies
+dictionary and converts the value for 'air_temperature' from a numpy array to a
+``DataArray`` that has the same dimensions as ``air_temperature`` had in the
+input state. That means that you could pass this object a state with whatever
+dimensions you want, whether it's ``('longitude', 'latitude', 'mid_levels')``, or
+``('interface_levels',)`` or ``('station_number', 'planet_number')``, etc.
 and this component will be able to take in that state, and return a
 tendency dictionary with the same dimensions (and order) that the model uses!
 And internally you can work with a simple 1-dimensional array. This is
 particularly useful for writing pointwise components using ``['*']`` or column
-components with ``['*', 'z']`` or ``['z', '*']``.
+components with, for example, ``['*', 'mid_levels']`` or
+``['interface_levels', '*']``.
 
 You can read more about properties in the section
 :ref:`Input/Output Properties`.
@@ -294,21 +267,12 @@ computational code, we can write:
 
 .. code-block:: python
 
-        def __call__(self, state):
-            # we get numpy arrays with specifications from input_properties
-            raw_arrays = get_numpy_arrays_with_properties(
-                state, self.input_properties)
-            T = raw_arrays['T']
-            # here the actual computation happens
-            raw_tendencies = {
-                'T': (T - self._T0)/self._tau,
+        def array_call(self, state):
+            tendencies = {
+                'T': (state['T'] - self._T0)/self._tau,
             }
-            # now we re-format the data in a way the host model can use
             diagnostics = {}
-            tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties,
-                state, self.input_properties)
-            return diagnostics, tendencies
+            return tendencies, diagnostics
 
 Instead of using 'air_temperature' in the raw_arrays and raw_tendencies
 dictionaries, we can use 'T'. This doesn't matter much for a name as short as

@@ -45,6 +45,8 @@ and packages to be used alongside one another.
 Then where's the model?
 -----------------------
 
+Check out `CliMT <https://github.com/climt/climt>`_ as an example.
+
 Models created with Sympl can work differently from traditional Fortran models.
 A model developer makes the components of their model available. Using these
 components, you can write a script which acts as the model executable, but also

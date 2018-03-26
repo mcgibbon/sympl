@@ -24,6 +24,9 @@ In addition to the computational functionality below, all components have "prope
 for their inputs and outputs, which are described in the section
 :ref:`Input/Output Properties`.
 
+Details on the internals of components and how to write them are in the section on
+:ref:`Writing Components`.
+
 Prognostic
 ----------
 

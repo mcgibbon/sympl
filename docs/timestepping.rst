@@ -3,12 +3,12 @@ Timestepping
 
 :py:class:`~sympl.TimeStepper` objects use time derivatives from
 :py:class:`~sympl.Prognostic` objects to step a model state forward in time.
-They are initialized using a list of :py:class:`~sympl.Prognostic` objects.
+They are initialized using any number of :py:class:`~sympl.Prognostic` objects.
 
 .. code-block:: python
 
     from sympl import AdamsBashforth
-    time_stepper = AdamsBashforth([MyPrognostic(), MyOtherPrognostic()])
+    time_stepper = AdamsBashforth(MyPrognostic(), MyOtherPrognostic())
 
 Once initialized, a :py:class:`~sympl.TimeStepper` object has a very similar
 interface to the :py:class:`~sympl.Implicit` object.
@@ -16,7 +16,7 @@ interface to the :py:class:`~sympl.Implicit` object.
 .. code-block:: python
 
     from datetime import timedelta
-    time_stepper = AdamsBashforth([MyPrognostic()])
+    time_stepper = AdamsBashforth(MyPrognostic())
     timestep = timedelta(minutes=10)
     diagnostics, next_state = time_stepper(state, timestep)
     state.update(diagnostics)
