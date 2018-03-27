@@ -60,7 +60,7 @@ class TimesteppingBase(object):
 
     def test_timestepper_reveals_prognostics(self):
         prog1 = MockEmptyPrognostic()
-        prog1.input_properties = {'input1': {}}
+        prog1.input_properties = {'input1': {'dims': ['dim1'], 'units': 'm'}}
         time_stepper = self.timestepper_class(prog1)
         assert same_list(time_stepper.prognostic_list, (prog1,))
 
@@ -455,7 +455,6 @@ class TimesteppingBase(object):
         }
         _, new_state = stepper(state, timedelta(seconds=5))
         assert 'input1' in new_state.keys()
-        print(new_state['input1'].values.data, untouched_quantity.values.data)
         assert new_state['input1'].dims == untouched_quantity.dims
         assert np.allclose(new_state['input1'].values, 10.)
         assert new_state['input1'].attrs['units'] == 'J'

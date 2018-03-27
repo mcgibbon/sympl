@@ -1,4 +1,5 @@
 import pytest
+import unittest
 import mock
 from sympl import (
     Prognostic, Diagnostic, Monitor, PrognosticComposite, DiagnosticComposite,
@@ -307,6 +308,44 @@ def test_diagnostic_composite_single_full_component():
     assert composite.diagnostic_properties == diagnostic_properties
 
 
+def test_diagnostic_composite_single_component_no_dims_on_diagnostic():
+    input_properties = {
+        'diag1': {
+            'dims': ['dim1'],
+            'units': 'm',
+        },
+    }
+    diagnostic_properties = {
+        'diag1': {
+            'units': 'km',
+        },
+    }
+    diagnostic_output = {}
+    diagnostic = MockDiagnostic(
+        input_properties, diagnostic_properties, diagnostic_output)
+    composite = DiagnosticComposite(diagnostic)
+    assert composite.input_properties == input_properties
+    assert composite.diagnostic_properties == diagnostic_properties
+
+
+def test_diagnostic_composite_single_component_missing_dims_on_diagnostic():
+    input_properties = {}
+    diagnostic_properties = {
+        'diag1': {
+            'units': 'km',
+        },
+    }
+    diagnostic_output = {}
+    diagnostic = MockDiagnostic(
+        input_properties, diagnostic_properties, diagnostic_output)
+    try:
+        DiagnosticComposite(diagnostic)
+    except InvalidPropertyDictError:
+        pass
+    else:
+        raise AssertionError('Should have raised InvalidPropertyDictError')
+
+
 def test_diagnostic_composite_two_components_no_overlap():
     diagnostic1 = MockDiagnostic(
         input_properties={
@@ -566,6 +605,307 @@ def test_prognostic_composite_single_tendency():
         tendency_output={},
     )
     composite = PrognosticComposite(prognostic)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == prognostic.tendency_properties
+
+
+def test_prognostic_composite_implicit_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == {
+        'tend1': {
+            'dims': ['dims1', 'dims2'],
+            'units': 'degK / day',
+        }
+    }
+
+
+def test_two_prognostic_composite_implicit_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    prognostic2 = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic, prognostic2)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == {
+        'tend1': {
+            'dims': ['dims1', 'dims2'],
+            'units': 'degK / day',
+        }
+    }
+
+
+def test_prognostic_composite_explicit_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == prognostic.tendency_properties
+
+
+def test_two_prognostic_composite_explicit_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    prognostic2 = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic, prognostic2)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == prognostic.tendency_properties
+
+
+def test_two_prognostic_composite_explicit_and_implicit_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    prognostic2 = MockPrognostic(
+        input_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic, prognostic2)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == prognostic.tendency_properties
+
+
+def test_prognostic_composite_explicit_dims_not_in_input():
+    prognostic = MockPrognostic(
+        input_properties={
+            'input1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic)
+    assert composite.input_properties == prognostic.input_properties
+    assert composite.diagnostic_properties == prognostic.diagnostic_properties
+    assert composite.tendency_properties == prognostic.tendency_properties
+
+
+def test_two_prognostic_composite_incompatible_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'input1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            },
+            'input2': {
+                'dims': ['dims3', 'dims1'],
+                'units': 'degK / day'
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    prognostic2 = MockPrognostic(
+        input_properties={
+            'input1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            },
+            'input2': {
+                'dims': ['dims3', 'dims1'],
+                'units': 'degK / day'
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims3', 'dims1'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    try:
+        PrognosticComposite(prognostic, prognostic2)
+    except InvalidPropertyDictError:
+        pass
+    else:
+        raise AssertionError('Should have raised InvalidPropertyDictError')
+
+
+def test_two_prognostic_composite_compatible_dims():
+    prognostic = MockPrognostic(
+        input_properties={
+            'input1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            },
+            'input2': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day'
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    prognostic2 = MockPrognostic(
+        input_properties={
+            'input1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            },
+            'input2': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day'
+            }
+        },
+        diagnostic_properties={},
+        tendency_properties={
+            'tend1': {
+                'dims': ['dims1', 'dims2'],
+                'units': 'degK / day',
+            }
+        },
+        diagnostic_output={},
+        tendency_output={},
+    )
+    composite = PrognosticComposite(prognostic, prognostic2)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties

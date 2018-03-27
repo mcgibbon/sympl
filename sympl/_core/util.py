@@ -637,20 +637,27 @@ def get_final_shape(data_array, out_dims, direction_to_names):
     return final_shape
 
 
-def combine_component_properties(component_list, property_name):
-    args = []
+def combine_component_properties(component_list, property_name, input_properties=None):
+    property_list = []
     for component in component_list:
-        args.append(getattr(component, property_name))
-    return combine_properties(*args)
+        property_list.append(getattr(component, property_name))
+    return combine_properties(property_list, input_properties)
 
 
-def combine_properties(*args):
+def combine_properties(property_list, input_properties=None):
+    if input_properties is None:
+        input_properties = {}
     return_dict = {}
-    for property_dict in args:
+    for property_dict in property_list:
         for name, properties in property_dict.items():
             if name not in return_dict:
                 return_dict[name] = {}
                 return_dict[name].update(properties)
+                if 'dims' not in properties.keys():
+                    if name in input_properties.keys() and 'dims' in input_properties[name].keys():
+                        return_dict[name]['dims'] = input_properties[name]['dims']
+                    else:
+                        raise InvalidPropertyDictError()
             elif not units_are_compatible(
                     properties['units'], return_dict[name]['units']):
                 raise InvalidPropertyDictError(
@@ -659,8 +666,14 @@ def combine_properties(*args):
                         return_dict[name]['units'],
                         properties['units'], name))
             else:
+                if 'dims' in properties.keys():
+                    new_dims = properties['dims']
+                elif name in input_properties.keys() and 'dims' in input_properties[name].keys():
+                    new_dims = input_properties[name]['dims']
+                else:
+                    raise InvalidPropertyDictError()
                 try:
-                    dims = combine_dims(return_dict[name]['dims'], properties['dims'])
+                    dims = combine_dims(return_dict[name]['dims'], new_dims)
                     return_dict[name]['dims'] = dims
                 except InvalidPropertyDictError as err:
                     raise InvalidPropertyDictError(

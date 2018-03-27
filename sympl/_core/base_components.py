@@ -1,6 +1,5 @@
 import abc
-from .util import (
-    get_numpy_arrays_with_properties, restore_data_arrays_with_properties)
+from .state import get_numpy_arrays_with_properties, restore_data_arrays_with_properties
 from .time import timedelta
 from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,

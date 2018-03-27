@@ -59,6 +59,13 @@ Breaking changes
   proper conversion of dimensions and units.
 * Removed ComponentTestBase from package. All of its tests except for output
   caching are now performed on object initialization or call time.
+* "*" matches are now enforced to be the same across all quantities of a
+  component, such that the length of the "*" axis will be the same for all
+  quantities. Any missing dimensions that are present on other quantities
+  will be created and broadcast to achieve this.
+* dims_like is obsolete as a result, and is no longer used. `dims` should be
+  used instead. If present, `dims` from input properties will be used as
+  default.
 
 v0.3.2
 ------

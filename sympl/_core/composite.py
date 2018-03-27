@@ -2,6 +2,7 @@ from .base_components import Prognostic, Diagnostic, Monitor
 from .util import (
     update_dict_by_adding_another, ensure_no_shared_keys,
     combine_component_properties)
+from .exceptions import InvalidPropertyDictError
 
 
 class InputPropertiesCompositeMixin(object):
@@ -27,9 +28,12 @@ class DiagnosticPropertiesCompositeMixin(object):
     def diagnostic_properties(self):
         return_dict = {}
         for component in self.component_list:
-            print(component.diagnostic_properties.keys(), return_dict.keys())
             ensure_no_shared_keys(component.diagnostic_properties, return_dict)
             return_dict.update(component.diagnostic_properties)
+        for name, properties in return_dict.items():
+            if 'dims' not in properties.keys() and not (name in self.input_properties):
+                raise InvalidPropertyDictError(
+                    'Must define dims for diagnostic output {}'.format(name))
         return return_dict
 
     def __init__(self, *args):
@@ -103,7 +107,8 @@ class PrognosticComposite(
 
     @property
     def tendency_properties(self):
-        return combine_component_properties(self.component_list, 'tendency_properties')
+        return combine_component_properties(
+            self.component_list, 'tendency_properties', self.input_properties)
 
     def __init__(self, *args):
         """
