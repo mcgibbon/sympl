@@ -135,6 +135,57 @@ class PrognosticTests(unittest.TestCase):
         assert prognostic.state_given['time'] == timedelta(seconds=0)
         assert prognostic.times_called == 1
 
+    def test_input_requires_dims(self):
+        input_properties = {'input1': {'units': 'm'}}
+        diagnostic_properties = {}
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties, tendency_properties,
+                diagnostic_output, tendency_output
+            )
+
+    def test_input_requires_units(self):
+        input_properties = {'input1': {'dims': ['dim1']}}
+        diagnostic_properties = {}
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                tendency_properties,
+                diagnostic_output, tendency_output
+            )
+
+    def test_diagnostic_requires_units(self):
+        input_properties = {}
+        diagnostic_properties = {'diag1': {}}
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                tendency_properties,
+                diagnostic_output, tendency_output
+            )
+
+    def test_tendency_requires_units(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {'tend1': {}}
+        diagnostic_output = {}
+        tendency_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                tendency_properties,
+                diagnostic_output, tendency_output
+            )
+
     def test_raises_when_tendency_not_given(self):
         input_properties = {}
         diagnostic_properties = {}
@@ -808,6 +859,36 @@ class DiagnosticTests(unittest.TestCase):
         assert diagnostic.state_given['time'] == timedelta(seconds=0)
         assert diagnostic.times_called == 1
 
+    def test_input_requires_dims(self):
+        input_properties = {'input1': {'units': 'm'}}
+        diagnostic_properties = {}
+        diagnostic_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                diagnostic_output
+            )
+
+    def test_input_requires_units(self):
+        input_properties = {'input1': {'dims': ['dim1']}}
+        diagnostic_properties = {}
+        diagnostic_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                diagnostic_output
+            )
+
+    def test_diagnostic_requires_units(self):
+        input_properties = {}
+        diagnostic_properties = {'diag1': {}}
+        diagnostic_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                diagnostic_output,
+            )
+
     def test_raises_when_diagnostic_not_given(self):
         input_properties = {}
         diagnostic_properties = {
@@ -1231,6 +1312,58 @@ class ImplicitTests(unittest.TestCase):
         assert 'time' in implicit.state_given.keys()
         assert implicit.state_given['time'] == timedelta(seconds=0)
         assert implicit.times_called == 1
+
+    def test_input_requires_dims(self):
+        input_properties = {'input1': {'units': 'm'}}
+        diagnostic_properties = {}
+        output_properties = {}
+        diagnostic_output = {}
+        state_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                output_properties,
+                diagnostic_output, state_output
+            )
+
+    def test_input_requires_units(self):
+        input_properties = {'input1': {'dims': ['dim1']}}
+        diagnostic_properties = {}
+        output_properties = {}
+        diagnostic_output = {}
+        state_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                output_properties,
+                diagnostic_output, state_output
+            )
+
+    def test_diagnostic_requires_units(self):
+        input_properties = {}
+        diagnostic_properties = {'diag1': {}}
+        output_properties = {}
+        diagnostic_output = {}
+        state_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                output_properties,
+                diagnostic_output, state_output
+            )
+
+    def test_output_requires_units(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        output_properties = {'output1': {}}
+        diagnostic_output = {}
+        state_output = {}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.component_class(
+                input_properties, diagnostic_properties,
+                output_properties,
+                diagnostic_output, state_output
+            )
 
     def test_timedelta_is_passed(self):
         implicit = MockImplicit({}, {}, {}, {}, {})

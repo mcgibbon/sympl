@@ -336,9 +336,9 @@ def test_diagnostic_composite_single_component_missing_dims_on_diagnostic():
         },
     }
     diagnostic_output = {}
-    diagnostic = MockDiagnostic(
-        input_properties, diagnostic_properties, diagnostic_output)
     try:
+        diagnostic = MockDiagnostic(
+            input_properties, diagnostic_properties, diagnostic_output)
         DiagnosticComposite(diagnostic)
     except InvalidPropertyDictError:
         pass

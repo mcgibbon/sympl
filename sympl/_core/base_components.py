@@ -11,7 +11,32 @@ def apply_scale_factors(array_state, scale_factors):
         array_state[key] *= factor
 
 
+class InputMixin(object):
+
+    def __init__(self):
+        for name, properties in self.input_properties.items():
+            if 'units' not in properties.keys():
+                raise InvalidPropertyDictError(
+                    'Input properties do not have units defined for {}'.format(name))
+            if 'dims' not in properties.keys():
+                raise InvalidPropertyDictError(
+                    'Input properties do not have dims defined for {}'.format(name)
+                )
+        super(InputMixin, self).__init__()
+
+
 class TendencyMixin(object):
+
+    def __init__(self):
+        for name, properties in self.tendency_properties.items():
+            if 'units' not in properties.keys():
+                raise InvalidPropertyDictError(
+                    'Tendency properties do not have units defined for {}'.format(name))
+            if 'dims' not in properties.keys() and name not in self.input_properties.keys():
+                raise InvalidPropertyDictError(
+                    'Tendency properties do not have dims defined for {}'.format(name)
+                )
+        super(TendencyMixin, self).__init__()
 
     @property
     def _wanted_tendency_aliases(self):
@@ -55,6 +80,17 @@ class TendencyMixin(object):
 
 class DiagnosticMixin(object):
 
+    def __init__(self):
+        for name, properties in self.diagnostic_properties.items():
+            if 'units' not in properties.keys():
+                raise InvalidPropertyDictError(
+                    'Diagnostic properties do not have units defined for {}'.format(name))
+            if 'dims' not in properties.keys() and name not in self.input_properties.keys():
+                raise InvalidPropertyDictError(
+                    'Diagnostic properties do not have dims defined for {}'.format(name)
+                )
+        super(DiagnosticMixin, self).__init__()
+
     @property
     def _wanted_diagnostic_aliases(self):
         wanted_diagnostic_aliases = {}
@@ -96,6 +132,17 @@ class DiagnosticMixin(object):
 
 
 class OutputMixin(object):
+
+    def __init__(self):
+        for name, properties in self.output_properties.items():
+            if 'units' not in properties.keys():
+                raise InvalidPropertyDictError(
+                    'Output properties do not have units defined for {}'.format(name))
+            if 'dims' not in properties.keys() and name not in self.input_properties.keys():
+                raise InvalidPropertyDictError(
+                    'Output properties do not have dims defined for {}'.format(name)
+                )
+        super(OutputMixin, self).__init__()
 
     @property
     def _wanted_output_aliases(self):
@@ -139,7 +186,7 @@ class OutputMixin(object):
         self._check_extra_outputs(output_dict)
 
 
-class Implicit(DiagnosticMixin, OutputMixin):
+class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
     """
     Attributes
     ----------
@@ -282,6 +329,7 @@ class Implicit(DiagnosticMixin, OutputMixin):
             self._added_tendency_properties = self._insert_tendency_properties()
         else:
             self._added_tendency_properties = set()
+        super(Implicit, self).__init__()
 
     def _insert_tendency_properties(self):
         added_names = []
@@ -427,7 +475,7 @@ class Implicit(DiagnosticMixin, OutputMixin):
         pass
 
 
-class Prognostic(DiagnosticMixin, TendencyMixin):
+class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
     """
     Attributes
     ----------
@@ -537,6 +585,7 @@ class Prognostic(DiagnosticMixin, TendencyMixin):
             self.diagnostic_scale_factors = {}
         self.update_interval = update_interval
         self._last_update_time = None
+        super(Prognostic, self).__init__()
 
     def __call__(self, state):
         """
@@ -614,7 +663,7 @@ class Prognostic(DiagnosticMixin, TendencyMixin):
         pass
 
 
-class ImplicitPrognostic(DiagnosticMixin, TendencyMixin):
+class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
     """
     Attributes
     ----------
@@ -737,6 +786,7 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin):
             self.name = self.__class__.__name__.lower()
         else:
             self.name = name
+        super(ImplicitPrognostic, self).__init__()
 
     def __call__(self, state, timestep):
         """
@@ -817,7 +867,7 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin):
         """
 
 
-class Diagnostic(DiagnosticMixin):
+class Diagnostic(DiagnosticMixin, InputMixin):
     """
     Attributes
     ----------
@@ -905,6 +955,7 @@ class Diagnostic(DiagnosticMixin):
         self.update_interval = update_interval
         self._last_update_time = None
         self._diagnostics = None
+        super(Diagnostic, self).__init__()
 
     def __call__(self, state):
         """
