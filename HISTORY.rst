@@ -31,6 +31,8 @@ Latest
   returned by get_component_aliases
 * Fixed a bug where TimeStepper objects would modify the arrays passed to them by
   Prognostic objects, leading to unexpected value changes.
+* Fixed a bug where constants were missing from the string returned by
+  get_constants_string, particularly any new constants (issue #27)
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

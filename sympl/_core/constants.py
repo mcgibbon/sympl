@@ -9,16 +9,29 @@ class ConstantDict(dict):
 
     def _repr(self, sphinx=False):
         return_string = ''
+        printed_names = set()
         for category, name_list in constant_names_by_category.items():
             if len(name_list) > 0:
                 return_string += category.title() + '\n'
             for name in name_list:
+                printed_names.add(name)
                 units = self[name].attrs['units']
                 units = units.replace('dimensionless', '')
                 return_string += '\t{}: {} {}\n'.format(
                     name, self[name].values.item(), units)
                 if sphinx:
                     return_string += '\n'
+            return_string += '\n'
+        print(set(self.keys()).difference(printed_names))
+        if len(set(self.keys()).difference(printed_names)) > 0:
+            return_string += 'User Defined\n'
+            for name in self.keys():
+                if name not in printed_names:
+                    units = self[name].attrs['units']
+                    return_string += '\t{}: {} {}\n'.format(
+                        name, self[name].values.item(), units)
+                    if sphinx:
+                        return_string += '\n'
             return_string += '\n'
         return return_string
 
@@ -120,7 +133,8 @@ constant_names_by_category = {
         'gravitational_acceleration',
         'planetary_radius',
         'planetary_rotation_rate',
-        'seconds_per_day'],
+        'seconds_per_day'
+    ],
 
     'physical': [
         'stefan_boltzmann_constant',
@@ -129,7 +143,8 @@ constant_names_by_category = {
         'boltzmann_constant',
         'loschmidt_constant',
         'universal_gas_constant',
-        'planck_constant'],
+        'planck_constant'
+    ],
 
     'condensible': [
         'density_of_liquid_phase',
@@ -146,7 +161,10 @@ constant_names_by_category = {
         'thermal_conductivity_of_solid_phase_as_ice',
         'thermal_conductivity_of_solid_phase_as_snow',
         'thermal_conductivity_of_liquid_phase',
-        'freezing_temperature_of_liquid_phase'],
+        'freezing_temperature_of_liquid_phase',
+        'enthalpy_of_fusion',
+        'latent_heat_of_vaporization',
+    ],
 
     'atmospheric': [
         'heat_capacity_of_dry_air_at_constant_pressure',
@@ -155,9 +173,12 @@ constant_names_by_category = {
         'reference_air_pressure'],
 
     'stellar': [
-        'stellar_irradiance'],
+        'stellar_irradiance',
+        'solar_constant',
+    ],
 
-    'oceanographic': [],
+    'oceanographic': [
+    ],
 
     'chemical': [
         'heat_capacity_of_water_vapor_at_constant_pressure',
@@ -165,7 +186,23 @@ constant_names_by_category = {
         'gas_constant_of_water_vapor',
         'latent_heat_of_vaporization_of_water',
         'heat_capacity_of_liquid_water',
-        'latent_heat_of_fusion_of_water'],
+        'latent_heat_of_fusion_of_water',
+        'heat_capacity_of_solid_water_as_ice',
+        'heat_capacity_of_solid_water_as_snow',
+        'thermal_conductivity_of_solid_water_as_ice',
+        'thermal_conductivity_of_solid_water_as_snow',
+        'thermal_conductivity_of_liquid_water',
+        'density_of_solid_water_as_ice',
+        'density_of_solid_water_as_snow',
+        'freezing_temperature_of_liquid_water',
+        'specific_enthalpy_of_water_vapor',
+        'density_of_snow',
+        'heat_capacity_of_snow',
+        'heat_capacity_of_ice',
+        'density_of_ice',
+        'thermal_conductivity_of_ice',
+        'thermal_conductivity_of_snow',
+    ],
 
 }
 
