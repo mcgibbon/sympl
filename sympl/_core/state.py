@@ -143,7 +143,10 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
 
 
 def restore_data_arrays_with_properties(
-        raw_arrays, output_properties, input_state, input_properties):
+        raw_arrays, output_properties, input_state, input_properties,
+        ignore_names=None):
+    if ignore_names is None:
+        ignore_names = []
     wildcard_names, dim_lengths = get_wildcard_matches_and_dim_lengths(
         input_state, input_properties)
     for name, value in raw_arrays.items():
@@ -151,7 +154,9 @@ def restore_data_arrays_with_properties(
             raw_arrays[name] = np.asarray(value)
     out_dims_property = {}
     for name, properties in output_properties.items():
-        if 'dims' in properties.keys():
+        if name in ignore_names:
+            continue
+        elif 'dims' in properties.keys():
             out_dims_property[name] = properties['dims']
         elif name not in input_properties.keys():
             raise InvalidPropertyDictError(
@@ -163,6 +168,8 @@ def restore_data_arrays_with_properties(
             out_dims_property[name] = input_properties[name]['dims']
     out_dict = {}
     for name, dims in out_dims_property.items():
+        if name in ignore_names:
+            continue
         if 'alias' in output_properties[name].keys():
             raw_name = output_properties[name]['alias']
         elif name in input_properties.keys() and 'alias' in input_properties[name].keys():

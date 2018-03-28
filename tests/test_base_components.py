@@ -825,6 +825,135 @@ class PrognosticTests(unittest.TestCase):
             prognostic, {'time': dt + timedelta(seconds=50)})
         assert prognostic.times_called == 5, 'should not re-compute output'
 
+    def test_tendencies_in_diagnostics_no_tendency(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {}
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, tendencies_in_diagnostics=True
+        )
+        assert prognostic.input_properties == {}
+        assert prognostic.diagnostic_properties == {}
+        assert prognostic.tendency_properties == {}
+        state = {'time': timedelta(0)}
+        _, diagnostics = self.call_component(prognostic, state)
+        assert diagnostics == {}
+
+    def test_tendencies_in_diagnostics_one_tendency(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            }
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 20.,
+        }
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, tendencies_in_diagnostics=True,
+        )
+        tendency_name = 'output1_tendency_from_{}'.format(prognostic.__class__.__name__)
+        assert len(prognostic.diagnostic_properties) == 1
+        assert tendency_name in prognostic.diagnostic_properties.keys()
+        properties = prognostic.diagnostic_properties[tendency_name]
+        assert properties['dims'] == ['dim1']
+        assert properties['units'] == 'm/s'
+        state = {
+            'time': timedelta(0),
+        }
+        _, diagnostics = self.call_component(prognostic, state)
+        assert tendency_name in diagnostics.keys()
+        assert len(
+            diagnostics[tendency_name].dims) == 1
+        assert 'dim1' in diagnostics[tendency_name].dims
+        assert diagnostics[tendency_name].attrs['units'] == 'm/s'
+        assert np.all(diagnostics[tendency_name].values == 20.)
+
+    def test_tendencies_in_diagnostics_one_tendency_dims_from_input(self):
+        input_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'units': 'm/s'
+            }
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 20.,
+        }
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, tendencies_in_diagnostics=True,
+        )
+        tendency_name = 'output1_tendency_from_{}'.format(prognostic.__class__.__name__)
+        assert len(prognostic.diagnostic_properties) == 1
+        assert tendency_name in prognostic.diagnostic_properties.keys()
+        properties = prognostic.diagnostic_properties[tendency_name]
+        assert properties['dims'] == ['dim1']
+        assert properties['units'] == 'm/s'
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}),
+        }
+        _, diagnostics = self.call_component(prognostic, state)
+        assert tendency_name in diagnostics.keys()
+        assert len(
+            diagnostics[tendency_name].dims) == 1
+        assert 'dim1' in diagnostics[tendency_name].dims
+        assert diagnostics[tendency_name].attrs['units'] == 'm/s'
+        assert np.all(diagnostics[tendency_name].values == 20.)
+
+    def test_tendencies_in_diagnostics_one_tendency_with_component_name(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            }
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 20.,
+        }
+        prognostic = self.component_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, tendencies_in_diagnostics=True,
+            name='component',
+        )
+        tendency_name = 'output1_tendency_from_component'
+        assert len(prognostic.diagnostic_properties) == 1
+        assert tendency_name in prognostic.diagnostic_properties.keys()
+        properties = prognostic.diagnostic_properties[tendency_name]
+        assert properties['dims'] == ['dim1']
+        assert properties['units'] == 'm/s'
+        state = {
+            'time': timedelta(0),
+        }
+        _, diagnostics = self.call_component(prognostic, state)
+        print(diagnostics.keys())
+        assert tendency_name in diagnostics.keys()
+        assert len(
+            diagnostics[tendency_name].dims) == 1
+        assert 'dim1' in diagnostics[tendency_name].dims
+        assert diagnostics[tendency_name].attrs['units'] == 'm/s'
+        assert np.all(diagnostics[tendency_name].values == 20.)
+
 
 class ImplicitPrognosticTests(PrognosticTests):
 
@@ -2037,6 +2166,53 @@ class ImplicitTests(unittest.TestCase):
         output_properties = {
             'output1': {
                 'dims': ['dim1'],
+                'units': 'm'
+            }
+        }
+        diagnostic_output = {}
+        output_state = {
+            'output1': np.ones([10]) * 20.,
+        }
+        implicit = MockImplicit(
+            input_properties, diagnostic_properties, output_properties,
+            diagnostic_output, output_state, tendencies_in_diagnostics=True,
+        )
+        assert len(implicit.diagnostic_properties) == 1
+        assert 'output1_tendency_from_mockimplicit' in implicit.diagnostic_properties.keys()
+        assert 'output1' in input_properties.keys(), 'Implicit needs original value to calculate tendency'
+        assert input_properties['output1']['dims'] == ['dim1']
+        assert input_properties['output1']['units'] == 'm'
+        properties = implicit.diagnostic_properties[
+            'output1_tendency_from_mockimplicit']
+        assert properties['dims'] == ['dim1']
+        assert properties['units'] == 'm s^-1'
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10])*10.,
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            ),
+        }
+        diagnostics, _ = implicit(state, timedelta(seconds=5))
+        assert 'output1_tendency_from_mockimplicit' in diagnostics.keys()
+        assert len(
+            diagnostics['output1_tendency_from_mockimplicit'].dims) == 1
+        assert 'dim1' in diagnostics['output1_tendency_from_mockimplicit'].dims
+        assert diagnostics['output1_tendency_from_mockimplicit'].attrs['units'] == 'm s^-1'
+        assert np.all(
+            diagnostics['output1_tendency_from_mockimplicit'].values == 2.)
+
+    def test_tendencies_in_diagnostics_one_tendency_dims_from_input(self):
+        input_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_properties = {}
+        output_properties = {
+            'output1': {
                 'units': 'm'
             }
         }
