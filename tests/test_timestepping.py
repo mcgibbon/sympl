@@ -333,6 +333,44 @@ class TimesteppingBase(object):
         assert len(new_state['air_temperature'].attrs) == 1
         assert new_state['air_temperature'].attrs['units'] == 'K'
 
+    def test_given_tendency_not_modified_with_two_components(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'tend1': {
+                'dims': ['dim1'],
+                'units': 'm/s',
+            }
+        }
+        diagnostic_output = {}
+        tendency_output_1 = {
+            'tend1': np.ones([10]) * 5.
+        }
+        prognostic1 = MockPrognostic(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output_1
+        )
+        tendency_output_2 = {
+            'tend1': np.ones([10]) * 5.
+        }
+        prognostic2 = MockPrognostic(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output_2
+        )
+        stepper = self.timestepper_class(
+            prognostic1, prognostic2, tendencies_in_diagnostics=True)
+        state = {
+            'time': timedelta(0),
+            'tend1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'},
+            )
+        }
+        _, _ = stepper(state, timedelta(seconds=5))
+        assert np.all(tendency_output_1['tend1'] == 5.)
+        assert np.all(tendency_output_2['tend1'] == 5.)
+
     def test_tendencies_in_diagnostics_no_tendency(self):
         input_properties = {}
         diagnostic_properties = {}

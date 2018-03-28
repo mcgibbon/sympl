@@ -252,7 +252,10 @@ def update_dict_by_adding_another(dict1, dict2):
     """
     for key in dict2.keys():
         if key not in dict1:
-            dict1[key] = dict2[key]
+            if hasattr(dict2[key], 'copy'):
+                dict1[key] = dict2[key].copy()
+            else:
+                dict1[key] = dict2[key]
         else:
             if (isinstance(dict1[key], DataArray) and isinstance(dict2[key], DataArray) and
                     ('units' in dict1[key].attrs) and ('units' in dict2[key].attrs)):

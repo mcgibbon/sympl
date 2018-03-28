@@ -29,6 +29,8 @@ Latest
   respectively if outputs do not match.
 * Added a priority order of property types for determining which aliases are
   returned by get_component_aliases
+* Fixed a bug where TimeStepper objects would modify the arrays passed to them by
+  Prognostic objects, leading to unexpected value changes.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
