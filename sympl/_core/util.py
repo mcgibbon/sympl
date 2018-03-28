@@ -3,7 +3,7 @@ import numpy as np
 from .units import units_are_compatible
 from .array import DataArray
 from .exceptions import (
-    SharedKeyError, InvalidStateError, InvalidPropertyDictError)
+    SharedKeyError, InvalidPropertyDictError)
 
 try:
     from numba import jit
