@@ -7,9 +7,49 @@ class ConstantPrognostic(Prognostic):
     """
     Prescribes constant tendencies provided at initialization.
 
-    Note: Any arrays in the passed dictionaries are not copied, so that
-        if you were to modify them after passing them into this object,
-        it would also modify the values inside this object.
+    Attributes
+    ----------
+    input_properties : dict
+        A dictionary whose keys are quantities required in the state when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    tendency_properties : dict
+        A dictionary whose keys are quantities for which tendencies are returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    diagnostic_properties : dict
+        A dictionary whose keys are diagnostic quantities returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    input_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which input values are scaled before being used
+        by this object.
+    tendency_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which tendency values are scaled before being
+        returned by this object.
+    diagnostic_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which diagnostic values are scaled before being
+        returned by this object.
+    update_interval : timedelta
+        If not None, the component will only give new output if at least
+        a period of update_interval has passed since the last time new
+        output was given. Otherwise, it would return that cached output.
+    tendencies_in_diagnostics : boo
+        A boolean indicating whether this object will put tendencies of
+        quantities in its diagnostic output based on first order time
+        differencing of output values.
+    name : string
+        A label to be used for this object, for example as would be used for
+        Y in the name "X_tendency_from_Y".
+
+    Note
+    ----
+    Any arrays in the passed dictionaries are not copied, so that
+    if you were to modify them after passing them into this object,
+    it would also modify the values inside this object.
     """
 
     @property
@@ -36,7 +76,7 @@ class ConstantPrognostic(Prognostic):
             }
         return return_dict
 
-    def __init__(self, tendencies, diagnostics=None):
+    def __init__(self, tendencies, diagnostics=None, **kwargs):
         """
         Args
         ----
@@ -44,17 +84,41 @@ class ConstantPrognostic(Prognostic):
             A dictionary whose keys are strings indicating
             state quantities and values are the time derivative of those
             quantities in units/second to be returned by this Prognostic.
-        diagnostics : dict
+        diagnostics : dict, optional
             A dictionary whose keys are strings indicating
             state quantities and values are the value of those quantities
-            to be returned by this Prognostic.
+            to be returned by this Prognostic. By default an empty dictionary
+            is used.
+        input_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which input values are scaled before being used
+            by this object.
+        tendency_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which tendency values are scaled before being
+            returned by this object.
+        diagnostic_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which diagnostic values are scaled before being
+            returned by this object.
+        update_interval : timedelta, optional
+            If given, the component will only give new output if at least
+            a period of update_interval has passed since the last time new
+            output was given. Otherwise, it would return that cached output.
+        tendencies_in_diagnostics : bool, optional
+            A boolean indicating whether this object will put tendencies of
+            quantities in its diagnostic output.
+        name : string, optional
+            A label to be used for this object, for example as would be used for
+            Y in the name "X_tendency_from_Y". By default the class name in
+            lowercase is used.
         """
         self.__tendencies = tendencies.copy()
         if diagnostics is not None:
             self.__diagnostics = diagnostics.copy()
         else:
             self.__diagnostics = {}
-        super(ConstantPrognostic, self).__init__()
+        super(ConstantPrognostic, self).__init__(**kwargs)
 
     def array_call(self, state):
         tendencies = {}
@@ -69,6 +133,29 @@ class ConstantPrognostic(Prognostic):
 class ConstantDiagnostic(Diagnostic):
     """
     Yields constant diagnostics provided at initialization.
+
+    Attributes
+    ----------
+    input_properties : dict
+        A dictionary whose keys are quantities required in the state when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    diagnostic_properties : dict
+        A dictionary whose keys are diagnostic quantities returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    input_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which input values are scaled before being used
+        by this object.
+    diagnostic_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which diagnostic values are scaled before being
+        returned by this object.
+    update_interval : timedelta
+        If not None, the component will only give new output if at least
+        a period of update_interval has passed since the last time new
+        output was given. Otherwise, it would return that cached output.
 
     Note
     ----
@@ -91,7 +178,7 @@ class ConstantDiagnostic(Diagnostic):
             }
         return return_dict
 
-    def __init__(self, diagnostics):
+    def __init__(self, diagnostics, **kwargs):
         """
         Args
         ----
@@ -100,9 +187,21 @@ class ConstantDiagnostic(Diagnostic):
             state quantities and values are the value of those quantities.
             The values in the dictionary will be returned when this
             Diagnostic is called.
+        input_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which input values are scaled before being used
+            by this object.
+        diagnostic_scale_factors : dict, optional
+            A (possibly empty) dictionary whose keys are quantity names and
+            values are floats by which diagnostic values are scaled before being
+            returned by this object.
+        update_interval : timedelta, optional
+            If given, the component will only give new output if at least
+            a period of update_interval has passed since the last time new
+            output was given. Otherwise, it would return that cached output.
         """
         self.__diagnostics = diagnostics.copy()
-        super(ConstantDiagnostic, self).__init__()
+        super(ConstantDiagnostic, self).__init__(**kwargs)
 
     def array_call(self, state):
         return_state = {}
@@ -119,6 +218,44 @@ class RelaxationPrognostic(Prognostic):
     :math:`\frac{dx}{dt} = - \frac{x - x_{eq}}{\tau}`
     where :math:`x` is the quantity being relaxed, :math:`x_{eq}` is the
     equilibrium value, and :math:`\tau` is the timescale of the relaxation.
+
+    Attributes
+    ----------
+    input_properties : dict
+        A dictionary whose keys are quantities required in the state when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    tendency_properties : dict
+        A dictionary whose keys are quantities for which tendencies are returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    diagnostic_properties : dict
+        A dictionary whose keys are diagnostic quantities returned when the
+        object is called, and values are dictionaries which indicate 'dims' and
+        'units'.
+    input_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which input values are scaled before being used
+        by this object.
+    tendency_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which tendency values are scaled before being
+        returned by this object.
+    diagnostic_scale_factors : dict
+        A (possibly empty) dictionary whose keys are quantity names and
+        values are floats by which diagnostic values are scaled before being
+        returned by this object.
+    update_interval : timedelta
+        If not None, the component will only give new output if at least
+        a period of update_interval has passed since the last time new
+        output was given. Otherwise, it would return that cached output.
+    tendencies_in_diagnostics : boo
+        A boolean indicating whether this object will put tendencies of
+        quantities in its diagnostic output based on first order time
+        differencing of output values.
+    name : string
+        A label to be used for this object, for example as would be used for
+        Y in the name "X_tendency_from_Y".
     """
 
     @property
@@ -250,6 +387,16 @@ class TimeDifferencingWrapper(ImplicitPrognostic):
         return self._implicit.diagnostic_propertes
 
     def __init__(self, implicit, **kwargs):
+        """
+        Initializes the TimeDifferencingWrapper. Some kwargs of Implicit
+        objects are not implemented, and should be applied instead on the
+        Implicit object which is wrapped by this one.
+
+        Parameters
+        ----------
+        implicit: Implicit
+            An Implicit component to wrap.
+        """
         if len(kwargs) > 0:
             raise TypeError('Received unexpected keyword argument {}'.format(
                 kwargs.popitem()[0]))
