@@ -118,9 +118,11 @@ class TendencyScalingMixin(object):
         return scaled_tendencies
 
 
-class ScalingWrapper(object):
+class PrognosticScalingWrapper(
+    Prognostic, InputScalingMixin, DiagnosticScalingMixin, TendencyScalingMixin):
 
-    def __init__(self, component):
+    def __init__(self, component, input_scale_factors, diagnostic_scale_factors,
+                 tendency_scale_factors):
         """
         Initializes the scaling wrapper.
 
@@ -128,13 +130,15 @@ class ScalingWrapper(object):
         ----------
         component
             The component to be wrapped.
+        input_scale_factors : dict
+        diagnostic_scale_factors : dict
+        tendency_scale_factors : dict
         """
         self.wrapped_component = component
-        super(ScalingWrapper, self).__init__()
-
-
-class PrognosticScalingWrapper(
-    ScalingWrapper, Prognostic, InputScalingMixin, DiagnosticScalingMixin, TendencyScalingMixin):
+        super(ScalingWrapper, self).__init__(
+            input_scale_factors=input_scale_factors,
+            diagnostic_scale_factors=diagnostic_scale_factors,
+            tendency_scale_factors=tendency_scale_factors)
 
     def __call__(self, state):
         input = self.apply_input_scaling(state)
@@ -145,7 +149,7 @@ class PrognosticScalingWrapper(
 
 
 class ImplicitPrognosticScalingWrapper(
-    ScalingWrapper, ImplicitPrognostic, InputScalingMixin, DiagnosticScalingMixin, TendencyScalingMixin):
+    ImplicitPrognostic, InputScalingMixin, DiagnosticScalingMixin, TendencyScalingMixin):
 
     def __call__(self, state, timestep):
         input = self.apply_input_scaling(state)
@@ -156,7 +160,7 @@ class ImplicitPrognosticScalingWrapper(
 
 
 class DiagnosticScalingWrapper(
-    ScalingWrapper, Diagnostic, InputScalingMixin, DiagnosticScalingMixin):
+    Diagnostic, InputScalingMixin, DiagnosticScalingMixin):
 
     def __call__(self, state):
         input = self.apply_input_scaling(state)
@@ -167,7 +171,7 @@ class DiagnosticScalingWrapper(
 
 
 class ImplicitScalingWrapper(
-    ScalingWrapper, Diagnostic, InputScalingMixin, DiagnosticScalingMixin, OutputScalingMixin):
+    Diagnostic, InputScalingMixin, DiagnosticScalingMixin, OutputScalingMixin):
 
     def __call__(self, state, timestep):
         input = self.apply_input_scaling(state)
