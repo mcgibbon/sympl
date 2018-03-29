@@ -189,7 +189,6 @@ def restore_data_arrays_with_properties(
                     out_dims.append(dims[i])
             out_array = np.reshape(raw_arrays[raw_name], target_shape)
         else:
-            print(raw_arrays)
             if len(dims) != len(raw_arrays[raw_name].shape):
                 raise InvalidPropertyDictError(
                     'Returned array for {} has shape {} '

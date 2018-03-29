@@ -188,7 +188,6 @@ class TimeStepper(object):
                     'TimeStepper ({}). You must disable '
                     'tendencies_in_diagnostics for this TimeStepper.'.format(
                         tendency_name))
-            print(name, input_properties, output_properties)
             base_units = input_properties[name]['units']
             diagnostics[tendency_name] = (
                 (new_state[name].to_units(base_units) - state[name].to_units(base_units)) /
