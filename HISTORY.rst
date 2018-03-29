@@ -33,6 +33,7 @@ Latest
   Prognostic objects, leading to unexpected value changes.
 * Fixed a bug where constants were missing from the string returned by
   get_constants_string, particularly any new constants (issue #27)
+* Fixed a bug in NetCDFMonitor which led to some aliases being skipped.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

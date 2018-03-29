@@ -102,7 +102,7 @@ else:
 
             # replace cached variable names with their aliases
             for longname, shortname in self._aliases.items():
-                for full_var_name in cache_state.keys():
+                for full_var_name in tuple(cache_state.keys()):
                     # replace any string in the full variable name that matches longname
                     # example: if longname is "temperature", shortname is "T", and
                     #    full_var_name is "temperature_tendency_from_radiation", the
