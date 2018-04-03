@@ -34,6 +34,11 @@ Latest
 * Fixed a bug where constants were missing from the string returned by
   get_constants_string, particularly any new constants (issue #27)
 * Fixed a bug in NetCDFMonitor which led to some aliases being skipped.
+* Modified class checking on components so that components which satisfy the
+  component's API will be recognized as instances using isinstance(obj, Class).
+  Right now this only checks for the presence and lack of presence of
+  component attributes, and correct signature of __call__. Later it may also
+  check properties dictionaries for consistency, or perform other checks.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -3,192 +3,14 @@ from .._core.base_components import (
 )
 
 
-class InputScalingMixin(object):
-
-    @property
-    def input_properties(self):
-        return self.wrapped_component.input_properties
-
-    def __init__(self, input_scale_factors=None):
-        self.input_scale_factors = dict()
-        if input_scale_factors is not None:
-            for input_field, value in input_scale_factors.items():
-                if input_field not in self.wrapped_component.inputs:
-                    raise ValueError(
-                        "{} is not an input of the wrapped component.".format(input_field))
-                self.input_scale_factors[input_field] = value
-        super(InputScalingMixin, self).__init__()
-
-    def apply_input_scaling(self, input_state):
-        scaled_state = {}
-        for name in scaled_state.keys():
-            if name in self.input_scale_factors.keys():
-                scale_factor = self.input_scale_factors[name]
-                scaled_state[name] = input_state[name]*scale_factor
-                scaled_state[name].attrs.update(input_state[name].attrs)
-            else:
-                scaled_state[name] = input_state[name]
-        return scaled_state
-
-
-class OutputScalingMixin(object):
-
-    @property
-    def output_properties(self):
-        return self.wrapped_component.output_properties
-
-    def __init__(self, output_scale_factors=None):
-        self.output_scale_factors = dict()
-        if output_scale_factors is not None:
-            for input_field, value in output_scale_factors.items():
-                if input_field not in self.wrapped_component.inputs:
-                    raise ValueError(
-                        "{} is not an input of the wrapped component.".format(
-                            input_field))
-                self.output_scale_factors[input_field] = value
-        super(OutputScalingMixin, self).__init__()
-
-    def apply_output_scaling(self, output_state):
-        scaled_outputs = {}
-        for name in scaled_outputs.keys():
-            if name in self.output_scale_factors.keys():
-                scale_factor = self.output_scale_factors[name]
-                scaled_outputs[name] = output_state[name] * scale_factor
-                scaled_outputs[name].attrs.update(output_state[name].attrs)
-            else:
-                scaled_outputs[name] = output_state[name]
-        return scaled_outputs
-
-
-class DiagnosticScalingMixin(object):
-
-    @property
-    def diagnostic_properties(self):
-        return self.wrapped_component.diagnostic_properties
-
-    def __init__(self, diagnostic_scale_factors=None):
-        self.diagnostic_scale_factors = dict()
-        if diagnostic_scale_factors is not None:
-            for input_field, value in diagnostic_scale_factors.items():
-                if input_field not in self.wrapped_component.inputs:
-                    raise ValueError(
-                        "{} is not an input of the wrapped component.".format(
-                            input_field))
-                self.diagnostic_scale_factors[input_field] = value
-        super(DiagnosticScalingMixin, self).__init__()
-
-    def apply_diagnostic_scaling(self, diagnostics):
-        scaled_diagnostics = {}
-        for name in scaled_diagnostics.keys():
-            if name in self.diagnostic_scale_factors.keys():
-                scale_factor = self.diagnostic_scale_factors[name]
-                scaled_diagnostics[name] = diagnostics[name] * scale_factor
-                scaled_diagnostics[name].attrs.update(diagnostics[name].attrs)
-            else:
-                scaled_diagnostics[name] = diagnostics[name]
-        return scaled_diagnostics
-
-
-class TendencyScalingMixin(object):
-
-    @property
-    def tendency_properties(self):
-        return self.wrapped_component.tendency_properties
-
-    def __init__(self, tendency_scale_factors=None):
-        self.tendency_scale_factors = dict()
-        if tendency_scale_factors is not None:
-            for input_field, value in tendency_scale_factors.items():
-                if input_field not in self.wrapped_component.inputs:
-                    raise ValueError(
-                        "{} is not an input of the wrapped component.".format(
-                            input_field))
-                self.tendency_scale_factors[input_field] = value
-        super(TendencyScalingMixin, self).__init__()
-
-    def apply_tendency_scaling(self, tendencies):
-        scaled_tendencies = {}
-        for name in scaled_tendencies.keys():
-            if name in self.tendency_scale_factors.keys():
-                scale_factor = self.tendency_scale_factors[name]
-                scaled_tendencies[name] = tendencies[name] * scale_factor
-                scaled_tendencies[name].attrs.update(tendencies[name].attrs)
-            else:
-                scaled_tendencies[name] = tendencies[name]
-        return scaled_tendencies
-
-
-class PrognosticScalingWrapper(
-    Prognostic, InputScalingMixin, DiagnosticScalingMixin, TendencyScalingMixin):
-
-    def __init__(self, component, input_scale_factors, diagnostic_scale_factors,
-                 tendency_scale_factors):
-        """
-        Initializes the scaling wrapper.
-
-        Parameters
-        ----------
-        component
-            The component to be wrapped.
-        input_scale_factors : dict
-        diagnostic_scale_factors : dict
-        tendency_scale_factors : dict
-        """
-        self.wrapped_component = component
-        super(ScalingWrapper, self).__init__(
-            input_scale_factors=input_scale_factors,
-            diagnostic_scale_factors=diagnostic_scale_factors,
-            tendency_scale_factors=tendency_scale_factors)
-
-    def __call__(self, state):
-        input = self.apply_input_scaling(state)
-        tendencies, diagnostics = self.wrapped_component(input)
-        tendencies = self.apply_tendency_scaling(tendencies)
-        diagnostics = self.apply_diagnostic_scaling(diagnostics)
-        return tendencies, diagnostics
-
-
-class ImplicitPrognosticScalingWrapper(
-    ImplicitPrognostic, InputScalingMixin, DiagnosticScalingMixin, TendencyScalingMixin):
-
-    def __call__(self, state, timestep):
-        input = self.apply_input_scaling(state)
-        tendencies, diagnostics = self.wrapped_component(input, timestep)
-        tendencies = self.apply_tendency_scaling(tendencies)
-        diagnostics = self.apply_diagnostic_scaling(diagnostics)
-        return tendencies, diagnostics
-
-
-class DiagnosticScalingWrapper(
-    Diagnostic, InputScalingMixin, DiagnosticScalingMixin):
-
-    def __call__(self, state):
-        input = self.apply_input_scaling(state)
-        tendencies, diagnostics = self.wrapped_component(input)
-        tendencies = self.apply_tendency_scaling(tendencies)
-        diagnostics = self.apply_diagnostic_scaling(diagnostics)
-        return tendencies, diagnostics
-
-
-class ImplicitScalingWrapper(
-    Diagnostic, InputScalingMixin, DiagnosticScalingMixin, OutputScalingMixin):
-
-    def __call__(self, state, timestep):
-        input = self.apply_input_scaling(state)
-        diagnostics, output = self.wrapped_component(input, timestep)
-        diagnostics = self.apply_diagnostic_scaling(diagnostics)
-        output = self.apply_output_scaling(output)
-        return diagnostics, output
-
-
 class ScalingWrapper(object):
     """
     Wraps any component and scales either inputs, outputs or tendencies
     by a floating point value.
     Example
     -------
-    This is how the ScaledInputOutputWrapper can be used to wrap a Prognostic.
-    >>> scaled_component = ScaledInputOutputWrapper(
+    This is how the ScalingWrapper can be used to wrap a Prognostic.
+    >>> scaled_component = ScalingWrapper(
     >>>     RRTMRadiation(),
     >>>     input_scale_factors = {
     >>>         'specific_humidity' = 0.2},
@@ -232,12 +54,20 @@ class ScalingWrapper(object):
             The keys in the scale factors do not correspond to valid
             input/output/tendency for this component.
         """
+        if not any(
+                isinstance(component, t) for t in [
+                    Diagnostic, Prognostic, ImplicitPrognostic, Implicit]):
+            raise TypeError(
+                'component must be a component type (Diagnostic, Prognostic, '
+                'ImplicitPrognostic, or Implicit)'
+            )
 
+        self._component = component
         self._input_scale_factors = dict()
         if input_scale_factors is not None:
 
             for input_field in input_scale_factors.keys():
-                if input_field not in component.inputs:
+                if input_field not in component.input_properties.keys():
                     raise ValueError(
                         "{} is not a valid input quantity.".format(input_field))
 
@@ -245,98 +75,113 @@ class ScalingWrapper(object):
 
         self._diagnostic_scale_factors = dict()
         if diagnostic_scale_factors is not None:
-
-            for diagnostic_field in diagnostic_scale_factors.keys():
-                if diagnostic_field not in component.diagnostics:
-                    raise ValueError(
-                        "{} is not a valid diagnostic quantity.".format(diagnostic_field))
-
+            if not hasattr(component, 'diagnostic_properties'):
+                raise TypeError(
+                    'Cannot apply diagnostic scale factors to component without '
+                    'diagnostic output.')
+            self._ensure_fields_have_properties(
+                diagnostic_scale_factors, component.diagnostic_properties, 'diagnostic')
             self._diagnostic_scale_factors = diagnostic_scale_factors
 
-        if hasattr(component, 'input_properties') and hasattr(component, 'output_properties'):
+        self._output_scale_factors = dict()
+        if output_scale_factors is not None:
+            if not hasattr(component, 'output_properties'):
+                raise TypeError(
+                    'Cannot apply output scale factors to component without '
+                    'output_properties.')
+            self._ensure_fields_have_properties(
+                output_scale_factors, component.output_properties, 'output')
+            self._output_scale_factors = output_scale_factors
 
-            self._output_scale_factors = dict()
-            if output_scale_factors is not None:
+        self._tendency_scale_factors = dict()
+        if tendency_scale_factors is not None:
+            if not hasattr(component, 'tendency_properties'):
+                raise TypeError(
+                    'Cannot apply tendency scale factors to component that does '
+                    'not output tendencies.')
+            self._ensure_fields_have_properties(
+                tendency_scale_factors, component.tendency_properties, 'tendency')
+            self._tendency_scale_factors = tendency_scale_factors
 
-                for output_field in output_scale_factors.keys():
-                    if output_field not in component.outputs:
-                        raise ValueError(
-                            "{} is not a valid output quantity.".format(output_field))
-
-                self._output_scale_factors = output_scale_factors
-            self._component_type = 'Implicit'
-
-        elif hasattr(component, 'input_properties') and hasattr(component, 'tendency_properties'):
-
-            self._tendency_scale_factors = dict()
-            if tendency_scale_factors is not None:
-
-                for tendency_field in tendency_scale_factors.keys():
-                    if tendency_field not in component.tendencies:
-                        raise ValueError(
-                            "{} is not a valid tendency quantity.".format(tendency_field))
-
-                self._tendency_scale_factors = tendency_scale_factors
-            self._component_type = 'Prognostic'
-
-        elif hasattr(component, 'input_properties') and hasattr(component, 'diagnostic_properties'):
-            self._component_type = 'Diagnostic'
-        else:
-            raise TypeError(
-                "Component must be either of type Implicit or Prognostic or Diagnostic")
-
-        self._component = component
+    def _ensure_fields_have_properties(
+            self, scale_factors, properties, properties_name):
+        for field in scale_factors.keys():
+            if field not in properties.keys():
+                raise ValueError(
+                    "{} is not a {} quantity in the given component"
+                    ", but was given a scale factor.".format(field, properties_name))
 
     def __getattr__(self, item):
         return getattr(self._component, item)
 
     def __call__(self, state, timestep=None):
+        """
+        Call the underlying component, applying scaling.
 
+        Parameters
+        ----------
+        state : dict
+            A model state dictionary.
+        timestep : timedelta, optional
+            A time step. If the underlying component does not use a timestep,
+            this will be discarded. If it does, this argument is required.
+
+        Returns
+        -------
+        *args
+            The return values of the underlying component.
+        """
         scaled_state = {}
         if 'time' in state:
             scaled_state['time'] = state['time']
 
-        for input_field in self.inputs:
+        for input_field in self.input_properties.keys():
             if input_field in self._input_scale_factors:
                 scale_factor = self._input_scale_factors[input_field]
                 scaled_state[input_field] = state[input_field]*float(scale_factor)
+                scaled_state[input_field].attrs = state[input_field].attrs
             else:
                 scaled_state[input_field] = state[input_field]
 
-        if self._component_type == 'Implicit':
+        if isinstance(self._component, Implicit):
+            if timestep is None:
+                raise TypeError('Must give timestep to call Implicit.')
             diagnostics, new_state = self._component(scaled_state, timestep)
-
-            for output_field in self._output_scale_factors.keys():
-                scale_factor = self._output_scale_factors[output_field]
-                new_state[output_field] *= float(scale_factor)
-
-            for diagnostic_field in self._diagnostic_scale_factors.keys():
-                scale_factor = self._diagnostic_scale_factors[diagnostic_field]
-                diagnostics[diagnostic_field] *= float(scale_factor)
-
+            for name in self._output_scale_factors.keys():
+                scale_factor = self._output_scale_factors[name]
+                new_state[name] *= float(scale_factor)
+            for name in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[name]
+                diagnostics[name] *= float(scale_factor)
             return diagnostics, new_state
-        elif self._component_type == 'Prognostic':
+        elif isinstance(self._component, Prognostic):
             tendencies, diagnostics = self._component(scaled_state)
-
             for tend_field in self._tendency_scale_factors.keys():
                 scale_factor = self._tendency_scale_factors[tend_field]
                 tendencies[tend_field] *= float(scale_factor)
-
-            for diagnostic_field in self._diagnostic_scale_factors.keys():
-                scale_factor = self._diagnostic_scale_factors[diagnostic_field]
-                diagnostics[diagnostic_field] *= float(scale_factor)
-
+            for name in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[name]
+                diagnostics[name] *= float(scale_factor)
             return tendencies, diagnostics
-        elif self._component_type == 'Diagnostic':
+        elif isinstance(self._component, ImplicitPrognostic):
+            if timestep is None:
+                raise TypeError('Must give timestep to call ImplicitPrognostic.')
+            tendencies, diagnostics = self._component(scaled_state, timestep)
+            for tend_field in self._tendency_scale_factors.keys():
+                scale_factor = self._tendency_scale_factors[tend_field]
+                tendencies[tend_field] *= float(scale_factor)
+            for name in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[name]
+                diagnostics[name] *= float(scale_factor)
+            return tendencies, diagnostics
+        elif isinstance(self._component, Diagnostic):
             diagnostics = self._component(scaled_state)
-
-            for diagnostic_field in self._diagnostic_scale_factors.keys():
-                scale_factor = self._diagnostic_scale_factors[diagnostic_field]
-                diagnostics[diagnostic_field] *= float(scale_factor)
-
+            for name in self._diagnostic_scale_factors.keys():
+                scale_factor = self._diagnostic_scale_factors[name]
+                diagnostics[name] *= float(scale_factor)
             return diagnostics
         else:  # Should never reach this
-            raise ValueError(
+            raise RuntimeError(
                 'Unknown component type, seems to be a bug in ScalingWrapper')
 
 
@@ -354,29 +199,32 @@ class UpdateFrequencyWrapper(object):
     >>> prognostic = UpdateFrequencyWrapper(MyPrognostic(), timedelta(hours=1))
     """
 
-    def __init__(self, prognostic, update_timedelta):
+    def __init__(self, component, update_timedelta):
         """
         Initialize the UpdateFrequencyWrapper object.
         Args
         ----
-        prognostic : Prognostic
-            The object to be wrapped.
+        component
+            The component object to be wrapped.
         update_timedelta : timedelta
             The amount that state['time'] must differ from when output
             was cached before new output is computed.
         """
-        self._prognostic = prognostic
+        self.component = component
         self._update_timedelta = update_timedelta
         self._cached_output = None
         self._last_update_time = None
 
-    def __call__(self, state, **kwargs):
+    def __call__(self, state, timestep=None, **kwargs):
         if ((self._last_update_time is None) or
                 (state['time'] >= self._last_update_time +
                  self._update_timedelta)):
-            self._cached_output = self._prognostic(state, **kwargs)
+            if timestep is not None:
+                self._cached_output = self.component(state, timestep, **kwargs)
+            else:
+                self._cached_output = self.component(state, **kwargs)
             self._last_update_time = state['time']
         return self._cached_output
 
     def __getattr__(self, item):
-        return getattr(self._prognostic, item)
+        return getattr(self.component, item)

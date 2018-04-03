@@ -4,11 +4,90 @@ from .time import timedelta
 from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError, InvalidStateError)
+from inspect import getargspec
+
+
+def option_or_default(option, default):
+    if option is None:
+        return default
+    else:
+        return option
 
 
 def apply_scale_factors(array_state, scale_factors):
     for key, factor in scale_factors.items():
         array_state[key] *= factor
+
+
+def is_component_class(cls):
+    return any(issubclass(cls, cls2) for cls2 in (Implicit, Prognostic, ImplicitPrognostic, Diagnostic))
+
+
+def is_component_base_class(cls):
+    return cls in (Implicit, Prognostic, ImplicitPrognostic, Diagnostic)
+
+
+class ComponentMeta(abc.ABCMeta):
+
+    def __instancecheck__(self, instance):
+        if is_component_class(instance.__class__) or not is_component_base_class(self):
+            return issubclass(instance.__class__, self)
+        else:
+            check_attributes = (
+                'input_properties',
+                'tendency_properties',
+                'diagnostic_properties',
+                'output_properties',
+                '__call__',
+                'array_call',
+                'tendencies_in_diagnostics',
+                'name',
+            )
+            required_attributes = list(
+                att for att in check_attributes if hasattr(self, att)
+            )
+            disallowed_attributes = list(
+                att for att in check_attributes if att not in required_attributes
+            )
+            if 'name' in disallowed_attributes:  # name is always allowed
+                disallowed_attributes.remove('name')
+            has_attributes = (
+                all(hasattr(instance, att) for att in required_attributes) and
+                not any(hasattr(instance, att) for att in disallowed_attributes)
+            )
+            if hasattr(self, '__call__') and not hasattr(instance, '__call__'):
+                return False
+            elif hasattr(self, '__call__'):
+                timestep_in_class_call = 'timestep' in getargspec(self.__call__).args
+                instance_argspec = getargspec(instance.__call__)
+                timestep_in_instance_call = 'timestep' in instance_argspec.args
+                instance_defaults = {}
+                if instance_argspec.defaults is not None:
+                    n = len(instance_argspec.args) - 1
+                    for i, default in enumerate(reversed(instance_argspec.defaults)):
+                        instance_defaults[instance_argspec.args[n-i]] = default
+                timestep_optional = (
+                    'timestep' in instance_defaults.keys() and instance_defaults['timestep'] is None)
+                has_correct_spec = (timestep_in_class_call == timestep_in_instance_call) or timestep_optional
+            else:
+                raise RuntimeError(
+                    'Cannot check instance type on component subclass that has '
+                    'no __call__ method')
+            return has_attributes and has_correct_spec
+
+
+def check_overlapping_aliases(properties, properties_name):
+    defined_aliases = set()
+    for name, properties in properties.items():
+        if 'alias' in properties.keys():
+            if properties['alias'] not in defined_aliases:
+                defined_aliases.add(properties['alias'])
+            else:
+                raise InvalidPropertyDictError(
+                    'Multiple quantities map to alias {} in {} '
+                    'properties'.format(
+                        properties['alias'], properties_name)
+                )
 
 
 class InputMixin(object):
@@ -22,6 +101,7 @@ class InputMixin(object):
                 raise InvalidPropertyDictError(
                     'Input properties do not have dims defined for {}'.format(name)
                 )
+        check_overlapping_aliases(self.input_properties, 'input')
         super(InputMixin, self).__init__()
 
     def _check_inputs(self, state):
@@ -41,6 +121,7 @@ class TendencyMixin(object):
                 raise InvalidPropertyDictError(
                     'Tendency properties do not have dims defined for {}'.format(name)
                 )
+        check_overlapping_aliases(self.tendency_properties, 'tendency')
         super(TendencyMixin, self).__init__()
 
     @property
@@ -94,6 +175,7 @@ class DiagnosticMixin(object):
                 raise InvalidPropertyDictError(
                     'Diagnostic properties do not have dims defined for {}'.format(name)
                 )
+        check_overlapping_aliases(self.diagnostic_properties, 'diagnostic')
         super(DiagnosticMixin, self).__init__()
 
     @property
@@ -147,6 +229,7 @@ class OutputMixin(object):
                 raise InvalidPropertyDictError(
                     'Output properties do not have dims defined for {}'.format(name)
                 )
+        check_overlapping_aliases(self.output_properties, 'output')
         super(OutputMixin, self).__init__()
 
     @property
@@ -209,34 +292,21 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
         for the new state are returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    input_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which input values are scaled before being used
-        by this object.
-    output_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which output values are scaled before being
-        returned by this object.
-    diagnostic_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which diagnostic values are scaled before being
-        returned by this object.
     tendencies_in_diagnostics : bool
         A boolean indicating whether this object will put tendencies of
         quantities in its diagnostic output based on first order time
         differencing of output values.
-    update_interval : timedelta
-        If not None, the component will only give new output if at least
-        a period of update_interval has passed since the last time new
-        output was given. Otherwise, it would return that cached output.
     time_unit_name : str
         The unit to use for time differencing when putting tendencies in
         diagnostics.
     time_unit_timedelta: timedelta
         A timedelta corresponding to a single time unit as used for time
         differencing when putting tendencies in diagnostics.
+    name : string
+        A label to be used for this object, for example as would be used for
+        Y in the name "X_tendency_from_Y".
     """
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = ComponentMeta
 
     time_unit_name = 's'
     time_unit_timedelta = timedelta(seconds=1)
@@ -277,59 +347,23 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
             self._making_repr = False
             return return_value
 
-    def __init__(
-            self, input_scale_factors=None, output_scale_factors=None,
-            diagnostic_scale_factors=None, tendencies_in_diagnostics=False,
-            update_interval=None, name=None):
+    def __init__(self, tendencies_in_diagnostics=False, name=None):
         """
         Initializes the Implicit object.
 
         Args
         ----
-        input_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which input values are scaled before being used
-            by this object.
-        output_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which output values are scaled before being
-            returned by this object.
-        diagnostic_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which diagnostic values are scaled before being
-            returned by this object.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
             quantities in its diagnostic output based on first order time
             differencing of output values.
-        update_interval : timedelta, optional
-            If given, the component will only give new output if at least
-            a period of update_interval has passed since the last time new
-            output was given. Otherwise, it would return that cached output.
         name : string, optional
             A label to be used for this object, for example as would be used for
             Y in the name "X_tendency_from_Y". By default the class name in
             lowercase is used.
         """
-        if input_scale_factors is not None:
-            self.input_scale_factors = input_scale_factors
-        else:
-            self.input_scale_factors = {}
-        if output_scale_factors is not None:
-            self.output_scale_factors = output_scale_factors
-        else:
-            self.output_scale_factors = {}
-        if diagnostic_scale_factors is not None:
-            self.diagnostic_scale_factors = diagnostic_scale_factors
-        else:
-            self.diagnostic_scale_factors = {}
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        self.update_interval = update_interval
-        self._last_update_time = None
-        if name is None:
-            self.name = self.__class__.__name__.lower()
-        else:
-            self.name = name
+        self.name = name or self.__class__.__name__.lower()
         if tendencies_in_diagnostics:
             self._added_tendency_properties = self._insert_tendency_properties()
         else:
@@ -426,29 +460,22 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
             If state is not a valid input for the Implicit instance
             for other reasons.
         """
-        if (self.update_interval is None or
-                self._last_update_time is None or
-                state['time'] >= self._last_update_time + self.update_interval):
-            self._check_inputs(state)
-            raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
-            raw_state['time'] = state['time']
-            apply_scale_factors(raw_state, self.input_scale_factors)
-            raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
-            self._check_diagnostics(raw_diagnostics)
-            self._check_outputs(raw_new_state)
-            apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
-            apply_scale_factors(raw_new_state, self.output_scale_factors)
-            if self.tendencies_in_diagnostics:
-                self._insert_tendencies_to_diagnostics(
-                    raw_state, raw_new_state, timestep, raw_diagnostics)
-            self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties,
-                state, self.input_properties)
-            self._new_state = restore_data_arrays_with_properties(
-                raw_new_state, self.output_properties,
-                state, self.input_properties)
-            self._last_update_time = state['time']
-        return self._diagnostics, self._new_state
+        self._check_inputs(state)
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_state['time'] = state['time']
+        raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
+        self._check_diagnostics(raw_diagnostics)
+        self._check_outputs(raw_new_state)
+        if self.tendencies_in_diagnostics:
+            self._insert_tendencies_to_diagnostics(
+                raw_state, raw_new_state, timestep, raw_diagnostics)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties,
+            state, self.input_properties)
+        new_state = restore_data_arrays_with_properties(
+            raw_new_state, self.output_properties,
+            state, self.input_properties)
+        return diagnostics, new_state
 
     def _insert_tendencies_to_diagnostics(
             self, raw_state, raw_new_state, timestep, raw_diagnostics):
@@ -501,23 +528,7 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         A dictionary whose keys are diagnostic quantities returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    input_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which input values are scaled before being used
-        by this object.
-    tendency_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which tendency values are scaled before being
-        returned by this object.
-    diagnostic_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which diagnostic values are scaled before being
-        returned by this object.
-    update_interval : timedelta
-        If not None, the component will only give new output if at least
-        a period of update_interval has passed since the last time new
-        output was given. Otherwise, it would return that cached output.
-    tendencies_in_diagnostics : boo
+    tendencies_in_diagnostics : bool
         A boolean indicating whether this object will put tendencies of
         quantities in its diagnostic output based on first order time
         differencing of output values.
@@ -525,7 +536,7 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         A label to be used for this object, for example as would be used for
         Y in the name "X_tendency_from_Y".
     """
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = ComponentMeta
 
     @abc.abstractproperty
     def input_properties(self):
@@ -538,6 +549,8 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
     @abc.abstractproperty
     def diagnostic_properties(self):
         return {}
+
+    name = None
 
     def __str__(self):
         return (
@@ -563,31 +576,12 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
             self._making_repr = False
             return return_value
 
-    def __init__(
-            self, input_scale_factors=None, tendency_scale_factors=None,
-            diagnostic_scale_factors=None, update_interval=None,
-            tendencies_in_diagnostics=False, name=None):
+    def __init__(self, tendencies_in_diagnostics=False, name=None):
         """
         Initializes the Implicit object.
 
         Args
         ----
-        input_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which input values are scaled before being used
-            by this object.
-        tendency_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which tendency values are scaled before being
-            returned by this object.
-        diagnostic_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which diagnostic values are scaled before being
-            returned by this object.
-        update_interval : timedelta, optional
-            If given, the component will only give new output if at least
-            a period of update_interval has passed since the last time new
-            output was given. Otherwise, it would return that cached output.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
             quantities in its diagnostic output.
@@ -596,25 +590,8 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
             Y in the name "X_tendency_from_Y". By default the class name in
             lowercase is used.
         """
-        if input_scale_factors is not None:
-            self.input_scale_factors = input_scale_factors
-        else:
-            self.input_scale_factors = {}
-        if tendency_scale_factors is not None:
-            self.tendency_scale_factors = tendency_scale_factors
-        else:
-            self.tendency_scale_factors = {}
-        if diagnostic_scale_factors is not None:
-            self.diagnostic_scale_factors = diagnostic_scale_factors
-        else:
-            self.diagnostic_scale_factors = {}
-        self.update_interval = update_interval
-        self._last_update_time = None
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        if name is None:
-            self.name = self.__class__.__name__
-        else:
-            self.name = name
+        self.name = name or self.__class__.__name__
         self._added_diagnostic_names = []
         if self.tendencies_in_diagnostics:
             self._insert_tendency_properties()
@@ -668,33 +645,26 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
-        if (self.update_interval is None or
-                self._last_update_time is None or
-                state['time'] >= self._last_update_time + self.update_interval):
-            raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
-            raw_state['time'] = state['time']
-            apply_scale_factors(raw_state, self.input_scale_factors)
-            raw_tendencies, raw_diagnostics = self.array_call(raw_state)
-            self._check_tendencies(raw_tendencies)
-            self._check_diagnostics(raw_diagnostics)
-            apply_scale_factors(raw_tendencies, self.tendency_scale_factors)
-            apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
-            self._tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties,
-                state, self.input_properties)
-            self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties,
-                state, self.input_properties,
-                ignore_names=self._added_diagnostic_names)
-            if self.tendencies_in_diagnostics:
-                self._insert_tendencies_to_diagnostics()
-            self._last_update_time = state['time']
-        return self._tendencies, self._diagnostics
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_state['time'] = state['time']
+        raw_tendencies, raw_diagnostics = self.array_call(raw_state)
+        self._check_tendencies(raw_tendencies)
+        self._check_diagnostics(raw_diagnostics)
+        tendencies = restore_data_arrays_with_properties(
+            raw_tendencies, self.tendency_properties,
+            state, self.input_properties)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties,
+            state, self.input_properties,
+            ignore_names=self._added_diagnostic_names)
+        if self.tendencies_in_diagnostics:
+            self._insert_tendencies_to_diagnostics(tendencies, diagnostics)
+        return tendencies, diagnostics
 
-    def _insert_tendencies_to_diagnostics(self):
-        for name, value in self._tendencies.items():
+    def _insert_tendencies_to_diagnostics(self, tendencies, diagnostics):
+        for name, value in tendencies.items():
             tendency_name = self._get_tendency_name(name)
-            self._diagnostics[tendency_name] = value
+            diagnostics[tendency_name] = value
 
     def _check_missing_diagnostics(self, diagnostics_dict):
         missing_diagnostics = set()
@@ -752,27 +722,7 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         A dictionary whose keys are diagnostic quantities returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    input_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which input values are scaled before being used
-        by this object.
-    tendency_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which tendency values are scaled before being
-        returned by this object.
-    diagnostic_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which diagnostic values are scaled before being
-        returned by this object.
-    update_interval : timedelta
-        If not None, the component will only give new output if at least
-        a period of update_interval has passed since the last time new
-        output was given. Otherwise, it would return that cached output.
-    name : string
-        A label to be used for this object, for example as would be used for
-        Y in the name "X_tendency_from_Y". By default the class name in
-        lowercase is used.
-    tendencies_in_diagnostics : boo
+    tendencies_in_diagnostics : bool
         A boolean indicating whether this object will put tendencies of
         quantities in its diagnostic output based on first order time
         differencing of output values.
@@ -780,7 +730,7 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         A label to be used for this object, for example as would be used for
         Y in the name "X_tendency_from_Y".
     """
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = ComponentMeta
 
     @abc.abstractproperty
     def input_properties(self):
@@ -793,6 +743,8 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
     @abc.abstractproperty
     def diagnostic_properties(self):
         return {}
+
+    name = None
 
     def __str__(self):
         return (
@@ -816,31 +768,12 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
             self._making_repr = False
             return return_value
 
-    def __init__(
-            self, input_scale_factors=None, tendency_scale_factors=None,
-            diagnostic_scale_factors=None, update_interval=None,
-            tendencies_in_diagnostics=False, name=None):
+    def __init__(self, tendencies_in_diagnostics=False, name=None):
         """
         Initializes the Implicit object.
 
         Args
         ----
-        input_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which input values are scaled before being used
-            by this object.
-        tendency_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which tendency values are scaled before being
-            returned by this object.
-        diagnostic_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which diagnostic values are scaled before being
-            returned by this object.
-        update_interval : timedelta, optional
-            If given, the component will only give new output if at least
-            a period of update_interval has passed since the last time new
-            output was given. Otherwise, it would return that cached output.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
             quantities in its diagnostic output.
@@ -849,25 +782,8 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
             Y in the name "X_tendency_from_Y". By default the class name in
             lowercase is used.
         """
-        if input_scale_factors is not None:
-            self.input_scale_factors = input_scale_factors
-        else:
-            self.input_scale_factors = {}
-        if tendency_scale_factors is not None:
-            self.tendency_scale_factors = tendency_scale_factors
-        else:
-            self.tendency_scale_factors = {}
-        if diagnostic_scale_factors is not None:
-            self.diagnostic_scale_factors = diagnostic_scale_factors
-        else:
-            self.diagnostic_scale_factors = {}
-        self.update_interval = update_interval
-        self._last_update_time = None
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        if name is None:
-            self.name = self.__class__.__name__
-        else:
-            self.name = name
+        self.name = name or self.__class__.__name__
         self._added_diagnostic_names = []
         if self.tendencies_in_diagnostics:
             self._insert_tendency_properties()
@@ -923,33 +839,27 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
-        if (self.update_interval is None or
-                self._last_update_time is None or
-                state['time'] >= self._last_update_time + self.update_interval):
-            raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
-            raw_state['time'] = state['time']
-            apply_scale_factors(raw_state, self.input_scale_factors)
-            raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
-            self._check_tendencies(raw_tendencies)
-            self._check_diagnostics(raw_diagnostics)
-            apply_scale_factors(raw_tendencies, self.tendency_scale_factors)
-            apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
-            self._tendencies = restore_data_arrays_with_properties(
-                raw_tendencies, self.tendency_properties,
-                state, self.input_properties)
-            self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties,
-                state, self.input_properties,
-                ignore_names=self._added_diagnostic_names)
-            if self.tendencies_in_diagnostics:
-                self._insert_tendencies_to_diagnostics()
-            self._last_update_time = state['time']
-        return self._tendencies, self._diagnostics
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_state['time'] = state['time']
+        raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
+        self._check_tendencies(raw_tendencies)
+        self._check_diagnostics(raw_diagnostics)
+        tendencies = restore_data_arrays_with_properties(
+            raw_tendencies, self.tendency_properties,
+            state, self.input_properties)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties,
+            state, self.input_properties,
+            ignore_names=self._added_diagnostic_names)
+        if self.tendencies_in_diagnostics:
+            self._insert_tendencies_to_diagnostics(tendencies, diagnostics)
+        self._last_update_time = state['time']
+        return tendencies, diagnostics
 
-    def _insert_tendencies_to_diagnostics(self):
-        for name, value in self._tendencies.items():
+    def _insert_tendencies_to_diagnostics(self, tendencies, diagnostics):
+        for name, value in tendencies.items():
             tendency_name = self._get_tendency_name(name)
-            self._diagnostics[tendency_name] = value
+            diagnostics[tendency_name] = value
 
     def _check_missing_diagnostics(self, diagnostics_dict):
         missing_diagnostics = set()
@@ -1004,20 +914,8 @@ class Diagnostic(DiagnosticMixin, InputMixin):
         A dictionary whose keys are diagnostic quantities returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    input_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which input values are scaled before being used
-        by this object.
-    diagnostic_scale_factors : dict
-        A (possibly empty) dictionary whose keys are quantity names and
-        values are floats by which diagnostic values are scaled before being
-        returned by this object.
-    update_interval : timedelta
-        If not None, the component will only give new output if at least
-        a period of update_interval has passed since the last time new
-        output was given. Otherwise, it would return that cached output.
     """
-    __metaclass__ = abc.ABCMeta
+    __metaclass__ = ComponentMeta
 
     @abc.abstractproperty
     def input_properties(self):
@@ -1048,38 +946,10 @@ class Diagnostic(DiagnosticMixin, InputMixin):
             self._making_repr = False
             return return_value
 
-    def __init__(
-            self, input_scale_factors=None, diagnostic_scale_factors=None,
-            update_interval=None):
+    def __init__(self):
         """
         Initializes the Implicit object.
-
-        Args
-        ----
-        input_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which input values are scaled before being used
-            by this object.
-        diagnostic_scale_factors : dict, optional
-            A (possibly empty) dictionary whose keys are quantity names and
-            values are floats by which diagnostic values are scaled before being
-            returned by this object.
-        update_interval : timedelta, optional
-            If given, the component will only give new output if at least
-            a period of update_interval has passed since the last time new
-            output was given. Otherwise, it would return that cached output.
         """
-        if input_scale_factors is not None:
-            self.input_scale_factors = input_scale_factors
-        else:
-            self.input_scale_factors = {}
-        if diagnostic_scale_factors is not None:
-            self.diagnostic_scale_factors = diagnostic_scale_factors
-        else:
-            self.diagnostic_scale_factors = {}
-        self.update_interval = update_interval
-        self._last_update_time = None
-        self._diagnostics = None
         super(Diagnostic, self).__init__()
 
     def __call__(self, state):
@@ -1105,20 +975,14 @@ class Diagnostic(DiagnosticMixin, InputMixin):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
-        if (self.update_interval is None or
-                self._last_update_time is None or
-                state['time'] >= self._last_update_time + self.update_interval):
-            raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
-            raw_state['time'] = state['time']
-            apply_scale_factors(raw_state, self.input_scale_factors)
-            raw_diagnostics = self.array_call(raw_state)
-            self._check_diagnostics(raw_diagnostics)
-            apply_scale_factors(raw_diagnostics, self.diagnostic_scale_factors)
-            self._diagnostics = restore_data_arrays_with_properties(
-                raw_diagnostics, self.diagnostic_properties,
-                state, self.input_properties)
-            self._last_update_time = state['time']
-        return self._diagnostics
+        raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        raw_state['time'] = state['time']
+        raw_diagnostics = self.array_call(raw_state)
+        self._check_diagnostics(raw_diagnostics)
+        diagnostics = restore_data_arrays_with_properties(
+            raw_diagnostics, self.diagnostic_properties,
+            state, self.input_properties)
+        return diagnostics
 
     @abc.abstractmethod
     def array_call(self, state):
