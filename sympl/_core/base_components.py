@@ -4,8 +4,11 @@ from .time import timedelta
 from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError, InvalidStateError)
-from inspect import getargspec
 from six import add_metaclass
+try:
+    from inspect import getfullargspec as getargspec
+except ImportError:
+    from inspect import getargspec
 
 
 def option_or_default(option, default):
