@@ -7,6 +7,7 @@ class ScalingWrapper(object):
     """
     Wraps any component and scales either inputs, outputs or tendencies
     by a floating point value.
+
     Example
     -------
     This is how the ScalingWrapper can be used to wrap a Prognostic.
@@ -26,9 +27,10 @@ class ScalingWrapper(object):
                  diagnostic_scale_factors=None):
         """
         Initializes the ScaledInputOutputWrapper object.
+
         Args
         ----
-        component : Prognostic, Implicit
+        component : Prognostic, Implicit, Diagnostic, ImplicitPrognostic
             The component to be wrapped.
         input_scale_factors : dict
             a dictionary whose keys are the inputs that will be scaled
@@ -42,10 +44,12 @@ class ScalingWrapper(object):
         diagnostic_scale_factors : dict
             a dictionary whose keys are the diagnostics that will be scaled
             and values are floating point scaling factors.
+
         Returns
         -------
         scaled_component : ScaledInputOutputWrapper
             the scaled version of the component
+
         Raises
         ------
         TypeError
@@ -187,10 +191,10 @@ class ScalingWrapper(object):
 
 class UpdateFrequencyWrapper(object):
     """
-    Wraps a prognostic object so that when it is called, it only computes new
+    Wraps a component object so that when it is called, it only computes new
     output if sufficient time has passed, and otherwise returns its last
-    computed output. The Delayed object requires that the 'time' attribute is
-    set in the state, in addition to any requirements of the Prognostic
+    computed output.
+
     Example
     -------
     This how the wrapper should be used on a fictional Prognostic class
@@ -202,10 +206,11 @@ class UpdateFrequencyWrapper(object):
     def __init__(self, component, update_timedelta):
         """
         Initialize the UpdateFrequencyWrapper object.
+
         Args
         ----
-        component
-            The component object to be wrapped.
+        component : Prognostic, Implicit, Diagnostic, ImplicitPrognostic
+            The component to be wrapped.
         update_timedelta : timedelta
             The amount that state['time'] must differ from when output
             was cached before new output is computed.
@@ -216,6 +221,24 @@ class UpdateFrequencyWrapper(object):
         self._last_update_time = None
 
     def __call__(self, state, timestep=None, **kwargs):
+        """
+        Call the underlying component, or return cached values instead if
+        insufficient time has passed since the last time cached values were
+        stored.
+
+        Parameters
+        ----------
+        state : dict
+            A model state dictionary.
+        timestep : timedelta, optional
+            A time step. If the underlying component does not use a timestep,
+            this will be discarded. If it does, this argument is required.
+
+        Returns
+        -------
+        *args
+            The return values of the underlying component.
+        """
         if ((self._last_update_time is None) or
                 (state['time'] >= self._last_update_time +
                  self._update_timedelta)):

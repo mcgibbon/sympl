@@ -116,6 +116,57 @@ class MockMonitor(Monitor):
     def store(self, state):
         return
 
+class BadMockPrognostic(Prognostic):
+
+    input_properties = {}
+    tendency_properties = {}
+    diagnostic_properties = {}
+
+    def __init__(self):
+        pass
+
+    def array_call(self, state):
+        return {}, {}
+
+
+class BadMockImplicitPrognostic(ImplicitPrognostic):
+
+    input_properties = {}
+    tendency_properties = {}
+    diagnostic_properties = {}
+
+    def __init__(self):
+        pass
+
+    def array_call(self, state, timestep):
+        return {}, {}
+
+
+class BadMockDiagnostic(Diagnostic):
+
+    input_properties = {}
+    diagnostic_properties = {}
+
+    def __init__(self):
+        pass
+
+    def array_call(self, state):
+        return {}
+
+
+class BadMockImplicit(Implicit):
+
+    input_properties = {}
+    diagnostic_properties = {}
+    output_properties = {}
+
+    def __init__(self):
+        pass
+
+    def array_call(self, state, timestep):
+        return {}, {}
+
+
 
 class PrognosticTests(unittest.TestCase):
 
@@ -123,6 +174,11 @@ class PrognosticTests(unittest.TestCase):
 
     def call_component(self, component, state):
         return component(state)
+
+    def test_cannot_use_bad_component(self):
+        component = BadMockPrognostic()
+        with self.assertRaises(RuntimeError):
+            self.call_component(component, {'time': timedelta(0)})
 
     def test_subclass_check(self):
         class MyPrognostic(object):
@@ -1066,6 +1122,11 @@ class ImplicitPrognosticTests(PrognosticTests):
     def call_component(self, component, state):
         return component(state, timedelta(seconds=1))
 
+    def test_cannot_use_bad_component(self):
+        component = BadMockImplicitPrognostic()
+        with self.assertRaises(RuntimeError):
+            self.call_component(component, {'time': timedelta(0)})
+
     def test_subclass_check(self):
         class MyImplicitPrognostic(object):
             input_properties = {}
@@ -1176,6 +1237,11 @@ class DiagnosticTests(unittest.TestCase):
 
     def call_component(self, component, state):
         return component(state)
+
+    def test_cannot_use_bad_component(self):
+        component = BadMockDiagnostic()
+        with self.assertRaises(RuntimeError):
+            self.call_component(component, {'time': timedelta(0)})
 
     def test_subclass_check(self):
         class MyDiagnostic(object):
@@ -1602,6 +1668,11 @@ class ImplicitTests(unittest.TestCase):
 
     def call_component(self, component, state):
         return component(state, timedelta(seconds=1))
+
+    def test_cannot_use_bad_component(self):
+        component = BadMockImplicit()
+        with self.assertRaises(RuntimeError):
+            self.call_component(component, {'time': timedelta(0)})
 
     def test_subclass_check(self):
         class MyImplicit(object):

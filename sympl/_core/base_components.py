@@ -5,6 +5,7 @@ from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError, InvalidStateError)
 from inspect import getargspec
+from six import add_metaclass
 
 
 def option_or_default(option, default):
@@ -27,53 +28,63 @@ def is_component_base_class(cls):
     return cls in (Implicit, Prognostic, ImplicitPrognostic, Diagnostic)
 
 
+def get_kwarg_defaults(func):
+    return_dict = {}
+    argspec = getargspec(func)
+    if argspec.defaults is not None:
+        n = len(argspec.args) - 1
+        for i, default in enumerate(reversed(argspec.defaults)):
+            return_dict[argspec.args[n-i]] = default
+    return return_dict
+
+
 class ComponentMeta(abc.ABCMeta):
 
-    def __instancecheck__(self, instance):
-        if is_component_class(instance.__class__) or not is_component_base_class(self):
-            return issubclass(instance.__class__, self)
-        else:
-            check_attributes = (
-                'input_properties',
-                'tendency_properties',
-                'diagnostic_properties',
-                'output_properties',
-                '__call__',
-                'array_call',
-                'tendencies_in_diagnostics',
-                'name',
-            )
-            required_attributes = list(
-                att for att in check_attributes if hasattr(self, att)
-            )
-            disallowed_attributes = list(
-                att for att in check_attributes if att not in required_attributes
-            )
-            if 'name' in disallowed_attributes:  # name is always allowed
-                disallowed_attributes.remove('name')
+    def __instancecheck__(cls, instance):
+        if is_component_class(instance.__class__) or not is_component_base_class(cls):
+            return issubclass(instance.__class__, cls)
+        else:  # checking if non-inheriting instance is a duck-type of a component base class
+            required_attributes, disallowed_attributes = cls.__get_attribute_requirements()
             has_attributes = (
                 all(hasattr(instance, att) for att in required_attributes) and
                 not any(hasattr(instance, att) for att in disallowed_attributes)
             )
-            if hasattr(self, '__call__') and not hasattr(instance, '__call__'):
+            if hasattr(cls, '__call__') and not hasattr(instance, '__call__'):
                 return False
-            elif hasattr(self, '__call__'):
-                timestep_in_class_call = 'timestep' in getargspec(self.__call__).args
+            elif hasattr(cls, '__call__'):
+                timestep_in_class_call = 'timestep' in getargspec(cls.__call__).args
                 instance_argspec = getargspec(instance.__call__)
                 timestep_in_instance_call = 'timestep' in instance_argspec.args
-                instance_defaults = {}
-                if instance_argspec.defaults is not None:
-                    n = len(instance_argspec.args) - 1
-                    for i, default in enumerate(reversed(instance_argspec.defaults)):
-                        instance_defaults[instance_argspec.args[n-i]] = default
-                timestep_optional = (
+                instance_defaults = get_kwarg_defaults(instance.__call__)
+                timestep_is_optional = (
                     'timestep' in instance_defaults.keys() and instance_defaults['timestep'] is None)
-                has_correct_spec = (timestep_in_class_call == timestep_in_instance_call) or timestep_optional
+                has_correct_spec = (timestep_in_class_call == timestep_in_instance_call) or timestep_is_optional
             else:
                 raise RuntimeError(
                     'Cannot check instance type on component subclass that has '
                     'no __call__ method')
             return has_attributes and has_correct_spec
+
+    def __get_attribute_requirements(cls):
+        check_attributes = (
+            'input_properties',
+            'tendency_properties',
+            'diagnostic_properties',
+            'output_properties',
+            '__call__',
+            'array_call',
+            'tendencies_in_diagnostics',
+            'name',
+        )
+        required_attributes = list(
+            att for att in check_attributes if hasattr(cls, att)
+        )
+        disallowed_attributes = list(
+            att for att in check_attributes if att not in required_attributes
+        )
+        if 'name' in disallowed_attributes:  # name is always allowed
+            disallowed_attributes.remove('name')
+        return required_attributes, disallowed_attributes
 
 
 def check_overlapping_aliases(properties, properties_name):
@@ -90,10 +101,11 @@ def check_overlapping_aliases(properties, properties_name):
                 )
 
 
-class InputMixin(object):
+class InputChecker(object):
 
-    def __init__(self):
-        for name, properties in self.input_properties.items():
+    def __init__(self, component):
+        self.component = component
+        for name, properties in self.component.input_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
                     'Input properties do not have units defined for {}'.format(name))
@@ -101,39 +113,40 @@ class InputMixin(object):
                 raise InvalidPropertyDictError(
                     'Input properties do not have dims defined for {}'.format(name)
                 )
-        check_overlapping_aliases(self.input_properties, 'input')
-        super(InputMixin, self).__init__()
+        check_overlapping_aliases(self.component.input_properties, 'input')
+        super(InputChecker, self).__init__()
 
-    def _check_inputs(self, state):
-        for key in self.input_properties.keys():
+    def check_inputs(self, state):
+        for key in self.component.input_properties.keys():
             if key not in state.keys():
                 raise InvalidStateError('Missing input quantity {}'.format(key))
 
 
-class TendencyMixin(object):
+class TendencyChecker(object):
 
-    def __init__(self):
-        for name, properties in self.tendency_properties.items():
+    def __init__(self, component):
+        self.component = component
+        for name, properties in self.component.tendency_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
                     'Tendency properties do not have units defined for {}'.format(name))
-            if 'dims' not in properties.keys() and name not in self.input_properties.keys():
+            if 'dims' not in properties.keys() and name not in self.component.input_properties.keys():
                 raise InvalidPropertyDictError(
                     'Tendency properties do not have dims defined for {}'.format(name)
                 )
-        check_overlapping_aliases(self.tendency_properties, 'tendency')
-        super(TendencyMixin, self).__init__()
+        check_overlapping_aliases(self.component.tendency_properties, 'tendency')
+        super(TendencyChecker, self).__init__()
 
     @property
     def _wanted_tendency_aliases(self):
         wanted_tendency_aliases = {}
-        for name, properties in self.tendency_properties.items():
+        for name, properties in self.component.tendency_properties.items():
             wanted_tendency_aliases[name] = []
             if 'alias' in properties.keys():
                 wanted_tendency_aliases[name].append(properties['alias'])
-            if (name in self.input_properties.keys() and
-                    'alias' in self.input_properties[name].keys()):
-                wanted_tendency_aliases[name].append(self.input_properties[name]['alias'])
+            if (name in self.component.input_properties.keys() and
+                    'alias' in self.component.input_properties[name].keys()):
+                wanted_tendency_aliases[name].append(self.component.input_properties[name]['alias'])
         return wanted_tendency_aliases
 
     def _check_missing_tendencies(self, tendency_dict):
@@ -159,47 +172,50 @@ class TendencyMixin(object):
                 'tendency_properties'.format(
                     self.__class__.__name__, ', '.join(extra_tendencies)))
 
-    def _check_tendencies(self, tendency_dict):
+    def check_tendencies(self, tendency_dict):
         self._check_missing_tendencies(tendency_dict)
         self._check_extra_tendencies(tendency_dict)
 
 
-class DiagnosticMixin(object):
+class DiagnosticChecker(object):
 
-    def __init__(self):
-        for name, properties in self.diagnostic_properties.items():
+    def __init__(self, component):
+        self.component = component
+        self._ignored_diagnostics = []
+        for name, properties in component.diagnostic_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
                     'Diagnostic properties do not have units defined for {}'.format(name))
-            if 'dims' not in properties.keys() and name not in self.input_properties.keys():
+            if 'dims' not in properties.keys() and name not in component.input_properties.keys():
                 raise InvalidPropertyDictError(
                     'Diagnostic properties do not have dims defined for {}'.format(name)
                 )
-        check_overlapping_aliases(self.diagnostic_properties, 'diagnostic')
-        super(DiagnosticMixin, self).__init__()
+        check_overlapping_aliases(component.diagnostic_properties, 'diagnostic')
 
     @property
     def _wanted_diagnostic_aliases(self):
         wanted_diagnostic_aliases = {}
-        for name, properties in self.diagnostic_properties.items():
+        for name, properties in self.component.diagnostic_properties.items():
             wanted_diagnostic_aliases[name] = []
             if 'alias' in properties.keys():
                 wanted_diagnostic_aliases[name].append(properties['alias'])
-            if (name in self.input_properties.keys() and
-                    'alias' in self.input_properties[name].keys()):
-                wanted_diagnostic_aliases[name].append(self.input_properties[name]['alias'])
+            if (name in self.component.input_properties.keys() and
+                    'alias' in self.component.input_properties[name].keys()):
+                wanted_diagnostic_aliases[name].append(
+                    self.component.input_properties[name]['alias'])
         return wanted_diagnostic_aliases
 
     def _check_missing_diagnostics(self, diagnostics_dict):
         missing_diagnostics = set()
         for name, aliases in self._wanted_diagnostic_aliases.items():
             if (name not in diagnostics_dict.keys() and
+                    name not in self._ignored_diagnostics and
                     not any(alias in diagnostics_dict.keys() for alias in aliases)):
                 missing_diagnostics.add(name)
         if len(missing_diagnostics) > 0:
             raise ComponentMissingOutputError(
                 'Component {} did not compute diagnostic(s) {}'.format(
-                    self.__class__.__name__, ', '.join(missing_diagnostics)))
+                    self.component.__class__.__name__, ', '.join(missing_diagnostics)))
 
     def _check_extra_diagnostics(self, diagnostics_dict):
         wanted_set = set()
@@ -211,38 +227,42 @@ class DiagnosticMixin(object):
             raise ComponentExtraOutputError(
                 'Component {} computed diagnostic(s) {} which are not in '
                 'diagnostic_properties'.format(
-                    self.__class__.__name__, ', '.join(extra_diagnostics)))
+                    self.component.__class__.__name__, ', '.join(extra_diagnostics)))
 
-    def _check_diagnostics(self, diagnostics_dict):
+    def set_ignored_diagnostics(self, ignored_diagnostics):
+        self._ignored_diagnostics = ignored_diagnostics
+
+    def check_diagnostics(self, diagnostics_dict):
         self._check_missing_diagnostics(diagnostics_dict)
         self._check_extra_diagnostics(diagnostics_dict)
 
 
-class OutputMixin(object):
+class OutputChecker(object):
 
-    def __init__(self):
-        for name, properties in self.output_properties.items():
+    def __init__(self, component):
+        self.component = component
+        for name, properties in self.component.output_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
                     'Output properties do not have units defined for {}'.format(name))
-            if 'dims' not in properties.keys() and name not in self.input_properties.keys():
+            if 'dims' not in properties.keys() and name not in self.component.input_properties.keys():
                 raise InvalidPropertyDictError(
                     'Output properties do not have dims defined for {}'.format(name)
                 )
-        check_overlapping_aliases(self.output_properties, 'output')
-        super(OutputMixin, self).__init__()
+        check_overlapping_aliases(self.component.output_properties, 'output')
+        super(OutputChecker, self).__init__()
 
     @property
     def _wanted_output_aliases(self):
         wanted_output_aliases = {}
-        for name, properties in self.output_properties.items():
+        for name, properties in self.component.output_properties.items():
             wanted_output_aliases[name] = []
             if 'alias' in properties.keys():
                 wanted_output_aliases[name].append(properties['alias'])
-            if (name in self.input_properties.keys() and
-                    'alias' in self.input_properties[name].keys()):
+            if (name in self.component.input_properties.keys() and
+                    'alias' in self.component.input_properties[name].keys()):
                 wanted_output_aliases[name].append(
-                    self.input_properties[name]['alias'])
+                    self.component.input_properties[name]['alias'])
         return wanted_output_aliases
 
     def _check_missing_outputs(self, outputs_dict):
@@ -269,12 +289,13 @@ class OutputMixin(object):
                 'output_properties'.format(
                     self.__class__.__name__, ', '.join(extra_outputs)))
 
-    def _check_outputs(self, output_dict):
+    def check_outputs(self, output_dict):
         self._check_missing_outputs(output_dict)
         self._check_extra_outputs(output_dict)
 
 
-class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
+@add_metaclass(ComponentMeta)
+class Implicit(object):
     """
     Attributes
     ----------
@@ -306,7 +327,6 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
         A label to be used for this object, for example as would be used for
         Y in the name "X_tendency_from_Y".
     """
-    __metaclass__ = ComponentMeta
 
     time_unit_name = 's'
     time_unit_timedelta = timedelta(seconds=1)
@@ -364,10 +384,14 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
         """
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         self.name = name or self.__class__.__name__.lower()
+        super(Implicit, self).__init__()
+        self._input_checker = InputChecker(self)
+        self._diagnostic_checker = DiagnosticChecker(self)
+        self._output_checker = OutputChecker(self)
         if tendencies_in_diagnostics:
-            self._added_tendency_properties = self._insert_tendency_properties()
-        else:
-            self._added_tendency_properties = set()
+            self._diagnostic_checker.set_ignored_diagnostics(
+                self._insert_tendency_properties())
+        self.__initialized = True
         super(Implicit, self).__init__()
 
     def _insert_tendency_properties(self):
@@ -412,24 +436,26 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
             added_names.append(tendency_name)
         return added_names
 
-    def _check_missing_diagnostics(self, diagnostics_dict):
-        missing_diagnostics = set()
-        for name, aliases in self._wanted_diagnostic_aliases.items():
-            if (name not in diagnostics_dict.keys() and
-                    name not in self._added_tendency_properties and
-                    not any(alias in diagnostics_dict.keys() for alias in aliases)):
-                missing_diagnostics.add(name)
-        if len(missing_diagnostics) > 0:
-            raise ComponentMissingOutputError(
-                'Component {} did not compute diagnostics {}'.format(
-                    self.__class__.__name__, ', '.join(missing_diagnostics)))
-
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
 
     @property
     def tendencies_in_diagnostics(self):
         return self._tendencies_in_diagnostics  # value cannot be modified
+
+    def __check_self_is_initialized(self):
+        try:
+            initialized = self.__initialized
+        except AttributeError:
+            initialized = False
+        if not initialized:
+            raise RuntimeError(
+                'Component has not called __init__ of base class, likely '
+                'because its class {} is missing a call to '
+                'super({}, self).__init__(**kwargs) in its __init__ '
+                'method.'.format(
+                    self.__class__.__name__, self.__class__.__name__)
+            )
 
     def __call__(self, state, timestep):
         """
@@ -460,12 +486,13 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
             If state is not a valid input for the Implicit instance
             for other reasons.
         """
-        self._check_inputs(state)
+        self.__check_self_is_initialized()
+        self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         raw_state['time'] = state['time']
         raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
-        self._check_diagnostics(raw_diagnostics)
-        self._check_outputs(raw_new_state)
+        self._diagnostic_checker.check_diagnostics(raw_diagnostics)
+        self._output_checker.check_outputs(raw_new_state)
         if self.tendencies_in_diagnostics:
             self._insert_tendencies_to_diagnostics(
                 raw_state, raw_new_state, timestep, raw_diagnostics)
@@ -512,7 +539,8 @@ class Implicit(DiagnosticMixin, OutputMixin, InputMixin):
         pass
 
 
-class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
+@add_metaclass(ComponentMeta)
+class Prognostic(object):
     """
     Attributes
     ----------
@@ -536,7 +564,6 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         A label to be used for this object, for example as would be used for
         Y in the name "X_tendency_from_Y".
     """
-    __metaclass__ = ComponentMeta
 
     @abc.abstractproperty
     def input_properties(self):
@@ -592,9 +619,15 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         """
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         self.name = name or self.__class__.__name__
-        self._added_diagnostic_names = []
+        self._input_checker = InputChecker(self)
+        self._tendency_checker = TendencyChecker(self)
+        self._diagnostic_checker = DiagnosticChecker(self)
         if self.tendencies_in_diagnostics:
-            self._insert_tendency_properties()
+            self._added_diagnostic_names = self._insert_tendency_properties()
+            self._diagnostic_checker.set_ignored_diagnostics(self._added_diagnostic_names)
+        else:
+            self._added_diagnostic_names = []
+        self.__initialized = True
         super(Prognostic, self).__init__()
 
     @property
@@ -602,6 +635,7 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         return self._tendencies_in_diagnostics
 
     def _insert_tendency_properties(self):
+        added_names = []
         for name, properties in self.tendency_properties.items():
             tendency_name = self._get_tendency_name(name)
             if 'dims' in properties.keys():
@@ -612,10 +646,25 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
                 'units': properties['units'],
                 'dims': dims,
             }
-            self._added_diagnostic_names.append(tendency_name)
+            added_names.append(tendency_name)
+        return added_names
 
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
+
+    def __check_self_is_initialized(self):
+        try:
+            initialized = self.__initialized
+        except AttributeError:
+            initialized = False
+        if not initialized:
+            raise RuntimeError(
+                'Component has not called __init__ of base class, likely '
+                'because its class {} is missing a call to '
+                'super({}, self).__init__(**kwargs) in its __init__ '
+                'method.'.format(
+                    self.__class__.__name__, self.__class__.__name__)
+            )
 
     def __call__(self, state):
         """
@@ -645,11 +694,13 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
+        self.__check_self_is_initialized()
+        self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         raw_state['time'] = state['time']
         raw_tendencies, raw_diagnostics = self.array_call(raw_state)
-        self._check_tendencies(raw_tendencies)
-        self._check_diagnostics(raw_diagnostics)
+        self._tendency_checker.check_tendencies(raw_tendencies)
+        self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         tendencies = restore_data_arrays_with_properties(
             raw_tendencies, self.tendency_properties,
             state, self.input_properties)
@@ -665,18 +716,6 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         for name, value in tendencies.items():
             tendency_name = self._get_tendency_name(name)
             diagnostics[tendency_name] = value
-
-    def _check_missing_diagnostics(self, diagnostics_dict):
-        missing_diagnostics = set()
-        for name, aliases in self._wanted_diagnostic_aliases.items():
-            if (name not in diagnostics_dict.keys() and
-                    name not in self._added_diagnostic_names and
-                    not any(alias in diagnostics_dict.keys() for alias in aliases)):
-                missing_diagnostics.add(name)
-        if len(missing_diagnostics) > 0:
-            raise ComponentMissingOutputError(
-                'Component {} did not compute diagnostics {}'.format(
-                    self.__class__.__name__, ', '.join(missing_diagnostics)))
 
     @abc.abstractmethod
     def array_call(self, state):
@@ -706,7 +745,8 @@ class Prognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         pass
 
 
-class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
+@add_metaclass(ComponentMeta)
+class ImplicitPrognostic(object):
     """
     Attributes
     ----------
@@ -730,7 +770,6 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         A label to be used for this object, for example as would be used for
         Y in the name "X_tendency_from_Y".
     """
-    __metaclass__ = ComponentMeta
 
     @abc.abstractproperty
     def input_properties(self):
@@ -785,8 +824,13 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         self.name = name or self.__class__.__name__
         self._added_diagnostic_names = []
+        self._input_checker = InputChecker(self)
+        self._diagnostic_checker = DiagnosticChecker(self)
+        self._tendency_checker = TendencyChecker(self)
         if self.tendencies_in_diagnostics:
-            self._insert_tendency_properties()
+            self._added_diagnostic_names = self._insert_tendency_properties()
+            self._diagnostic_checker.set_ignored_diagnostics(self._added_diagnostic_names)
+        self.__initialized = True
         super(ImplicitPrognostic, self).__init__()
 
     @property
@@ -794,6 +838,7 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         return self._tendencies_in_diagnostics
 
     def _insert_tendency_properties(self):
+        added_names = []
         for name, properties in self.tendency_properties.items():
             tendency_name = self._get_tendency_name(name)
             if 'dims' in properties.keys():
@@ -804,10 +849,25 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
                 'units': properties['units'],
                 'dims': dims,
             }
-            self._added_diagnostic_names.append(tendency_name)
+            added_names.append(tendency_name)
+        return added_names
 
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
+
+    def __check_self_is_initialized(self):
+        try:
+            initialized = self.__initialized
+        except AttributeError:
+            initialized = False
+        if not initialized:
+            raise RuntimeError(
+                'Component has not called __init__ of base class, likely '
+                'because its class {} is missing a call to '
+                'super({}, self).__init__(**kwargs) in its __init__ '
+                'method.'.format(
+                    self.__class__.__name__, self.__class__.__name__)
+            )
 
     def __call__(self, state, timestep):
         """
@@ -839,11 +899,13 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
+        self.__check_self_is_initialized()
+        self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         raw_state['time'] = state['time']
         raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
-        self._check_tendencies(raw_tendencies)
-        self._check_diagnostics(raw_diagnostics)
+        self._tendency_checker.check_tendencies(raw_tendencies)
+        self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         tendencies = restore_data_arrays_with_properties(
             raw_tendencies, self.tendency_properties,
             state, self.input_properties)
@@ -860,18 +922,6 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         for name, value in tendencies.items():
             tendency_name = self._get_tendency_name(name)
             diagnostics[tendency_name] = value
-
-    def _check_missing_diagnostics(self, diagnostics_dict):
-        missing_diagnostics = set()
-        for name, aliases in self._wanted_diagnostic_aliases.items():
-            if (name not in diagnostics_dict.keys() and
-                    name not in self._added_diagnostic_names and
-                    not any(alias in diagnostics_dict.keys() for alias in aliases)):
-                missing_diagnostics.add(name)
-        if len(missing_diagnostics) > 0:
-            raise ComponentMissingOutputError(
-                'Component {} did not compute diagnostics {}'.format(
-                    self.__class__.__name__, ', '.join(missing_diagnostics)))
 
     @abc.abstractmethod
     def array_call(self, state, timestep):
@@ -902,7 +952,8 @@ class ImplicitPrognostic(DiagnosticMixin, TendencyMixin, InputMixin):
         """
 
 
-class Diagnostic(DiagnosticMixin, InputMixin):
+@add_metaclass(ComponentMeta)
+class Diagnostic(object):
     """
     Attributes
     ----------
@@ -915,7 +966,6 @@ class Diagnostic(DiagnosticMixin, InputMixin):
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
     """
-    __metaclass__ = ComponentMeta
 
     @abc.abstractproperty
     def input_properties(self):
@@ -950,7 +1000,24 @@ class Diagnostic(DiagnosticMixin, InputMixin):
         """
         Initializes the Implicit object.
         """
+        self._input_checker = InputChecker(self)
+        self._diagnostic_checker = DiagnosticChecker(self)
+        self.__initialized = True
         super(Diagnostic, self).__init__()
+
+    def __check_self_is_initialized(self):
+        try:
+            initialized = self.__initialized
+        except AttributeError:
+            initialized = False
+        if not initialized:
+            raise RuntimeError(
+                'Component has not called __init__ of base class, likely '
+                'because its class {} is missing a call to '
+                'super({}, self).__init__(**kwargs) in its __init__ '
+                'method.'.format(
+                    self.__class__.__name__, self.__class__.__name__)
+            )
 
     def __call__(self, state):
         """
@@ -975,10 +1042,12 @@ class Diagnostic(DiagnosticMixin, InputMixin):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
+        self.__check_self_is_initialized()
+        self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         raw_state['time'] = state['time']
         raw_diagnostics = self.array_call(raw_state)
-        self._check_diagnostics(raw_diagnostics)
+        self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         diagnostics = restore_data_arrays_with_properties(
             raw_diagnostics, self.diagnostic_properties,
             state, self.input_properties)
@@ -1005,8 +1074,8 @@ class Diagnostic(DiagnosticMixin, InputMixin):
         """
 
 
+@add_metaclass(abc.ABCMeta)
 class Monitor(object):
-    __metaclass__ = abc.ABCMeta
 
     def __str__(self):
         return 'instance of {}(Monitor)'.format(self.__class__)

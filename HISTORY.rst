@@ -39,6 +39,7 @@ Latest
   Right now this only checks for the presence and lack of presence of
   component attributes, and correct signature of __call__. Later it may also
   check properties dictionaries for consistency, or perform other checks.
+* Fixed a bug where ABCMeta was not being used in Python 3.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
@@ -76,6 +77,10 @@ Breaking changes
 * dims_like is obsolete as a result, and is no longer used. `dims` should be
   used instead. If present, `dims` from input properties will be used as
   default.
+* Components will now raise an exception when __call__ of the component base
+  class (e.g. Implicit, Prognostic, etc.) if the __init__ method of the base
+  class has not been called, telling the user that the component __init__
+  method should make a call to the superclass init.
 
 v0.3.2
 ------

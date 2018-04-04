@@ -4,10 +4,106 @@ from sympl import (
     Prognostic, Implicit, Diagnostic, UpdateFrequencyWrapper, ScalingWrapper,
     TimeDifferencingWrapper, DataArray, ImplicitPrognostic
 )
-from test_base_components import (
-    MockPrognostic, MockImplicit, MockImplicitPrognostic, MockDiagnostic)
 import pytest
 import numpy as np
+
+
+class MockPrognostic(Prognostic):
+
+    input_properties = None
+    diagnostic_properties = None
+    tendency_properties = None
+
+    def __init__(
+            self, input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, **kwargs):
+        self.input_properties = input_properties
+        self.diagnostic_properties = diagnostic_properties
+        self.tendency_properties = tendency_properties
+        self.diagnostic_output = diagnostic_output
+        self.tendency_output = tendency_output
+        self.times_called = 0
+        self.state_given = None
+        super(MockPrognostic, self).__init__(**kwargs)
+
+    def array_call(self, state):
+        self.times_called += 1
+        self.state_given = state
+        return self.tendency_output, self.diagnostic_output
+
+
+class MockImplicitPrognostic(ImplicitPrognostic):
+
+    input_properties = None
+    diagnostic_properties = None
+    tendency_properties = None
+
+    def __init__(
+            self, input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, **kwargs):
+        self.input_properties = input_properties
+        self.diagnostic_properties = diagnostic_properties
+        self.tendency_properties = tendency_properties
+        self.diagnostic_output = diagnostic_output
+        self.tendency_output = tendency_output
+        self.times_called = 0
+        self.state_given = None
+        self.timestep_given = None
+        super(MockImplicitPrognostic, self).__init__(**kwargs)
+
+    def array_call(self, state, timestep):
+        self.times_called += 1
+        self.state_given = state
+        self.timestep_given = timestep
+        return self.tendency_output, self.diagnostic_output
+
+
+class MockDiagnostic(Diagnostic):
+
+    input_properties = None
+    diagnostic_properties = None
+
+    def __init__(
+            self, input_properties, diagnostic_properties, diagnostic_output,
+            **kwargs):
+        self.input_properties = input_properties
+        self.diagnostic_properties = diagnostic_properties
+        self.diagnostic_output = diagnostic_output
+        self.times_called = 0
+        self.state_given = None
+        super(MockDiagnostic, self).__init__(**kwargs)
+
+    def array_call(self, state):
+        self.times_called += 1
+        self.state_given = state
+        return self.diagnostic_output
+
+
+class MockImplicit(Implicit):
+
+    input_properties = None
+    diagnostic_properties = None
+    output_properties = None
+
+    def __init__(
+            self, input_properties, diagnostic_properties, output_properties,
+            diagnostic_output, state_output,
+            **kwargs):
+        self.input_properties = input_properties
+        self.diagnostic_properties = diagnostic_properties
+        self.output_properties = output_properties
+        self.diagnostic_output = diagnostic_output
+        self.state_output = state_output
+        self.times_called = 0
+        self.state_given = None
+        self.timestep_given = None
+        super(MockImplicit, self).__init__(**kwargs)
+
+    def array_call(self, state, timestep):
+        self.times_called += 1
+        self.state_given = state
+        self.timestep_given = timestep
+        return self.diagnostic_output, self.state_output
 
 
 class MockEmptyPrognostic(MockPrognostic):
