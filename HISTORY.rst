@@ -40,6 +40,8 @@ Latest
   component attributes, and correct signature of __call__. Later it may also
   check properties dictionaries for consistency, or perform other checks.
 * Fixed a bug where ABCMeta was not being used in Python 3.
+* Added initialize_numpy_arrays_with_properties which creates zero arrays for an output
+  properties dictionary.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

@@ -54,7 +54,10 @@ def get_wildcard_matches_and_dim_lengths(state, property_dictionary):
                     quantity_name, new_wildcard_names))
         wildcard_names.extend(
             [name for name in new_wildcard_names if name not in wildcard_names])
-    wildcard_names = tuple(wildcard_names)
+    if not any('dims' in p.keys() and '*' in p['dims'] for p in property_dictionary.values()):
+        wildcard_names = None  # can't determine wildcard matches if there is no wildcard
+    else:
+        wildcard_names = tuple(wildcard_names)
     return wildcard_names, dim_lengths
 
 
@@ -142,22 +145,72 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
         return out_array
 
 
-def restore_data_arrays_with_properties(
-        raw_arrays, output_properties, input_state, input_properties,
-        ignore_names=None):
-    if ignore_names is None:
-        ignore_names = []
+def initialize_numpy_arrays_with_properties(
+        output_properties, input_state, input_properties, dtype=np.float64):
+    """
+    Parameters
+    ----------
+    output_properties : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with properties for those quantities. The property "dims" must be
+        present for each quantity not also present in input_properties.
+    input_state : dict
+        A state dictionary that was used as input to a component for which
+        DataArrays are being restored.
+    input_properties : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with input properties for those quantities. The property "dims" must be
+        present, indicating the dimensions that the quantity was transformed to
+        when taken as input to a component.
+
+    Returns
+    -------
+    out_dict : dict
+        A dictionary whose keys are quantities and values are numpy arrays
+        corresponding to those quantities, with shapes determined from the
+        inputs to this function.
+
+    Raises
+    ------
+    InvalidPropertyDictError
+        When an output property is specified to have dims_like an input
+        property, but the arrays for the two properties have incompatible
+        shapes.
+    """
     wildcard_names, dim_lengths = get_wildcard_matches_and_dim_lengths(
         input_state, input_properties)
-    for name, value in raw_arrays.items():
+    dims_from_out_properties = extract_output_dims_properties(
+        output_properties, input_properties, [])
+    out_dict = {}
+    for name, out_dims in dims_from_out_properties.items():
+        if '*' in out_dims and wildcard_names is not None:
+            _, out_shape = fill_dims_wildcard(
+                out_dims, dim_lengths, wildcard_names, expand_wildcard=False)
+        elif '*' in out_dims and wildcard_names is None:
+            raise InvalidPropertyDictError(
+                'Cannot determine wildcard dimensions required for output if '
+                'there are no wildcard dimensions in input_properties')
+        else:
+            out_shape = []
+            for dim in out_dims:
+                out_shape.append(dim_lengths[dim])
+        out_dict[name] = np.zeros(out_shape, dtype=dtype)
+    return out_dict
+
+
+def ensure_values_are_arrays(array_dict):
+    for name, value in array_dict.items():
         if not isinstance(value, np.ndarray):
-            raw_arrays[name] = np.asarray(value)
-    out_dims_property = {}
+            array_dict[name] = np.asarray(value)
+
+
+def extract_output_dims_properties(output_properties, input_properties, ignore_names):
+    return_array = {}
     for name, properties in output_properties.items():
         if name in ignore_names:
             continue
         elif 'dims' in properties.keys():
-            out_dims_property[name] = properties['dims']
+            return_array[name] = properties['dims']
         elif name not in input_properties.keys():
             raise InvalidPropertyDictError(
                 'Output dims must be specified for {} in properties'.format(name))
@@ -165,54 +218,130 @@ def restore_data_arrays_with_properties(
             raise InvalidPropertyDictError(
                 'Input dims must be specified for {} in properties'.format(name))
         else:
-            out_dims_property[name] = input_properties[name]['dims']
+            return_array[name] = input_properties[name]['dims']
+    return return_array
+
+
+def fill_dims_wildcard(
+        out_dims, dim_lengths, wildcard_names, expand_wildcard=True):
+    i_wildcard = out_dims.index('*')
+    target_shape = []
+    out_dims_without_wildcard = []
+    for i, out_dim in enumerate(out_dims):
+        if i == i_wildcard and expand_wildcard:
+            target_shape.extend([dim_lengths[n] for n in wildcard_names])
+            out_dims_without_wildcard.extend(wildcard_names)
+        elif i == i_wildcard and not expand_wildcard:
+            target_shape.append(np.product([dim_lengths[n] for n in wildcard_names]))
+        else:
+            target_shape.append(dim_lengths[out_dim])
+            out_dims_without_wildcard.append(out_dim)
+    return out_dims_without_wildcard, target_shape
+
+
+def expand_array_wildcard_dims(raw_array, target_shape, name, out_dims):
+    try:
+        out_array = np.reshape(raw_array, target_shape)
+    except ValueError:
+        raise InvalidPropertyDictError(
+            'Failed to restore shape for output {} with raw shape {} '
+            'and target shape {}, are the output dims {} correct?'.format(
+                name, raw_array.shape, target_shape,
+                out_dims))
+    return out_array
+
+
+def get_alias_or_name(name, output_properties, input_properties):
+    if 'alias' in output_properties[name].keys():
+        raw_name = output_properties[name]['alias']
+    elif name in input_properties.keys() and 'alias' in input_properties[name].keys():
+        raw_name = input_properties[name]['alias']
+    else:
+        raw_name = name
+    return raw_name
+
+
+def check_array_shape(out_dims, raw_array, name, dim_lengths):
+    if len(out_dims) != len(raw_array.shape):
+        raise InvalidPropertyDictError(
+            'Returned array for {} has shape {} '
+            'which is incompatible with dims {} in properties'.format(
+                name, raw_array.shape, out_dims))
+    for dim, length in zip(out_dims, raw_array.shape):
+        if dim in dim_lengths.keys() and dim_lengths[dim] != length:
+            raise InvalidPropertyDictError(
+                'Dimension {} of quantity {} has length {}, but '
+                'another quantity has length {}'.format(
+                    dim, name, length, dim_lengths[dim])
+            )
+
+
+def restore_data_arrays_with_properties(
+        raw_arrays, output_properties, input_state, input_properties,
+        ignore_names=None):
+    """
+    Parameters
+    ----------
+    raw_arrays : dict
+        A dictionary whose keys are quantity names and values are numpy arrays
+        containing the data for those quantities.
+    output_properties : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with properties for those quantities. The property "dims" must be
+        present for each quantity not also present in input_properties. All
+        other properties are included as attributes on the output DataArray
+        for that quantity, including "units" which is required.
+    input_state : dict
+        A state dictionary that was used as input to a component for which
+        DataArrays are being restored.
+    input_properties : dict
+        A dictionary whose keys are quantity names and values are dictionaries
+        with input properties for those quantities. The property "dims" must be
+        present, indicating the dimensions that the quantity was transformed to
+        when taken as input to a component.
+    ignore_names : iterable of str
+        Names to ignore when encountered in output_properties, will not be
+        included in the returned dictionary.
+
+    Returns
+    -------
+    out_dict : dict
+        A dictionary whose keys are quantities and values are DataArrays
+        corresponding to those quantities, with data, shapes and attributes
+        determined from the inputs to this function.
+
+    Raises
+    ------
+    InvalidPropertyDictError
+        When an output property is specified to have dims_like an input
+        property, but the arrays for the two properties have incompatible
+        shapes.
+    """
+    raw_arrays = raw_arrays.copy()
+    if ignore_names is None:
+        ignore_names = []
+    wildcard_names, dim_lengths = get_wildcard_matches_and_dim_lengths(
+        input_state, input_properties)
+    ensure_values_are_arrays(raw_arrays)
+    dims_from_out_properties = extract_output_dims_properties(
+        output_properties, input_properties, ignore_names)
     out_dict = {}
-    for name, dims in out_dims_property.items():
+    for name, out_dims in dims_from_out_properties.items():
         if name in ignore_names:
             continue
-        if 'alias' in output_properties[name].keys():
-            raw_name = output_properties[name]['alias']
-        elif name in input_properties.keys() and 'alias' in input_properties[name].keys():
-            raw_name = input_properties[name]['alias']
+        raw_name = get_alias_or_name(name, output_properties, input_properties)
+        if '*' in out_dims:
+            out_dims_without_wildcard, target_shape = fill_dims_wildcard(
+                out_dims, dim_lengths, wildcard_names)
+            out_array = expand_array_wildcard_dims(
+                raw_arrays[raw_name], target_shape, name, out_dims)
         else:
-            raw_name = name
-        if '*' in dims:
-            i_wildcard = dims.index('*')
-            target_shape = []
-            out_dims = []
-            for i, length in enumerate(raw_arrays[raw_name].shape):
-                if i == i_wildcard:
-                    target_shape.extend([dim_lengths[n] for n in wildcard_names])
-                    out_dims.extend(wildcard_names)
-                else:
-                    target_shape.append(length)
-                    out_dims.append(dims[i])
-            try:
-                out_array = np.reshape(raw_arrays[raw_name], target_shape)
-            except ValueError:
-                raise InvalidPropertyDictError(
-                    'Failed to restore shape for output {} with raw shape {} '
-                    'and target shape {}, are the output dims {} correct?'.format(
-                        name, raw_arrays[raw_name].shape, target_shape,
-                        out_dims_property[name]))
-        else:
-            if len(dims) != len(raw_arrays[raw_name].shape):
-                raise InvalidPropertyDictError(
-                    'Returned array for {} has shape {} '
-                    'which is incompatible with dims {} in properties'.format(
-                        name, raw_arrays[raw_name].shape, dims))
-            for dim, length in zip(dims, raw_arrays[raw_name].shape):
-                if dim in dim_lengths.keys() and dim_lengths[dim] != length:
-                    raise InvalidPropertyDictError(
-                        'Dimension {} of quantity {} has length {}, but '
-                        'another quantity has length {}'.format(
-                            dim, name, length, dim_lengths[dim])
-                    )
-            out_dims = dims
+            check_array_shape(out_dims, raw_arrays[raw_name], name, dim_lengths)
+            out_dims_without_wildcard = out_dims
             out_array = raw_arrays[raw_name]
         out_dict[name] = DataArray(
             out_array,
-            dims=out_dims,
+            dims=out_dims_without_wildcard,
             attrs={'units': output_properties[name]['units']}
         )
     return out_dict

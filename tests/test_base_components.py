@@ -6,6 +6,7 @@ from sympl import (
     Prognostic, Diagnostic, Monitor, Implicit, ImplicitPrognostic,
     datetime, timedelta, DataArray, InvalidPropertyDictError,
     ComponentMissingOutputError, ComponentExtraOutputError,
+    InvalidStateError
 )
 
 def same_list(list1, list2):
@@ -167,13 +168,545 @@ class BadMockImplicit(Implicit):
         return {}, {}
 
 
+class InputTestBase():
 
-class PrognosticTests(unittest.TestCase):
+    def test_cannot_overlap_input_aliases(self):
+        input_properties = {
+            'input1': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'},
+            'input2': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'}
+        }
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(input_properties=input_properties)
+
+    def test_raises_when_input_missing(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {'time': timedelta(0)}
+        with self.assertRaises(InvalidStateError):
+            self.call_component(component, state)
+
+    def test_raises_when_input_incorrect_units(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.zeros([10]),
+                dims=['dim1'],
+                attrs={'units': 's'},
+            ),
+        }
+        with self.assertRaises(InvalidStateError):
+            self.call_component(component, state)
+
+    def test_raises_when_input_incorrect_dims(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.zeros([10]),
+                dims=['dim2'],
+                attrs={'units': 'm'},
+            ),
+        }
+        with self.assertRaises(InvalidStateError):
+            self.call_component(component, state)
+
+    def test_raises_when_input_conflicting_dim_lengths(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            },
+            'input1': {
+                'dims': ['dim2'],
+                'units': 'm',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.zeros([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'},
+            ),
+            'input2': DataArray(
+                np.zeros([7]),
+                dims=['dim1'],
+                attrs={'units': 'm'},
+            ),
+        }
+        with self.assertRaises(InvalidStateError):
+            self.call_component(component, state)
+
+    def test_collects_independent_wildcard_dims(self):
+        input_properties = {
+            'input1': {
+                'dims': ['*'],
+                'units': 'm',
+            },
+            'input2': {
+                'dims': ['*'],
+                'units': 'm',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.zeros([4]),
+                dims=['dim1'],
+                attrs={'units': 'm'},
+            ),
+            'input2': DataArray(
+                np.zeros([3]),
+                dims=['dim2'],
+                attrs={'units': 'm'},
+            ),
+        }
+        self.call_component(component, state)
+        given = component.state_given
+        assert len(given.keys()) == 3
+        assert 'time' in given.keys()
+        assert 'input1' in given.keys()
+        assert given['input1'].shape == (12,)
+        assert 'input2' in given.keys()
+        assert given['input2'].shape == (12,)
+
+    def test_accepts_when_input_swapped_dims(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1', 'dim2'],
+                'units': 'm',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.zeros([3, 4]),
+                dims=['dim2', 'dim1'],
+                attrs={'units': 'm'},
+            ),
+        }
+        self.call_component(component, state)
+        assert component.state_given['input1'].shape == (4, 3)
+
+    def test_input_requires_dims(self):
+        input_properties = {'input1': {'units': 'm'}}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(input_properties=input_properties)
+
+    def test_input_requires_units(self):
+        input_properties = {'input1': {'dims': ['dim1']}}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(input_properties=input_properties)
+
+    def test_input_no_transformations(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm'
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            )
+        }
+        self.call_component(component, state)
+        assert len(component.state_given) == 2
+        assert 'time' in component.state_given.keys()
+        assert 'input1' in component.state_given.keys()
+        assert isinstance(component.state_given['input1'], np.ndarray)
+        assert np.all(component.state_given['input1'] == np.ones([10]))
+
+    def test_input_converts_units(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm'
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'km'}
+            )
+        }
+        self.call_component(component, state)
+        assert len(component.state_given) == 2
+        assert 'time' in component.state_given.keys()
+        assert 'input1' in component.state_given.keys()
+        assert isinstance(component.state_given['input1'], np.ndarray)
+        assert np.all(component.state_given['input1'] == np.ones([10])*1000.)
+
+    def test_input_collects_one_dimension(self):
+        input_properties = {
+            'input1': {
+                'dims': ['*'],
+                'units': 'm'
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            )
+        }
+        self.call_component(component, state)
+        assert len(component.state_given) == 2
+        assert 'time' in component.state_given.keys()
+        assert 'input1' in component.state_given.keys()
+        assert isinstance(component.state_given['input1'], np.ndarray)
+        assert np.all(component.state_given['input1'] == np.ones([10]))
+
+    def test_input_is_aliased(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'm',
+                'alias': 'in1',
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            )
+        }
+        self.call_component(component, state)
+        assert len(component.state_given) == 2
+        assert 'time' in component.state_given.keys()
+        assert 'in1' in component.state_given.keys()
+        assert isinstance(component.state_given['in1'], np.ndarray)
+        assert np.all(component.state_given['in1'] == np.ones([10]))
+
+
+class DiagnosticTestBase():
+
+    def test_diagnostic_requires_dims(self):
+        diagnostic_properties = {'diag1': {'units': 'm'}}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(diagnostic_properties=diagnostic_properties)
+
+    def test_diagnostic_requires_units(self):
+        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(diagnostic_properties=diagnostic_properties)
+
+    def test_diagnostic_requires_correct_number_of_dims(self):
+        input_properties = {
+            'input1': {'units': 'm', 'dims': ['dim1', 'dim2']}
+        }
+        diagnostic_properties = {
+            'diag1': {'units': 'm', 'dims': ['dim1', 'dim2']}
+        }
+        diagnostic_output = {'diag1': np.zeros([10]),}
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10, 2]),
+                dims=['dim1', 'dim2'],
+                attrs={'units': 'm'}
+            )
+        }
+        component = self.get_component(
+            input_properties = input_properties,
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output,
+        )
+        with self.assertRaises(InvalidPropertyDictError):
+            _, _ = self.call_component(component, state)
+
+    def test_diagnostic_requires_correct_dim_length(self):
+        input_properties = {
+            'input1': {'units': 'm', 'dims': ['dim1', 'dim2']}
+        }
+        diagnostic_properties = {
+            'diag1': {'units': 'm', 'dims': ['dim1', 'dim2']}
+        }
+        diagnostic_output = {'diag1': np.zeros([5, 2]),}
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10, 2]),
+                dims=['dim1', 'dim2'],
+                attrs={'units': 'm'}
+            )
+        }
+        component = self.get_component(
+            input_properties=input_properties,
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output
+        )
+        with self.assertRaises(InvalidPropertyDictError):
+            _, _ = self.call_component(component, state)
+
+    def test_diagnostic_uses_input_dims(self):
+        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
+        diagnostic_properties = {'diag1': {'units': 'm'}}
+        self.get_component(
+            input_properties=input_properties,
+            diagnostic_properties=diagnostic_properties
+        )
+
+    def test_diagnostic_doesnt_use_input_units(self):
+        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
+        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(
+                input_properties=input_properties,
+                diagnostic_properties=diagnostic_properties
+            )
+
+    def test_diagnostics_no_transformations(self):
+        diagnostic_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm'
+            }
+        }
+        diagnostic_output = {
+            'output1': np.ones([10]),
+        }
+        component = self.get_component(
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output,
+        )
+        state = {'time': timedelta(0)}
+        diagnostics = self.get_diagnostics(self.call_component(component, state))
+        assert len(diagnostics) == 1
+        assert 'output1' in diagnostics.keys()
+        assert isinstance(diagnostics['output1'], DataArray)
+        assert len(diagnostics['output1'].dims) == 1
+        assert 'dim1' in diagnostics['output1'].dims
+        assert 'units' in diagnostics['output1'].attrs
+        assert diagnostics['output1'].attrs['units'] == 'm'
+        assert np.all(diagnostics['output1'].values == np.ones([10]))
+
+    def test_diagnostics_restoring_dims(self):
+        input_properties = {
+            'input1': {
+                'dims': ['*', 'dim1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_properties = {
+            'output1': {
+                'dims': ['*', 'dim1'],
+                'units': 'm'
+            }
+        }
+        diagnostic_output = {
+            'output1': np.ones([1, 10]),
+        }
+        component = self.get_component(
+            input_properties=input_properties,
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output,
+        )
+        state = {
+            'input1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}),
+            'time': timedelta(0)}
+        diagnostics = self.get_diagnostics(self.call_component(component, state))
+        assert len(diagnostics) == 1
+        assert 'output1' in diagnostics.keys()
+        assert isinstance(diagnostics['output1'], DataArray)
+        assert len(diagnostics['output1'].dims) == 1
+        assert 'dim1' in diagnostics['output1'].dims
+        assert 'units' in diagnostics['output1'].attrs
+        assert diagnostics['output1'].attrs['units'] == 'm'
+        assert np.all(diagnostics['output1'].values == np.ones([10]))
+
+    def test_diagnostics_with_alias(self):
+        diagnostic_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+                'alias': 'out1',
+            }
+        }
+        diagnostic_output = {
+            'out1': np.ones([10]),
+        }
+        component = self.get_component(
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output,
+        )
+        state = {'time': timedelta(0)}
+        diagnostics = self.get_diagnostics(self.call_component(component, state))
+        assert len(diagnostics) == 1
+        assert 'output1' in diagnostics.keys()
+        assert isinstance(diagnostics['output1'], DataArray)
+        assert len(diagnostics['output1'].dims) == 1
+        assert 'dim1' in diagnostics['output1'].dims
+        assert 'units' in diagnostics['output1'].attrs
+        assert diagnostics['output1'].attrs['units'] == 'm'
+        assert np.all(diagnostics['output1'].values == np.ones([10]))
+
+    def test_diagnostics_with_alias_from_input(self):
+        input_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+                'alias': 'out1',
+            }
+        }
+        diagnostic_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_output = {
+            'out1': np.ones([10]),
+        }
+        component = self.get_component(
+            input_properties=input_properties,
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output,
+        )
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            )
+        }
+        diagnostics = self.get_diagnostics(self.call_component(component, state))
+        assert len(diagnostics) == 1
+        assert 'output1' in diagnostics.keys()
+        assert isinstance(diagnostics['output1'], DataArray)
+        assert len(diagnostics['output1'].dims) == 1
+        assert 'dim1' in diagnostics['output1'].dims
+        assert 'units' in diagnostics['output1'].attrs
+        assert diagnostics['output1'].attrs['units'] == 'm'
+        assert np.all(diagnostics['output1'].values == np.ones([10]))
+
+    def test_diagnostics_with_dims_from_input(self):
+        input_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_properties = {
+            'output1': {
+                'units': 'm',
+            }
+        }
+        diagnostic_output = {
+            'output1': np.ones([10]),
+        }
+        component = self.get_component(
+            input_properties=input_properties,
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output,
+        )
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            )
+        }
+        diagnostics = self.get_diagnostics(self.call_component(component, state))
+        assert len(diagnostics) == 1
+        assert 'output1' in diagnostics.keys()
+        assert isinstance(diagnostics['output1'], DataArray)
+        assert len(diagnostics['output1'].dims) == 1
+        assert 'dim1' in diagnostics['output1'].dims
+        assert 'units' in diagnostics['output1'].attrs
+        assert diagnostics['output1'].attrs['units'] == 'm'
+        assert np.all(diagnostics['output1'].values == np.ones([10]))
+
+    def test_raises_when_diagnostic_not_given(self):
+        diagnostic_properties = {
+            'diag1': {
+                'dims': ['dims1'],
+                'units': 'm',
+            }
+        }
+        diagnostic_output = {}
+        diagnostic = self.get_component(
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentMissingOutputError):
+            self.call_component(diagnostic, state)
+
+    def test_raises_when_extraneous_diagnostic_given(self):
+        diagnostic_properties = {}
+        diagnostic_output = {
+            'diag1': np.zeros([10])
+        }
+        diagnostic = self.get_component(
+            diagnostic_properties=diagnostic_properties,
+            diagnostic_output=diagnostic_output
+        )
+        state = {'time': timedelta(0)}
+        with self.assertRaises(ComponentExtraOutputError):
+            self.call_component(diagnostic, state)
+
+
+class PrognosticTests(unittest.TestCase, InputTestBase):
 
     component_class = MockPrognostic
 
     def call_component(self, component, state):
         return component(state)
+
+    def get_component(
+            self, input_properties=None, tendency_properties=None,
+            diagnostic_properties=None, tendency_output=None,
+            diagnostic_output=None):
+        return MockPrognostic(
+            input_properties=input_properties or {},
+            tendency_properties=tendency_properties or {},
+            diagnostic_properties=diagnostic_properties or {},
+            tendency_output=tendency_output or {},
+            diagnostic_output=diagnostic_output or {},
+        )
+
+    def get_diagnostics(self, result):
+        return result[1]
 
     def test_cannot_use_bad_component(self):
         component = BadMockPrognostic()
@@ -253,134 +786,6 @@ class PrognosticTests(unittest.TestCase):
         assert 'time' in prognostic.state_given.keys()
         assert prognostic.state_given['time'] == timedelta(seconds=0)
         assert prognostic.times_called == 1
-
-    def test_input_requires_dims(self):
-        input_properties = {'input1': {'units': 'm'}}
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties, tendency_properties,
-                diagnostic_output, tendency_output
-            )
-
-    def test_input_requires_units(self):
-        input_properties = {'input1': {'dims': ['dim1']}}
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                tendency_properties,
-                diagnostic_output, tendency_output
-            )
-
-    def test_diagnostic_requires_dims(self):
-        input_properties = {}
-        diagnostic_properties = {'diag1': {'units': 'm'}}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                tendency_properties,
-                diagnostic_output, tendency_output
-            )
-
-    def test_diagnostic_requires_correct_number_of_dims(self):
-        input_properties = {
-            'input1': {'units': 'm', 'dims': ['dim1', 'dim2']}
-        }
-        diagnostic_properties = {
-            'diag1': {'units': 'm', 'dims': ['dim1', 'dim2']}
-        }
-        tendency_properties = {}
-        diagnostic_output = {'diag1': np.zeros([10]),}
-        tendency_output = {}
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10, 2]),
-                dims=['dim1', 'dim2'],
-                attrs={'units': 'm'}
-            )
-        }
-        component = self.component_class(
-            input_properties, diagnostic_properties,
-            tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        with self.assertRaises(InvalidPropertyDictError):
-            _, _ = self.call_component(component, state)
-
-    def test_diagnostic_requires_correct_dim_length(self):
-        input_properties = {
-            'input1': {'units': 'm', 'dims': ['dim1', 'dim2']}
-        }
-        diagnostic_properties = {
-            'diag1': {'units': 'm', 'dims': ['dim1', 'dim2']}
-        }
-        tendency_properties = {}
-        diagnostic_output = {'diag1': np.zeros([5, 2]),}
-        tendency_output = {}
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10, 2]),
-                dims=['dim1', 'dim2'],
-                attrs={'units': 'm'}
-            )
-        }
-        component = self.component_class(
-            input_properties, diagnostic_properties,
-            tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        with self.assertRaises(InvalidPropertyDictError):
-            _, _ = self.call_component(component, state)
-
-    def test_diagnostic_uses_base_dims(self):
-        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
-        diagnostic_properties = {'diag1': {'units': 'm'}}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        self.component_class(
-            input_properties, diagnostic_properties,
-            tendency_properties,
-            diagnostic_output, tendency_output
-        )
-
-    def test_diagnostic_doesnt_use_base_units(self):
-        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
-        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                tendency_properties,
-                diagnostic_output, tendency_output
-            )
-
-    def test_diagnostic_requires_units(self):
-        input_properties = {}
-        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                tendency_properties,
-                diagnostic_output, tendency_output
-            )
 
     def test_tendency_requires_dims(self):
         input_properties = {}
@@ -554,127 +959,6 @@ class PrognosticTests(unittest.TestCase):
         with self.assertRaises(ComponentExtraOutputError):
             _, _ = self.call_component(prognostic, state)
 
-    def test_input_no_transformations(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, _ = self.call_component(prognostic, state)
-        assert len(prognostic.state_given) == 2
-        assert 'time' in prognostic.state_given.keys()
-        assert 'input1' in prognostic.state_given.keys()
-        assert isinstance(prognostic.state_given['input1'], np.ndarray)
-        assert np.all(prognostic.state_given['input1'] == np.ones([10]))
-
-    def test_input_converts_units(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'km'}
-            )
-        }
-        _, _ = self.call_component(prognostic, state)
-        assert len(prognostic.state_given) == 2
-        assert 'time' in prognostic.state_given.keys()
-        assert 'input1' in prognostic.state_given.keys()
-        assert isinstance(prognostic.state_given['input1'], np.ndarray)
-        assert np.all(prognostic.state_given['input1'] == np.ones([10])*1000.)
-
-    def test_input_collects_one_dimension(self):
-        input_properties = {
-            'input1': {
-                'dims': ['*'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, _ = self.call_component(prognostic, state)
-        assert len(prognostic.state_given) == 2
-        assert 'time' in prognostic.state_given.keys()
-        assert 'input1' in prognostic.state_given.keys()
-        assert isinstance(prognostic.state_given['input1'], np.ndarray)
-        assert np.all(prognostic.state_given['input1'] == np.ones([10]))
-
-    def test_input_is_aliased(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'in1',
-            }
-        }
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, _ = self.call_component(prognostic, state)
-        assert len(prognostic.state_given) == 2
-        assert 'time' in prognostic.state_given.keys()
-        assert 'in1' in prognostic.state_given.keys()
-        assert isinstance(prognostic.state_given['in1'], np.ndarray)
-        assert np.all(prognostic.state_given['in1'] == np.ones([10]))
-
     def test_tendencies_no_transformations(self):
         input_properties = {}
         diagnostic_properties = {}
@@ -809,181 +1093,6 @@ class PrognosticTests(unittest.TestCase):
         assert 'units' in tendencies['output1'].attrs
         assert tendencies['output1'].attrs['units'] == 'm/s'
         assert np.all(tendencies['output1'].values == np.ones([10]))
-
-    def test_diagnostics_no_transformations(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        tendency_properties = {}
-        diagnostic_output = {
-            'output1': np.ones([10]),
-        }
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {'time': timedelta(0)}
-        _, diagnostics = self.call_component(prognostic, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_restoring_dims(self):
-        input_properties = {
-            'input1': {
-                'dims': ['*', 'dim1'],
-                'units': 'm',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['*', 'dim1'],
-                'units': 'm'
-            }
-        }
-        tendency_properties = {}
-        diagnostic_output = {
-            'output1': np.ones([1, 10]),
-        }
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}),
-            'time': timedelta(0)}
-        _, diagnostics = self.call_component(prognostic, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_alias(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'out1',
-            }
-        }
-        tendency_properties = {}
-        diagnostic_output = {
-            'out1': np.ones([10]),
-        }
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {'time': timedelta(0)}
-        _, diagnostics = self.call_component(prognostic, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_alias_from_input(self):
-        input_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'out1',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-            }
-        }
-        tendency_properties = {}
-        diagnostic_output = {
-            'out1': np.ones([10]),
-        }
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, diagnostics = self.call_component(prognostic, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_dims_from_input(self):
-        input_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'units': 'm',
-            }
-        }
-        tendency_properties = {}
-        diagnostic_output = {
-            'output1': np.ones([10]),
-        }
-        tendency_output = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, diagnostics = self.call_component(prognostic, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
 
     def test_tendencies_in_diagnostics_no_tendency(self):
         input_properties = {}
@@ -1122,6 +1231,18 @@ class ImplicitPrognosticTests(PrognosticTests):
     def call_component(self, component, state):
         return component(state, timedelta(seconds=1))
 
+    def get_component(
+            self, input_properties=None, tendency_properties=None,
+            diagnostic_properties=None, tendency_output=None,
+            diagnostic_output=None):
+        return MockImplicitPrognostic(
+            input_properties=input_properties or {},
+            tendency_properties=tendency_properties or {},
+            diagnostic_properties=diagnostic_properties or {},
+            tendency_output=tendency_output or {},
+            diagnostic_output=diagnostic_output or {},
+        )
+
     def test_cannot_use_bad_component(self):
         component = BadMockImplicitPrognostic()
         with self.assertRaises(RuntimeError):
@@ -1231,12 +1352,25 @@ class ImplicitPrognosticTests(PrognosticTests):
         assert prognostic.times_called == 1
 
 
-class DiagnosticTests(unittest.TestCase):
+class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
     component_class = MockDiagnostic
 
     def call_component(self, component, state):
         return component(state)
+
+    def get_component(
+            self, input_properties=None,
+            diagnostic_properties=None,
+            diagnostic_output=None):
+        return MockDiagnostic(
+            input_properties=input_properties or {},
+            diagnostic_properties=diagnostic_properties or {},
+            diagnostic_output=diagnostic_output or {},
+        )
+
+    def get_diagnostics(self, result):
+        return result
 
     def test_cannot_use_bad_component(self):
         component = BadMockDiagnostic()
@@ -1303,371 +1437,28 @@ class DiagnosticTests(unittest.TestCase):
         assert diagnostic.state_given['time'] == timedelta(seconds=0)
         assert diagnostic.times_called == 1
 
-    def test_input_requires_dims(self):
-        input_properties = {'input1': {'units': 'm'}}
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output
-            )
 
-    def test_input_requires_units(self):
-        input_properties = {'input1': {'dims': ['dim1']}}
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output
-            )
-
-    def test_diagnostic_requires_dims(self):
-        input_properties = {}
-        diagnostic_properties = {'diag1': {'units': 'm'}}
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output,
-            )
-
-    def test_diagnostic_uses_base_dims(self):
-        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
-        diagnostic_properties = {'diag1': {'units': 'm'}}
-        diagnostic_output = {}
-        self.component_class(
-            input_properties, diagnostic_properties,
-            diagnostic_output,
-        )
-
-    def test_diagnostic_doesnt_use_base_units(self):
-        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
-        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output,
-            )
-
-    def test_diagnostic_requires_units(self):
-        input_properties = {}
-        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output,
-            )
-
-    def test_cannot_overlap_input_aliases(self):
-        input_properties = {
-            'input1': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'},
-            'input2': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'}
-        }
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output
-            )
-
-    def test_cannot_overlap_diagnostic_aliases(self):
-        input_properties = {
-        }
-        diagnostic_properties = {
-            'diag1': {'dims': ['dim1'], 'units': 'm', 'alias': 'diag'},
-            'diag2': {'dims': ['dim1'], 'units': 'm', 'alias': 'diag'}
-        }
-        diagnostic_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                diagnostic_output
-            )
-
-    def test_raises_when_diagnostic_not_given(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'diag1': {
-                'dims': ['dims1'],
-                'units': 'm',
-            }
-        }
-        diagnostic_output = {}
-        diagnostic = self.component_class(
-            input_properties, diagnostic_properties,
-            diagnostic_output,
-        )
-        state = {'time': timedelta(0)}
-        with self.assertRaises(ComponentMissingOutputError):
-            _, _ = self.call_component(diagnostic, state)
-
-    def test_raises_when_extraneous_diagnostic_given(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        diagnostic_output = {
-            'diag1': np.zeros([10])
-        }
-        diagnostic = self.component_class(
-            input_properties, diagnostic_properties,
-            diagnostic_output,
-        )
-        state = {'time': timedelta(0)}
-        with self.assertRaises(ComponentExtraOutputError):
-            _, _ = self.call_component(diagnostic, state)
-
-    def test_input_no_transformations(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties, diagnostic_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _ = diagnostic(state)
-        assert len(diagnostic.state_given) == 2
-        assert 'time' in diagnostic.state_given.keys()
-        assert 'input1' in diagnostic.state_given.keys()
-        assert isinstance(diagnostic.state_given['input1'], np.ndarray)
-        assert np.all(diagnostic.state_given['input1'] == np.ones([10]))
-
-    def test_input_converts_units(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'km'}
-            )
-        }
-        _ = diagnostic(state)
-        assert len(diagnostic.state_given) == 2
-        assert 'time' in diagnostic.state_given.keys()
-        assert 'input1' in diagnostic.state_given.keys()
-        assert isinstance(diagnostic.state_given['input1'], np.ndarray)
-        assert np.all(diagnostic.state_given['input1'] == np.ones([10])*1000.)
-
-    def test_input_collects_one_dimension(self):
-        input_properties = {
-            'input1': {
-                'dims': ['*'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _ = diagnostic(state)
-        assert len(diagnostic.state_given) == 2
-        assert 'time' in diagnostic.state_given.keys()
-        assert 'input1' in diagnostic.state_given.keys()
-        assert isinstance(diagnostic.state_given['input1'], np.ndarray)
-        assert np.all(diagnostic.state_given['input1'] == np.ones([10]))
-
-    def test_input_is_aliased(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'in1',
-            }
-        }
-        diagnostic_properties = {}
-        diagnostic_output = {}
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _ = diagnostic(state)
-        assert len(diagnostic.state_given) == 2
-        assert 'time' in diagnostic.state_given.keys()
-        assert 'in1' in diagnostic.state_given.keys()
-        assert isinstance(diagnostic.state_given['in1'], np.ndarray)
-        assert np.all(diagnostic.state_given['in1'] == np.ones([10]))
-
-    def test_diagnostics_no_transformations(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_output = {
-            'output1': np.ones([10]),
-        }
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {'time': timedelta(0)}
-        diagnostics = diagnostic(state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_alias(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'out1',
-            }
-        }
-        diagnostic_output = {
-            'out1': np.ones([10]),
-        }
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {'time': timedelta(0)}
-        diagnostics = diagnostic(state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_alias_from_input(self):
-        input_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'out1',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-            }
-        }
-        diagnostic_output = {
-            'out1': np.ones([10]),
-        }
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        diagnostics = diagnostic(state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_dims_from_input(self):
-        input_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'units': 'm',
-            }
-        }
-        diagnostic_output = {
-            'output1': np.ones([10]),
-        }
-        diagnostic = MockDiagnostic(
-            input_properties, diagnostic_properties,
-            diagnostic_output
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        diagnostics = diagnostic(state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-
-class ImplicitTests(unittest.TestCase):
+class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
     component_class = MockImplicit
 
     def call_component(self, component, state):
         return component(state, timedelta(seconds=1))
+
+    def get_component(
+            self, input_properties=None, output_properties=None,
+            diagnostic_properties=None, state_output=None,
+            diagnostic_output=None):
+        return MockImplicit(
+            input_properties=input_properties or {},
+            output_properties=output_properties or {},
+            diagnostic_properties=diagnostic_properties or {},
+            state_output=state_output or {},
+            diagnostic_output=diagnostic_output or {},
+        )
+
+    def get_diagnostics(self, result):
+        return result[0]
 
     def test_cannot_use_bad_component(self):
         component = BadMockImplicit()
@@ -1752,83 +1543,6 @@ class ImplicitTests(unittest.TestCase):
         assert implicit.state_given['time'] == timedelta(seconds=0)
         assert implicit.times_called == 1
 
-    def test_input_requires_dims(self):
-        input_properties = {'input1': {'units': 'm'}}
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, state_output
-            )
-
-    def test_input_requires_units(self):
-        input_properties = {'input1': {'dims': ['dim1']}}
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, state_output
-            )
-
-    def test_diagnostic_requires_dims(self):
-        input_properties = {}
-        diagnostic_properties = {'diag1': {'units': 'm'}}
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, state_output
-            )
-
-    def test_diagnostic_uses_base_dims(self):
-        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
-        diagnostic_properties = {'diag1': {'units': 'm'}}
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        self.component_class(
-            input_properties, diagnostic_properties,
-            output_properties,
-            diagnostic_output, state_output
-        )
-
-    def test_diagnostic_doesnt_use_base_units(self):
-        input_properties = {'diag1': {'dims': ['dim1'], 'units': 'm'}}
-        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, state_output
-            )
-
-    def test_diagnostic_requires_units(self):
-        input_properties = {}
-        diagnostic_properties = {'diag1': {'dims': ['dim1']}}
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, state_output
-            )
-
     def test_output_requires_dims(self):
         input_properties = {}
         diagnostic_properties = {}
@@ -1878,39 +1592,6 @@ class ImplicitTests(unittest.TestCase):
                 input_properties, diagnostic_properties,
                 output_properties,
                 diagnostic_output, state_output
-            )
-
-    def test_cannot_overlap_input_aliases(self):
-        input_properties = {
-            'input1': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'},
-            'input2': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'}
-        }
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        output_state = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, output_state
-            )
-
-    def test_cannot_overlap_diagnostic_aliases(self):
-        input_properties = {
-        }
-        diagnostic_properties = {
-            'diag1': {'dims': ['dim1'], 'units': 'm', 'alias': 'diag'},
-            'diag2': {'dims': ['dim1'], 'units': 'm', 'alias': 'diag'}
-        }
-        output_properties = {}
-        diagnostic_output = {}
-        output_state = {}
-        with self.assertRaises(InvalidPropertyDictError):
-            self.component_class(
-                input_properties, diagnostic_properties,
-                output_properties,
-                diagnostic_output, output_state
             )
 
     def test_cannot_overlap_output_aliases(self):
@@ -1974,162 +1655,6 @@ class ImplicitTests(unittest.TestCase):
         state = {'time': timedelta(0)}
         with self.assertRaises(ComponentExtraOutputError):
             _, _ = self.call_component(implicit, state)
-
-    def test_raises_when_diagnostic_not_given(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'diag1': {
-                'dims': ['dims1'],
-                'units': 'm',
-            }
-        }
-        output_properties = {}
-        diagnostic_output = {}
-        state_output = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, state_output
-        )
-        state = {'time': timedelta(0)}
-        with self.assertRaises(ComponentMissingOutputError):
-            _, _ = self.call_component(implicit, state)
-
-    def test_raises_when_extraneous_diagnostic_given(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {
-            'diag1': np.zeros([10])
-        }
-        state_output = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, state_output
-        )
-        state = {'time': timedelta(0)}
-        with self.assertRaises(ComponentExtraOutputError):
-            _, _ = self.call_component(implicit, state)
-
-    def test_input_no_transformations(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, _ = self.call_component(implicit, state)
-        assert len(implicit.state_given) == 2
-        assert 'time' in implicit.state_given.keys()
-        assert 'input1' in implicit.state_given.keys()
-        assert isinstance(implicit.state_given['input1'], np.ndarray)
-        assert np.all(implicit.state_given['input1'] == np.ones([10]))
-
-    def test_input_converts_units(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'km'}
-            )
-        }
-        _, _ = self.call_component(implicit, state)
-        assert len(implicit.state_given) == 2
-        assert 'time' in implicit.state_given.keys()
-        assert 'input1' in implicit.state_given.keys()
-        assert isinstance(implicit.state_given['input1'], np.ndarray)
-        assert np.all(implicit.state_given['input1'] == np.ones([10])*1000.)
-
-    def test_input_collects_one_dimension(self):
-        input_properties = {
-            'input1': {
-                'dims': ['*'],
-                'units': 'm'
-            }
-        }
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, _ = self.call_component(implicit, state)
-        assert len(implicit.state_given) == 2
-        assert 'time' in implicit.state_given.keys()
-        assert 'input1' in implicit.state_given.keys()
-        assert isinstance(implicit.state_given['input1'], np.ndarray)
-        assert np.all(implicit.state_given['input1'] == np.ones([10]))
-
-    def test_input_is_aliased(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'in1',
-            }
-        }
-        diagnostic_properties = {}
-        output_properties = {}
-        diagnostic_output = {}
-        output_state = {}
-        prognostic = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {
-            'time': timedelta(0),
-            'input1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        _, _ = self.call_component(prognostic, state)
-        assert len(prognostic.state_given) == 2
-        assert 'time' in prognostic.state_given.keys()
-        assert 'in1' in prognostic.state_given.keys()
-        assert isinstance(prognostic.state_given['in1'], np.ndarray)
-        assert np.all(prognostic.state_given['in1'] == np.ones([10]))
 
     def test_output_no_transformations(self):
         input_properties = {}
@@ -2265,143 +1790,6 @@ class ImplicitTests(unittest.TestCase):
         assert 'units' in output['output1'].attrs
         assert output['output1'].attrs['units'] == 'm/s'
         assert np.all(output['output1'].values == np.ones([10]))
-
-    def test_diagnostics_no_transformations(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm'
-            }
-        }
-        output_properties = {}
-        diagnostic_output = {
-            'output1': np.ones([10]),
-        }
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {'time': timedelta(0)}
-        diagnostics, _ = self.call_component(implicit, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_alias(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'out1',
-            }
-        }
-        output_properties = {}
-        diagnostic_output = {
-            'out1': np.ones([10]),
-        }
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {'time': timedelta(0)}
-        diagnostics, _ = self.call_component(implicit, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_alias_from_input(self):
-        input_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-                'alias': 'out1',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-            }
-        }
-        output_properties = {}
-        diagnostic_output = {
-            'out1': np.ones([10]),
-        }
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        diagnostics, _ = self.call_component(implicit, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
-
-    def test_diagnostics_with_dims_from_input(self):
-        input_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm',
-            }
-        }
-        diagnostic_properties = {
-            'output1': {
-                'units': 'm',
-            }
-        }
-        output_properties = {}
-        diagnostic_output = {
-            'output1': np.ones([10]),
-        }
-        output_state = {}
-        implicit = self.component_class(
-            input_properties, diagnostic_properties, output_properties,
-            diagnostic_output, output_state
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            )
-        }
-        diagnostics, _ = self.call_component(implicit, state)
-        assert len(diagnostics) == 1
-        assert 'output1' in diagnostics.keys()
-        assert isinstance(diagnostics['output1'], DataArray)
-        assert len(diagnostics['output1'].dims) == 1
-        assert 'dim1' in diagnostics['output1'].dims
-        assert 'units' in diagnostics['output1'].attrs
-        assert diagnostics['output1'].attrs['units'] == 'm'
-        assert np.all(diagnostics['output1'].values == np.ones([10]))
 
     def test_tendencies_in_diagnostics_no_tendency(self):
         input_properties = {}
