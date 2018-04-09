@@ -22,7 +22,6 @@ class ConstantDict(dict):
                 if sphinx:
                     return_string += '\n'
             return_string += '\n'
-        print(set(self.keys()).difference(printed_names))
         if len(set(self.keys()).difference(printed_names)) > 0:
             return_string += 'User Defined\n'
             for name in self.keys():
