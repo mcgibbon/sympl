@@ -8,6 +8,7 @@ from sympl import (
     ComponentMissingOutputError, ComponentExtraOutputError,
     InvalidStateError
 )
+import warnings
 
 def same_list(list1, list2):
     return (len(list1) == len(list2) and all(
@@ -425,6 +426,25 @@ class DiagnosticTestBase():
         with self.assertRaises(InvalidPropertyDictError):
             self.get_component(diagnostic_properties=diagnostic_properties)
 
+    def test_diagnostic_warns_when_units_incompatible_with_input(self):
+        input_properties = {
+            'diag1': {'units': 'km', 'dims': ['dim1', 'dim2']}
+        }
+        diagnostic_properties = {
+            'diag1': {'units': 'seconds', 'dims': ['dim1', 'dim2']}
+        }
+        with warnings.catch_warnings(record=True) as w:
+            self.get_component(
+                input_properties=input_properties,
+                diagnostic_properties=diagnostic_properties
+            )
+            assert len(w) == 1
+            assert issubclass(w[-1].category, UserWarning)
+            assert 'units' in str(w[-1].message)
+            assert 'diag1' in str(w[-1].message)
+            assert 'seconds' in str(w[-1].message)
+            assert 'km' in str(w[-1].message)
+
     def test_diagnostic_requires_correct_number_of_dims(self):
         input_properties = {
             'input1': {'units': 'm', 'dims': ['dim1', 'dim2']}
@@ -727,6 +747,25 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
 
         instance = MyPrognostic()
         assert isinstance(instance, Prognostic)
+
+    def test_tendency_warns_when_units_incompatible_with_input(self):
+        input_properties = {
+            'input1': {'units': 'km', 'dims': ['dim1', 'dim2']}
+        }
+        tendency_properties = {
+            'input1': {'units': 'degK/s', 'dims': ['dim1', 'dim2']}
+        }
+        with warnings.catch_warnings(record=True) as w:
+            self.get_component(
+                input_properties=input_properties,
+                tendency_properties=tendency_properties
+            )
+            assert len(w) == 1
+            assert issubclass(w[-1].category, UserWarning)
+            assert 'units' in str(w[-1].message)
+            assert 'input1' in str(w[-1].message)
+            assert 'degK/s' in str(w[-1].message)
+            assert 'km' in str(w[-1].message)
 
     def test_two_components_are_not_instances_of_each_other(self):
         class MyPrognostic1(Prognostic):
@@ -1479,6 +1518,25 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
         instance = MyImplicit()
         assert isinstance(instance, Implicit)
+
+    def test_output_warns_when_units_incompatible_with_input(self):
+        input_properties = {
+            'input1': {'units': 'km', 'dims': ['dim1', 'dim2']}
+        }
+        output_properties = {
+            'input1': {'units': 'degK', 'dims': ['dim1', 'dim2']}
+        }
+        with warnings.catch_warnings(record=True) as w:
+            self.get_component(
+                input_properties=input_properties,
+                output_properties=output_properties,
+            )
+            assert len(w) == 1
+            assert issubclass(w[-1].category, UserWarning)
+            assert 'units' in str(w[-1].message)
+            assert 'input1' in str(w[-1].message)
+            assert 'degK' in str(w[-1].message)
+            assert 'km' in str(w[-1].message)
 
     def test_two_components_are_not_instances_of_each_other(self):
         class MyImplicit1(Implicit):

@@ -5,6 +5,8 @@ from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError, InvalidStateError)
 from six import add_metaclass
+import warnings
+from .units import units_are_compatible
 try:
     from inspect import getfullargspec as getargspec
 except ImportError:
@@ -125,6 +127,36 @@ class InputChecker(object):
                 raise InvalidStateError('Missing input quantity {}'.format(key))
 
 
+def get_name_with_incompatible_units(properties1, properties2):
+    """
+    If there are any keys shared by the two properties
+    dictionaries which indicate units that are incompatible with one another,
+    this returns such a key. Otherwise returns None.
+    """
+    for name in set(properties1.keys()).intersection(properties2.keys()):
+        if not units_are_compatible(
+                properties1[name]['units'], properties2[name]['units']):
+            return name
+    return None
+
+
+def get_tendency_name_with_incompatible_units(input_properties, tendency_properties):
+    """
+    Returns False if there are any keys shared by the two properties
+    dictionaries which indicate units that are incompatible with one another,
+    and True otherwise (if there are no conflicting unit specifications).
+    """
+    for name in set(input_properties.keys()).intersection(tendency_properties.keys()):
+        if input_properties[name]['units'] == '':
+            expected_tendency_units = 's^-1'
+        else:
+            expected_tendency_units = input_properties[name]['units'] + ' s^-1'
+        if not units_are_compatible(
+                expected_tendency_units, tendency_properties[name]['units']):
+            return name
+    return None
+
+
 class TendencyChecker(object):
 
     def __init__(self, component):
@@ -138,6 +170,15 @@ class TendencyChecker(object):
                     'Tendency properties do not have dims defined for {}'.format(name)
                 )
         check_overlapping_aliases(self.component.tendency_properties, 'tendency')
+        incompatible_name = get_tendency_name_with_incompatible_units(
+            self.component.input_properties, self.component.tendency_properties)
+        if incompatible_name is not None:
+            warnings.warn(
+                'Component of type {} has input {} with tendency units {} that '
+                'are incompatible with input units {}'.format(
+                    type(self.component), incompatible_name,
+                    self.component.tendency_properties[incompatible_name]['units'],
+                    self.component.input_properties[incompatible_name]['units']))
         super(TendencyChecker, self).__init__()
 
     @property
@@ -193,6 +234,15 @@ class DiagnosticChecker(object):
                 raise InvalidPropertyDictError(
                     'Diagnostic properties do not have dims defined for {}'.format(name)
                 )
+        incompatible_name = get_name_with_incompatible_units(
+            self.component.input_properties, self.component.diagnostic_properties)
+        if incompatible_name is not None:
+            warnings.warn(
+                'Component of type {} has input {} with diagnostic units {} that '
+                'are incompatible with input units {}'.format(
+                    type(self.component), incompatible_name,
+                    self.component.diagnostic_properties[incompatible_name]['units'],
+                    self.component.input_properties[incompatible_name]['units']))
         check_overlapping_aliases(component.diagnostic_properties, 'diagnostic')
 
     @property
@@ -253,6 +303,15 @@ class OutputChecker(object):
                     'Output properties do not have dims defined for {}'.format(name)
                 )
         check_overlapping_aliases(self.component.output_properties, 'output')
+        incompatible_name = get_name_with_incompatible_units(
+            self.component.input_properties, self.component.output_properties)
+        if incompatible_name is not None:
+            warnings.warn(
+                'Component of type {} has input {} with output units {} that '
+                'are incompatible with input units {}'.format(
+                    type(self.component), incompatible_name,
+                    self.component.output_properties[incompatible_name]['units'],
+                    self.component.input_properties[incompatible_name]['units']))
         super(OutputChecker, self).__init__()
 
     @property

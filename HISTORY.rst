@@ -43,6 +43,8 @@ Latest
 * Added initialize_numpy_arrays_with_properties which creates zero arrays for an output
   properties dictionary.
 * Added reference_air_temperature constant
+* Base classes now emit warnings when output property units conflict with input
+  property units (which probably indicates that they're wrong).
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
