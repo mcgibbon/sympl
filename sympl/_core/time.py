@@ -1,13 +1,13 @@
 from datetime import datetime as real_datetime, timedelta
 from .exceptions import DependencyError
 try:
-    import netcdftime as nt
-    if not all(hasattr(nt, attr) for attr in [
+    import cftime as ct
+    if not all(hasattr(ct, attr) for attr in [
             'DatetimeNoLeap', 'DatetimeProlepticGregorian', 'DatetimeAllLeap',
             'Datetime360Day', 'DatetimeJulian', 'DatetimeGregorian']):
-        nt = None
+        ct = None
 except ImportError:
-    nt = None
+    ct = None
 
 
 def datetime(
@@ -51,20 +51,20 @@ def datetime(
         return real_datetime(tzinfo=tzinfo, **kwargs)
     elif tzinfo is not None:
         raise ValueError('netcdftime does not support timezone-aware datetimes')
-    elif nt is None:
+    elif ct is None:
         raise DependencyError(
             "Calendars other than 'proleptic_gregorian' require the netcdftime "
             "package, which is not installed.")
     elif calendar.lower() in ('all_leap', '366_day'):
-        return nt.DatetimeAllLeap(**kwargs)
+        return ct.DatetimeAllLeap(**kwargs)
     elif calendar.lower() in ('no_leap', 'noleap', '365_day'):
-        return nt.DatetimeNoLeap(**kwargs)
+        return ct.DatetimeNoLeap(**kwargs)
     elif calendar.lower() == '360_day':
-        return nt.Datetime360Day(**kwargs)
+        return ct.Datetime360Day(**kwargs)
     elif calendar.lower() == 'julian':
-        return nt.DatetimeJulian(**kwargs)
+        return ct.DatetimeJulian(**kwargs)
     elif calendar.lower() == 'gregorian':
-        return nt.DatetimeGregorian(**kwargs)
+        return ct.DatetimeGregorian(**kwargs)
 
 
 __all__ = (datetime, timedelta)
