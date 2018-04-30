@@ -7,7 +7,7 @@ try:
 except ImportError:
     ct = None
 
-netcdftime_not_installed = 'netcdftime module is not installed'
+netcdftime_not_installed = 'cftime module is not installed'
 
 
 class DatetimeBase(object):
