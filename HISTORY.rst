@@ -42,6 +42,7 @@ Latest
 * Fixed a bug where ABCMeta was not being used in Python 3.
 * Added initialize_numpy_arrays_with_properties which creates zero arrays for an output
   properties dictionary.
+* Added reference_air_temperature constant
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
