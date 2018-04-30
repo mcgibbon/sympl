@@ -3,13 +3,9 @@ from sympl import datetime, timedelta
 import unittest
 import pytz
 try:
-    import netcdftime as nt
-    if not all(hasattr(nt, attr) for attr in [
-            'DatetimeNoLeap', 'DatetimeProlepticGregorian', 'DatetimeAllLeap',
-            'Datetime360Day', 'DatetimeJulian', 'DatetimeGregorian']):
-        nt = None
+    import cftime as ct
 except ImportError:
-    nt = None
+    ct = None
 
 netcdftime_not_installed = 'netcdftime module is not installed'
 
@@ -74,24 +70,24 @@ class ProlepticGregorianTests(unittest.TestCase, DatetimeBase):
         assert tz_dt.microsecond == 0
 
 
-@unittest.skipIf(nt is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class NoLeapTests(unittest.TestCase, DatetimeBase):
 
     calendar = 'no_leap'
 
     @property
     def dt_class(self):
-        return nt.DatetimeNoLeap
+        return ct.DatetimeNoLeap
 
 
-@unittest.skipIf(nt is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class Datetime365DayTests(unittest.TestCase, DatetimeBase):
 
     calendar = '365_day'
 
     @property
     def dt_class(self):
-        return nt.DatetimeNoLeap
+        return ct.DatetimeNoLeap
 
     def test_incrementing_years_using_days(self):
         dt = datetime(1900, 1, 1, calendar=self.calendar)
@@ -110,22 +106,22 @@ class Datetime365DayTests(unittest.TestCase, DatetimeBase):
         assert dt_1850.hour == 0
 
 
-@unittest.skipIf(nt is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class AllLeapTests(unittest.TestCase, DatetimeBase):
     calendar = 'all_leap'
 
     @property
     def dt_class(self):
-        return nt.DatetimeAllLeap
+        return ct.DatetimeAllLeap
 
 
-@unittest.skipIf(nt is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class Datetime366DayTests(unittest.TestCase, DatetimeBase):
     calendar = '366_day'
 
     @property
     def dt_class(self):
-        return nt.DatetimeAllLeap
+        return ct.DatetimeAllLeap
 
     def test_incrementing_years_using_days(self):
         dt = datetime(1900, 1, 1, calendar=self.calendar)
@@ -144,13 +140,13 @@ class Datetime366DayTests(unittest.TestCase, DatetimeBase):
         assert dt_1850.hour == 0
 
 
-@unittest.skipIf(nt is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class Datetime360DayTests(unittest.TestCase, DatetimeBase):
     calendar = '360_day'
 
     @property
     def dt_class(self):
-        return nt.Datetime360Day
+        return ct.Datetime360Day
 
     def test_incrementing_years_using_days(self):
         dt = datetime(1900, 1, 1, calendar=self.calendar)
@@ -169,19 +165,19 @@ class Datetime360DayTests(unittest.TestCase, DatetimeBase):
         assert dt_1850.hour == 0
 
 
-@unittest.skipIf(nt is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class JulianTests(unittest.TestCase, DatetimeBase):
     calendar = 'julian'
 
     @property
     def dt_class(self):
-        return nt.DatetimeJulian
+        return ct.DatetimeJulian
 
 
-unittest.skipIf(nt is None, netcdftime_not_installed)
+unittest.skipIf(ct is None, netcdftime_not_installed)
 class GregorianTests(unittest.TestCase, DatetimeBase):
     calendar = 'gregorian'
 
     @property
     def dt_class(self):
-        return nt.DatetimeGregorian
+        return ct.DatetimeGregorian
