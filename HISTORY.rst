@@ -45,6 +45,8 @@ Latest
 * Added reference_air_temperature constant
 * Base classes now emit warnings when output property units conflict with input
   property units (which probably indicates that they're wrong).
+* Fixed bug where degrees Celcius or Fahrenheit could not be used as units on inputs
+  because it would lead to an error
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

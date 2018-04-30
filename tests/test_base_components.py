@@ -366,6 +366,29 @@ class InputTestBase():
         assert isinstance(component.state_given['input1'], np.ndarray)
         assert np.all(component.state_given['input1'] == np.ones([10])*1000.)
 
+    def test_input_converts_temperature_units(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 'degK'
+            }
+        }
+        component = self.get_component(input_properties=input_properties)
+        state = {
+            'time': timedelta(0),
+            'input1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'degC'}
+            )
+        }
+        self.call_component(component, state)
+        assert len(component.state_given) == 2
+        assert 'time' in component.state_given.keys()
+        assert 'input1' in component.state_given.keys()
+        assert isinstance(component.state_given['input1'], np.ndarray)
+        assert np.all(component.state_given['input1'] == np.ones([10])*274.15)
+
     def test_input_collects_one_dimension(self):
         input_properties = {
             'input1': {

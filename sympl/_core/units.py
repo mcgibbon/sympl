@@ -50,7 +50,7 @@ def data_array_to_units(value, units):
             'Cannot retrieve units from type {}'.format(type(value)))
     elif unit_registry(value.attrs['units']) != unit_registry(units):
         attrs = value.attrs.copy()
-        value = (unit_registry(value.attrs['units'])*value).to(units).magnitude
+        value = unit_registry.Quantity(value, value.attrs['units']).to(units).magnitude
         attrs['units'] = units
         value.attrs = attrs
     return value
