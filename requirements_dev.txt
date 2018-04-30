@@ -8,7 +8,7 @@ coverage>=4.1
 Sphinx>=1.4.8
 cryptography>=1.4
 PyYAML>=3.11
-pytest==2.9.2
+pytest>=2.9.2
 pytest-cov>=2.4.0
 mock>=2.0.0
 xarray>=0.9.3
