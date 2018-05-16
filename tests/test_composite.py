@@ -615,7 +615,7 @@ def test_prognostic_composite_implicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -643,7 +643,7 @@ def test_two_prognostic_composite_implicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -659,7 +659,7 @@ def test_two_prognostic_composite_implicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -687,7 +687,7 @@ def test_prognostic_composite_explicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -711,7 +711,7 @@ def test_two_prognostic_composite_explicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -728,7 +728,7 @@ def test_two_prognostic_composite_explicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -752,7 +752,7 @@ def test_two_prognostic_composite_explicit_and_implicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -769,7 +769,7 @@ def test_two_prognostic_composite_explicit_and_implicit_dims():
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -792,7 +792,7 @@ def test_prognostic_composite_explicit_dims_not_in_input():
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             }
         },
         diagnostic_properties={},
@@ -816,11 +816,11 @@ def test_two_prognostic_composite_incompatible_dims():
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             },
             'input2': {
                 'dims': ['dims3', 'dims1'],
-                'units': 'degK / day'
+                'units': 'degK'
             }
         },
         diagnostic_properties={},
@@ -837,7 +837,7 @@ def test_two_prognostic_composite_incompatible_dims():
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             },
             'input2': {
                 'dims': ['dims3', 'dims1'],
@@ -867,11 +867,11 @@ def test_two_prognostic_composite_compatible_dims():
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             },
             'input2': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day'
+                'units': 'degK'
             }
         },
         diagnostic_properties={},
@@ -888,11 +888,11 @@ def test_two_prognostic_composite_compatible_dims():
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day',
+                'units': 'degK',
             },
             'input2': {
                 'dims': ['dims1', 'dims2'],
-                'units': 'degK / day'
+                'units': 'degK'
             }
         },
         diagnostic_properties={},

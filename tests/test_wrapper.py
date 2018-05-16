@@ -624,7 +624,7 @@ class ScalingTendencyMixin(object):
         self.tendency_properties = {
             'diag1': {
                 'dims': ['dim1'],
-                'units': 'm',
+                'units': 'm/s',
             }
         }
         self.tendency_output = {
