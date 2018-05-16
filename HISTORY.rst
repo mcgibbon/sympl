@@ -43,8 +43,6 @@ Latest
 * Added initialize_numpy_arrays_with_properties which creates zero arrays for an output
   properties dictionary.
 * Added reference_air_temperature constant
-* Base classes now emit warnings when output property units conflict with input
-  property units (which probably indicates that they're wrong).
 * Fixed bug where degrees Celcius or Fahrenheit could not be used as units on inputs
   because it would lead to an error
 
@@ -55,6 +53,8 @@ Breaking changes
   In order to get these, you should use e.g. input_properties.keys()
 * properties dictionaries are now abstract methods, so subclasses must define them.
   Previously they defaulted to empty dictionaries.
+* Base classes now raise InvalidPropertyDictError when output property units conflict with input
+  property units (which probably indicates that they're wrong).
 * Components should now be written using a new array_call method rather than __call__.
   __call__ will automatically unwrap DataArrays to numpy arrays to be passed into
   array_call based on the component's properties dictionaries, and re-wrap to

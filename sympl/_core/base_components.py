@@ -5,7 +5,6 @@ from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError, InvalidStateError)
 from six import add_metaclass
-import warnings
 from .units import units_are_compatible
 try:
     from inspect import getfullargspec as getargspec
@@ -173,7 +172,7 @@ class TendencyChecker(object):
         incompatible_name = get_tendency_name_with_incompatible_units(
             self.component.input_properties, self.component.tendency_properties)
         if incompatible_name is not None:
-            warnings.warn(
+            raise InvalidPropertyDictError(
                 'Component of type {} has input {} with tendency units {} that '
                 'are incompatible with input units {}'.format(
                     type(self.component), incompatible_name,
@@ -237,7 +236,7 @@ class DiagnosticChecker(object):
         incompatible_name = get_name_with_incompatible_units(
             self.component.input_properties, self.component.diagnostic_properties)
         if incompatible_name is not None:
-            warnings.warn(
+            raise InvalidPropertyDictError(
                 'Component of type {} has input {} with diagnostic units {} that '
                 'are incompatible with input units {}'.format(
                     type(self.component), incompatible_name,
@@ -306,7 +305,7 @@ class OutputChecker(object):
         incompatible_name = get_name_with_incompatible_units(
             self.component.input_properties, self.component.output_properties)
         if incompatible_name is not None:
-            warnings.warn(
+            raise InvalidPropertyDictError(
                 'Component of type {} has input {} with output units {} that '
                 'are incompatible with input units {}'.format(
                     type(self.component), incompatible_name,
