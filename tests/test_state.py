@@ -39,6 +39,33 @@ class InitializeNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert 'output1' in result.keys()
         assert result['output1'].shape == (10,)
         assert np.all(result['output1'] == np.zeros([10]))
+        assert result['output1'].dtype == np.float64
+
+    def test_single_output_single_dim_custom_dtype(self):
+        output_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm',
+                'dtype': np.int32,
+            }
+        }
+        input_properties = {
+            'input1': {
+                'dims': ['dim1'],
+                'units': 's^-1',
+            }
+        }
+        input_state = {
+            'input1': np.zeros([10])
+        }
+
+        result = initialize_numpy_arrays_with_properties(
+            output_properties, input_state, input_properties)
+        assert len(result.keys()) == 1
+        assert 'output1' in result.keys()
+        assert result['output1'].shape == (10,)
+        assert np.all(result['output1'] == np.zeros([10]))
+        assert result['output1'].dtype == np.int32
 
     def test_single_output_two_dims(self):
         output_properties = {

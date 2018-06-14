@@ -146,7 +146,7 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
 
 
 def initialize_numpy_arrays_with_properties(
-        output_properties, raw_input_state, input_properties, dtype=np.float64):
+        output_properties, raw_input_state, input_properties):
     """
     Parameters
     ----------
@@ -185,6 +185,7 @@ def initialize_numpy_arrays_with_properties(
         out_shape = []
         for dim in out_dims:
             out_shape.append(dim_lengths[dim])
+        dtype = output_properties[name].get('dtype', np.float64)
         out_dict[name] = np.zeros(out_shape, dtype=dtype)
     return out_dict
 
