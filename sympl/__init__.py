@@ -18,7 +18,8 @@ from ._core.util import (
     ensure_no_shared_keys,
     get_numpy_array, jit,
     restore_dimensions,
-    get_component_aliases)
+    get_component_aliases,
+    combine_component_properties)
 from ._core.state import (
     get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,

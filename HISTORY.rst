@@ -28,7 +28,7 @@ Latest
   dictionaries, raising ComponentMissingOutputError or ComponentExtraOutputError
   respectively if outputs do not match.
 * Added a priority order of property types for determining which aliases are
-  returned by get_component_aliases
+  returned by get_component_aliases.
 * Fixed a bug where TimeStepper objects would modify the arrays passed to them by
   Prognostic objects, leading to unexpected value changes.
 * Fixed a bug where constants were missing from the string returned by
@@ -42,9 +42,10 @@ Latest
 * Fixed a bug where ABCMeta was not being used in Python 3.
 * Added initialize_numpy_arrays_with_properties which creates zero arrays for an output
   properties dictionary.
-* Added reference_air_temperature constant
+* Added reference_air_temperature constant.
 * Fixed bug where degrees Celcius or Fahrenheit could not be used as units on inputs
-  because it would lead to an error
+  because it would lead to an error.
+* Added combine_component_properties as a public function.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

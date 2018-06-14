@@ -146,7 +146,7 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
 
 
 def initialize_numpy_arrays_with_properties(
-        output_properties, input_state, input_properties, dtype=np.float64):
+        output_properties, raw_input_state, input_properties, dtype=np.float64):
     """
     Parameters
     ----------
@@ -154,9 +154,9 @@ def initialize_numpy_arrays_with_properties(
         A dictionary whose keys are quantity names and values are dictionaries
         with properties for those quantities. The property "dims" must be
         present for each quantity not also present in input_properties.
-    input_state : dict
-        A state dictionary that was used as input to a component for which
-        DataArrays are being restored.
+    raw_input_state : dict
+        A state dictionary of numpy arrays that was used as input to a component
+        for which return arrays are being generated.
     input_properties : dict
         A dictionary whose keys are quantity names and values are dictionaries
         with input properties for those quantities. The property "dims" must be
@@ -177,25 +177,31 @@ def initialize_numpy_arrays_with_properties(
         property, but the arrays for the two properties have incompatible
         shapes.
     """
-    wildcard_names, dim_lengths = get_wildcard_matches_and_dim_lengths(
-        input_state, input_properties)
+    dim_lengths = get_dim_lengths_from_raw_input(raw_input_state, input_properties)
     dims_from_out_properties = extract_output_dims_properties(
         output_properties, input_properties, [])
     out_dict = {}
     for name, out_dims in dims_from_out_properties.items():
-        if '*' in out_dims and wildcard_names is not None:
-            _, out_shape = fill_dims_wildcard(
-                out_dims, dim_lengths, wildcard_names, expand_wildcard=False)
-        elif '*' in out_dims and wildcard_names is None:
-            raise InvalidPropertyDictError(
-                'Cannot determine wildcard dimensions required for output if '
-                'there are no wildcard dimensions in input_properties')
-        else:
-            out_shape = []
-            for dim in out_dims:
-                out_shape.append(dim_lengths[dim])
+        out_shape = []
+        for dim in out_dims:
+            out_shape.append(dim_lengths[dim])
         out_dict[name] = np.zeros(out_shape, dtype=dtype)
     return out_dict
+
+
+def get_dim_lengths_from_raw_input(raw_input, input_properties):
+    dim_lengths = {}
+    for name, properties in input_properties.items():
+        for i, dim_name in enumerate(properties['dims']):
+            if dim_name in dim_lengths:
+                if raw_input[name].shape[i] != dim_lengths[dim_name]:
+                    raise InvalidStateError(
+                        'Dimension name {} has differing lengths on different '
+                        'inputs'.format(dim_name)
+                    )
+            else:
+                dim_lengths[dim_name] = raw_input[name].shape[i]
+    return dim_lengths
 
 
 def ensure_values_are_arrays(array_dict):
@@ -331,6 +337,9 @@ def restore_data_arrays_with_properties(
             continue
         raw_name = get_alias_or_name(name, output_properties, input_properties)
         if '*' in out_dims:
+            for dim_name, length in zip(out_dims, raw_arrays[raw_name].shape):
+                if dim_name not in dim_lengths and dim_name != '*':
+                    dim_lengths[dim_name] = length
             out_dims_without_wildcard, target_shape = fill_dims_wildcard(
                 out_dims, dim_lengths, wildcard_names)
             out_array = expand_array_wildcard_dims(

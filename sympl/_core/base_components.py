@@ -526,7 +526,8 @@ class Implicit(object):
         Args
         ----
         state : dict
-            A model state dictionary.
+            A model state dictionary satisfying the input_properties of this
+            object.
         timestep : timedelta
             The amount of time to step forward.
 
@@ -583,7 +584,7 @@ class Implicit(object):
         ----
         state : dict
             A numpy array state dictionary. Instead of data arrays, should
-            include numpy arrays that satisfy the input properties of this
+            include numpy arrays that satisfy the input_properties of this
             object.
         timestep : timedelta
             The amount of time to step forward.
@@ -734,7 +735,8 @@ class Prognostic(object):
         Args
         ----
         state : dict
-            A model state dictionary.
+            A model state dictionary satisfying the input_properties of this
+            object.
 
         Returns
         -------
@@ -787,7 +789,7 @@ class Prognostic(object):
         ----
         state : dict
             A model state dictionary. Instead of data arrays, should
-            include numpy arrays that satisfy the input properties of this
+            include numpy arrays that satisfy the input_properties of this
             object.
 
         Returns
@@ -937,7 +939,8 @@ class ImplicitPrognostic(object):
         Args
         ----
         state : dict
-            A model state dictionary.
+            A model state dictionary satisfying the input_properties of this
+            object.
         timestep : timedelta
             The time over which the model is being stepped.
 
@@ -993,7 +996,7 @@ class ImplicitPrognostic(object):
         ----
         state : dict
             A model state dictionary. Instead of data arrays, should
-            include numpy arrays that satisfy the input properties of this
+            include numpy arrays that satisfy the input_properties of this
             object.
         timestep : timedelta
             The time over which the model is being stepped.
@@ -1087,7 +1090,8 @@ class Diagnostic(object):
         Args
         ----
         state : dict
-            A model state dictionary.
+            A model state dictionary satisfying the input_properties of this
+            object.
 
         Returns
         -------
@@ -1123,7 +1127,7 @@ class Diagnostic(object):
         ----
         state : dict
             A model state dictionary. Instead of data arrays, should
-            include numpy arrays that satisfy the input properties of this
+            include numpy arrays that satisfy the input_properties of this
             object.
 
         Returns
