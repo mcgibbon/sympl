@@ -109,6 +109,18 @@ class InputChecker(object):
 
     def __init__(self, component):
         self.component = component
+        if not hasattr(component, 'input_properties'):
+            raise InvalidPropertyDictError(
+                'Component of type {} is missing input_properties'.format(
+                    component.__class__.__name__)
+            )
+        elif not isinstance(component.input_properties, dict):
+            raise InvalidPropertyDictError(
+                'input_properties on component of type {} is of type {}, but '
+                'should be an instance of dict'.format(
+                    component.__class__.__name__,
+                    component.input_properties.__class__)
+            )
         for name, properties in self.component.input_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
@@ -160,6 +172,18 @@ class TendencyChecker(object):
 
     def __init__(self, component):
         self.component = component
+        if not hasattr(component, 'tendency_properties'):
+            raise InvalidPropertyDictError(
+                'Component of type {} is missing tendency_properties'.format(
+                    component.__class__.__name__)
+            )
+        elif not isinstance(component.tendency_properties, dict):
+            raise InvalidPropertyDictError(
+                'tendency_properties on component of type {} is of type {}, but '
+                'should be an instance of dict'.format(
+                    component.__class__.__name__,
+                    component.input_properties.__class__)
+            )
         for name, properties in self.component.tendency_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
@@ -224,6 +248,18 @@ class DiagnosticChecker(object):
 
     def __init__(self, component):
         self.component = component
+        if not hasattr(component, 'diagnostic_properties'):
+            raise InvalidPropertyDictError(
+                'Component of type {} is missing diagnostic_properties'.format(
+                    component.__class__.__name__)
+            )
+        elif not isinstance(component.diagnostic_properties, dict):
+            raise InvalidPropertyDictError(
+                'diagnostic_properties on component of type {} is of type {}, but '
+                'should be an instance of dict'.format(
+                    component.__class__.__name__,
+                    component.input_properties.__class__)
+            )
         self._ignored_diagnostics = []
         for name, properties in component.diagnostic_properties.items():
             if 'units' not in properties.keys():
@@ -293,6 +329,18 @@ class OutputChecker(object):
 
     def __init__(self, component):
         self.component = component
+        if not hasattr(component, 'output_properties'):
+            raise InvalidPropertyDictError(
+                'Component of type {} is missing output_properties'.format(
+                    component.__class__.__name__)
+            )
+        elif not isinstance(component.output_properties, dict):
+            raise InvalidPropertyDictError(
+                'output_properties on component of type {} is of type {}, but '
+                'should be an instance of dict'.format(
+                    component.__class__.__name__,
+                    component.input_properties.__class__)
+            )
         for name, properties in self.component.output_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(

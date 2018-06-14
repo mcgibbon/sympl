@@ -170,6 +170,10 @@ class BadMockImplicit(Implicit):
 
 class InputTestBase():
 
+    def test_raises_on_input_properties_of_wrong_type(self):
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(input_properties=({},))
+
     def test_cannot_overlap_input_aliases(self):
         input_properties = {
             'input1': {'dims': ['dim1'], 'units': 'm', 'alias': 'input'},
@@ -437,6 +441,10 @@ class InputTestBase():
 
 
 class DiagnosticTestBase():
+
+    def test_raises_on_diagnostic_properties_of_wrong_type(self):
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(diagnostic_properties=({},))
 
     def test_diagnostic_requires_dims(self):
         diagnostic_properties = {'diag1': {'units': 'm'}}
@@ -744,6 +752,10 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
 
     def get_diagnostics(self, result):
         return result[1]
+
+    def test_raises_on_tendency_properties_of_wrong_type(self):
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(tendency_properties=({},))
 
     def test_cannot_use_bad_component(self):
         component = BadMockPrognostic()
@@ -1510,6 +1522,10 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
     def get_diagnostics(self, result):
         return result[0]
+
+    def test_raises_on_output_properties_of_wrong_type(self):
+        with self.assertRaises(InvalidPropertyDictError):
+            self.get_component(output_properties=({},))
 
     def test_cannot_use_bad_component(self):
         component = BadMockImplicit()
