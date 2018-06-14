@@ -47,7 +47,7 @@ __all__ = (
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     initialize_numpy_arrays_with_properties,
-    get_component_aliases,
+    get_component_aliases, combine_component_properties,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
     UpdateFrequencyWrapper, ScalingWrapper,
