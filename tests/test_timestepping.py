@@ -416,7 +416,7 @@ class ImplicitPrognosticBase(PrognosticBase):
         prognostic = self.prognostic_class({}, {}, {}, {}, {})
         with pytest.warns(UserWarning) as w:
             self.timestepper_class(prognostic)
-        if isinstance(w, Warning):
+        if isinstance(w, UserWarning):
             w = [w]
         print(list(i.message for i in w))
         assert 'ImplicitPrognostic' in w[0].message
