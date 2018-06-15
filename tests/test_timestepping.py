@@ -420,6 +420,7 @@ class ImplicitPrognosticBase(PrognosticBase):
             w = [w]
         print(list(i.message for i in w))
         assert 'ImplicitPrognostic' in w[0].message.args[0]
+        assert 'scientifically invalid' in w[0].message.args[0]
 
 
 class TimesteppingBase(object):

@@ -141,7 +141,10 @@ class TimeStepper(object):
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         # warnings.simplefilter('always')
         if any(isinstance(a, ImplicitPrognostic) for a in args):
-            warnings.warn('ImplicitPrognostic')
+            warnings.warn(
+                'Using an ImplicitPrognostic in sympl TimeStepper objects may '
+                'lead to scientifically invalid results. Make sure the component '
+                'follows the same numerical assumptions as the TimeStepper used.')
         self.prognostic = ImplicitPrognosticComposite(*args)
 
     @property
