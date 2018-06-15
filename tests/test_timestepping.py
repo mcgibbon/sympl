@@ -2,9 +2,12 @@ import pytest
 import mock
 from sympl import (
     Prognostic, Leapfrog, AdamsBashforth, DataArray, SSPRungeKutta, timedelta,
-    InvalidPropertyDictError)
+    InvalidPropertyDictError, ImplicitPrognostic)
 from sympl._core.units import units_are_compatible
 import numpy as np
+import warnings
+
+warnings.filterwarnings('always', 'ImplicitPrognostic')
 
 
 def same_list(list1, list2):
@@ -44,6 +47,377 @@ class MockPrognostic(Prognostic):
         self.times_called += 1
         self.state_given = state
         return self._tendency_output, self._diagnostic_output
+
+
+class MockImplicitPrognostic(ImplicitPrognostic):
+    input_properties = None
+    diagnostic_properties = None
+    tendency_properties = None
+
+    def __init__(
+            self, input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output, **kwargs):
+        self.input_properties = input_properties
+        self.diagnostic_properties = diagnostic_properties
+        self.tendency_properties = tendency_properties
+        self._diagnostic_output = diagnostic_output
+        self._tendency_output = tendency_output
+        self.times_called = 0
+        self.state_given = None
+        super(MockImplicitPrognostic, self).__init__(**kwargs)
+
+    def array_call(self, state, timestep):
+        self.times_called += 1
+        self.state_given = state
+        return self._tendency_output, self._diagnostic_output
+
+
+class PrognosticBase(object):
+
+    prognostic_class = MockPrognostic
+
+    def test_given_tendency_not_modified_with_two_components(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'tend1': {
+                'dims': ['dim1'],
+                'units': 'm/s',
+            }
+        }
+        diagnostic_output = {}
+        tendency_output_1 = {
+            'tend1': np.ones([10]) * 5.
+        }
+        prognostic1 = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output_1
+        )
+        tendency_output_2 = {
+            'tend1': np.ones([10]) * 5.
+        }
+        prognostic2 = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output_2
+        )
+        stepper = self.timestepper_class(
+            prognostic1, prognostic2, tendencies_in_diagnostics=True)
+        state = {
+            'time': timedelta(0),
+            'tend1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'},
+            )
+        }
+        _, _ = stepper(state, timedelta(seconds=5))
+        assert np.all(tendency_output_1['tend1'] == 5.)
+        assert np.all(tendency_output_2['tend1'] == 5.)
+
+    def test_input_state_not_modified_with_two_components(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'tend1': {
+                'dims': ['dim1'],
+                'units': 'm/s',
+            }
+        }
+        diagnostic_output = {}
+        tendency_output_1 = {
+            'tend1': np.ones([10]) * 5.
+        }
+        prognostic1 = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output_1
+        )
+        tendency_output_2 = {
+            'tend1': np.ones([10]) * 5.
+        }
+        prognostic2 = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output_2
+        )
+        stepper = self.timestepper_class(
+            prognostic1, prognostic2, tendencies_in_diagnostics=True)
+        state = {
+            'time': timedelta(0),
+            'tend1': DataArray(
+                np.ones([10]),
+                dims=['dim1'],
+                attrs={'units': 'm'},
+            )
+        }
+        _, _ = stepper(state, timedelta(seconds=5))
+        assert state['tend1'].attrs['units'] == 'm'
+        assert np.all(state['tend1'].values == 1.)
+
+    def test_tendencies_in_diagnostics_no_tendency(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {}
+        diagnostic_output = {}
+        tendency_output = {}
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(
+            prognostic, tendencies_in_diagnostics=True)
+        state = {'time': timedelta(0)}
+        diagnostics, _ = stepper(state, timedelta(seconds=5))
+        assert diagnostics == {}
+
+    def test_tendencies_in_diagnostics_one_tendency(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            }
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(
+            prognostic, tendencies_in_diagnostics=True)
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10])*10.,
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            ),
+        }
+        diagnostics, _ = stepper(state, timedelta(seconds=5))
+        tendency_name = 'output1_tendency_from_{}'.format(stepper.__class__.__name__)
+        assert tendency_name in diagnostics.keys()
+        assert len(
+            diagnostics[tendency_name].dims) == 1
+        assert 'dim1' in diagnostics[tendency_name].dims
+        assert units_are_compatible(diagnostics[tendency_name].attrs['units'], 'm s^-1')
+        assert np.allclose(diagnostics[tendency_name].values, 2.)
+
+    def test_tendencies_in_diagnostics_one_tendency_with_component_name(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            }
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(
+            prognostic, tendencies_in_diagnostics=True, name='component')
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10])*10.,
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            ),
+        }
+        diagnostics, _ = stepper(state, timedelta(seconds=5))
+        assert 'output1_tendency_from_component' in diagnostics.keys()
+        assert len(
+            diagnostics['output1_tendency_from_component'].dims) == 1
+        assert 'dim1' in diagnostics['output1_tendency_from_component'].dims
+        assert units_are_compatible(diagnostics['output1_tendency_from_component'].attrs['units'], 'm s^-1')
+        assert np.allclose(diagnostics['output1_tendency_from_component'].values, 2.)
+
+    def test_copies_untouched_quantities(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            },
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(
+            prognostic, tendencies_in_diagnostics=True, name='component')
+        untouched_quantity = DataArray(
+            np.ones([10])*10.,
+            dims=['dim1'],
+            attrs={'units': 'J'}
+        )
+        state = {
+            'time': timedelta(0),
+            'output1': DataArray(
+                np.ones([10])*10.,
+                dims=['dim1'],
+                attrs={'units': 'm'}
+            ),
+            'input1': untouched_quantity,
+        }
+        _, new_state = stepper(state, timedelta(seconds=5))
+        assert 'input1' in new_state.keys()
+        assert new_state['input1'].dims == untouched_quantity.dims
+        assert np.allclose(new_state['input1'].values, 10.)
+        assert new_state['input1'].attrs['units'] == 'J'
+
+    def test_stepper_requires_input_for_stepped_quantity(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            },
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(prognostic)
+        assert 'output1' in stepper.input_properties.keys()
+        assert stepper.input_properties['output1']['dims'] == ['dim1']
+        assert units_are_compatible(stepper.input_properties['output1']['units'], 'm')
+
+    def test_stepper_outputs_stepped_quantity(self):
+        input_properties = {}
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            },
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(prognostic)
+        assert 'output1' in stepper.output_properties.keys()
+        assert stepper.output_properties['output1']['dims'] == ['dim1']
+        assert units_are_compatible(stepper.output_properties['output1']['units'], 'm')
+
+    def test_stepper_requires_input_for_input_quantity(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1', 'dim2'],
+                'units': 's',
+            }
+        }
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            },
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(prognostic)
+        assert 'input1' in stepper.input_properties.keys()
+        assert stepper.input_properties['input1']['dims'] == ['dim1', 'dim2']
+        assert units_are_compatible(stepper.input_properties['input1']['units'], 's')
+        assert len(stepper.diagnostic_properties) == 0
+
+    def test_stepper_gives_diagnostic_quantity(self):
+        input_properties = {}
+        diagnostic_properties = {
+            'diag1': {
+                'dims': ['dim2'],
+                'units': '',
+            }
+        }
+        tendency_properties = {
+        }
+        diagnostic_output = {}
+        tendency_output = {
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(
+            prognostic, tendencies_in_diagnostics=True, name='component')
+        assert 'diag1' in stepper.diagnostic_properties.keys()
+        assert stepper.diagnostic_properties['diag1']['dims'] == ['dim2']
+        assert units_are_compatible(
+            stepper.diagnostic_properties['diag1']['units'], '')
+        assert len(stepper.input_properties) == 0
+        assert len(stepper.output_properties) == 0
+
+    def test_stepper_gives_diagnostic_tendency_quantity(self):
+        input_properties = {
+            'input1': {
+                'dims': ['dim1', 'dim2'],
+                'units': 's',
+            }
+        }
+        diagnostic_properties = {}
+        tendency_properties = {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm/s'
+            },
+        }
+        diagnostic_output = {}
+        tendency_output = {
+            'output1': np.ones([10]) * 2.,
+        }
+        prognostic = self.prognostic_class(
+            input_properties, diagnostic_properties, tendency_properties,
+            diagnostic_output, tendency_output
+        )
+        stepper = self.timestepper_class(
+            prognostic, tendencies_in_diagnostics=True)
+        tendency_name = 'output1_tendency_from_{}'.format(stepper.__class__.__name__)
+        assert tendency_name in stepper.diagnostic_properties.keys()
+        assert len(stepper.diagnostic_properties) == 1
+        assert stepper.diagnostic_properties[tendency_name]['dims'] == ['dim1']
+        assert units_are_compatible(stepper.input_properties['output1']['units'], 'm')
+        assert units_are_compatible(stepper.diagnostic_properties[tendency_name]['units'], 'm/s')
+
+
+class ImplicitPrognosticBase(PrognosticBase):
+
+    prognostic_class = MockImplicitPrognostic
+
+    def test_warn_on_implicitprognostic(self):
+        prognostic = self.prognostic_class({}, {}, {}, {}, {})
+        with pytest.warns(UserWarning) as w:
+            self.timestepper_class(prognostic)
+        print(list(i.message for i in w))
+        assert 'ImplicitPrognostic' in w[0].message
 
 
 class TimesteppingBase(object):
@@ -333,407 +707,129 @@ class TimesteppingBase(object):
         assert len(new_state['air_temperature'].attrs) == 1
         assert new_state['air_temperature'].attrs['units'] == 'K'
 
-    def test_given_tendency_not_modified_with_two_components(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'tend1': {
-                'dims': ['dim1'],
-                'units': 'm/s',
-            }
-        }
-        diagnostic_output = {}
-        tendency_output_1 = {
-            'tend1': np.ones([10]) * 5.
-        }
-        prognostic1 = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output_1
-        )
-        tendency_output_2 = {
-            'tend1': np.ones([10]) * 5.
-        }
-        prognostic2 = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output_2
-        )
-        stepper = self.timestepper_class(
-            prognostic1, prognostic2, tendencies_in_diagnostics=True)
-        state = {
-            'time': timedelta(0),
-            'tend1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'},
-            )
-        }
-        _, _ = stepper(state, timedelta(seconds=5))
-        assert np.all(tendency_output_1['tend1'] == 5.)
-        assert np.all(tendency_output_2['tend1'] == 5.)
-
-    def test_input_state_not_modified_with_two_components(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'tend1': {
-                'dims': ['dim1'],
-                'units': 'm/s',
-            }
-        }
-        diagnostic_output = {}
-        tendency_output_1 = {
-            'tend1': np.ones([10]) * 5.
-        }
-        prognostic1 = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output_1
-        )
-        tendency_output_2 = {
-            'tend1': np.ones([10]) * 5.
-        }
-        prognostic2 = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output_2
-        )
-        stepper = self.timestepper_class(
-            prognostic1, prognostic2, tendencies_in_diagnostics=True)
-        state = {
-            'time': timedelta(0),
-            'tend1': DataArray(
-                np.ones([10]),
-                dims=['dim1'],
-                attrs={'units': 'm'},
-            )
-        }
-        _, _ = stepper(state, timedelta(seconds=5))
-        assert state['tend1'].attrs['units'] == 'm'
-        assert np.all(state['tend1'].values == 1.)
-
-    def test_tendencies_in_diagnostics_no_tendency(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {}
-        diagnostic_output = {}
-        tendency_output = {}
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(
-            prognostic, tendencies_in_diagnostics=True)
-        state = {'time': timedelta(0)}
-        diagnostics, _ = stepper(state, timedelta(seconds=5))
-        assert diagnostics == {}
-
-    def test_tendencies_in_diagnostics_one_tendency(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            }
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(
-            prognostic, tendencies_in_diagnostics=True)
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10])*10.,
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            ),
-        }
-        diagnostics, _ = stepper(state, timedelta(seconds=5))
-        tendency_name = 'output1_tendency_from_{}'.format(stepper.__class__.__name__)
-        assert tendency_name in diagnostics.keys()
-        assert len(
-            diagnostics[tendency_name].dims) == 1
-        assert 'dim1' in diagnostics[tendency_name].dims
-        assert units_are_compatible(diagnostics[tendency_name].attrs['units'], 'm s^-1')
-        assert np.allclose(diagnostics[tendency_name].values, 2.)
-
-    def test_tendencies_in_diagnostics_one_tendency_with_component_name(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            }
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(
-            prognostic, tendencies_in_diagnostics=True, name='component')
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10])*10.,
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            ),
-        }
-        diagnostics, _ = stepper(state, timedelta(seconds=5))
-        assert 'output1_tendency_from_component' in diagnostics.keys()
-        assert len(
-            diagnostics['output1_tendency_from_component'].dims) == 1
-        assert 'dim1' in diagnostics['output1_tendency_from_component'].dims
-        assert units_are_compatible(diagnostics['output1_tendency_from_component'].attrs['units'], 'm s^-1')
-        assert np.allclose(diagnostics['output1_tendency_from_component'].values, 2.)
-
-    def test_copies_untouched_quantities(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            },
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(
-            prognostic, tendencies_in_diagnostics=True, name='component')
-        untouched_quantity = DataArray(
-            np.ones([10])*10.,
-            dims=['dim1'],
-            attrs={'units': 'J'}
-        )
-        state = {
-            'time': timedelta(0),
-            'output1': DataArray(
-                np.ones([10])*10.,
-                dims=['dim1'],
-                attrs={'units': 'm'}
-            ),
-            'input1': untouched_quantity,
-        }
-        _, new_state = stepper(state, timedelta(seconds=5))
-        assert 'input1' in new_state.keys()
-        assert new_state['input1'].dims == untouched_quantity.dims
-        assert np.allclose(new_state['input1'].values, 10.)
-        assert new_state['input1'].attrs['units'] == 'J'
-
-    def test_stepper_requires_input_for_stepped_quantity(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            },
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(prognostic)
-        assert 'output1' in stepper.input_properties.keys()
-        assert stepper.input_properties['output1']['dims'] == ['dim1']
-        assert units_are_compatible(stepper.input_properties['output1']['units'], 'm')
-
-    def test_stepper_outputs_stepped_quantity(self):
-        input_properties = {}
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            },
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(prognostic)
-        assert 'output1' in stepper.output_properties.keys()
-        assert stepper.output_properties['output1']['dims'] == ['dim1']
-        assert units_are_compatible(stepper.output_properties['output1']['units'], 'm')
-
-    def test_stepper_requires_input_for_input_quantity(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1', 'dim2'],
-                'units': 's',
-            }
-        }
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            },
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(prognostic)
-        assert 'input1' in stepper.input_properties.keys()
-        assert stepper.input_properties['input1']['dims'] == ['dim1', 'dim2']
-        assert units_are_compatible(stepper.input_properties['input1']['units'], 's')
-        assert len(stepper.diagnostic_properties) == 0
-
-    def test_stepper_gives_diagnostic_quantity(self):
-        input_properties = {}
-        diagnostic_properties = {
-            'diag1': {
-                'dims': ['dim2'],
-                'units': '',
-            }
-        }
-        tendency_properties = {
-        }
-        diagnostic_output = {}
-        tendency_output = {
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(
-            prognostic, tendencies_in_diagnostics=True, name='component')
-        assert 'diag1' in stepper.diagnostic_properties.keys()
-        assert stepper.diagnostic_properties['diag1']['dims'] == ['dim2']
-        assert units_are_compatible(
-            stepper.diagnostic_properties['diag1']['units'], '')
-        assert len(stepper.input_properties) == 0
-        assert len(stepper.output_properties) == 0
-
-    def test_stepper_gives_diagnostic_tendency_quantity(self):
-        input_properties = {
-            'input1': {
-                'dims': ['dim1', 'dim2'],
-                'units': 's',
-            }
-        }
-        diagnostic_properties = {}
-        tendency_properties = {
-            'output1': {
-                'dims': ['dim1'],
-                'units': 'm/s'
-            },
-        }
-        diagnostic_output = {}
-        tendency_output = {
-            'output1': np.ones([10]) * 2.,
-        }
-        prognostic = MockPrognostic(
-            input_properties, diagnostic_properties, tendency_properties,
-            diagnostic_output, tendency_output
-        )
-        stepper = self.timestepper_class(
-            prognostic, tendencies_in_diagnostics=True)
-        tendency_name = 'output1_tendency_from_{}'.format(stepper.__class__.__name__)
-        assert tendency_name in stepper.diagnostic_properties.keys()
-        assert len(stepper.diagnostic_properties) == 1
-        assert stepper.diagnostic_properties[tendency_name]['dims'] == ['dim1']
-        assert units_are_compatible(stepper.input_properties['output1']['units'], 'm')
-        assert units_are_compatible(stepper.diagnostic_properties[tendency_name]['units'], 'm/s')
+    @mock.patch.object(MockEmptyPrognostic, '__call__')
+    def test_array_four_steps(self, mock_prognostic_call):
+        mock_prognostic_call.return_value = (
+            {'air_temperature': np.ones((3, 3)) * 1.}, {})
+        state = {'time': timedelta(0), 'air_temperature': np.ones((3, 3)) * 273.}
+        timestep = timedelta(seconds=1.)
+        time_stepper = self.timestepper_class(MockEmptyPrognostic())
+        diagnostics, new_state = time_stepper.__call__(state, timestep)
+        assert same_list(state.keys(), ['time', 'air_temperature'])
+        assert (state['air_temperature'] == np.ones((3, 3)) * 273.).all()
+        assert same_list(new_state.keys(), ['time', 'air_temperature'])
+        assert (new_state['air_temperature'] == np.ones((3, 3)) * 274.).all()
+        state = new_state
+        diagnostics, new_state = time_stepper.__call__(new_state, timestep)
+        assert same_list(state.keys(), ['time', 'air_temperature'])
+        assert (state['air_temperature'] == np.ones((3, 3)) * 274.).all()
+        assert same_list(new_state.keys(), ['time', 'air_temperature'])
+        assert (new_state['air_temperature'] == np.ones((3, 3)) * 275.).all()
+        state = new_state
+        diagnostics, new_state = time_stepper.__call__(state, timestep)
+        assert same_list(state.keys(), ['time', 'air_temperature'])
+        assert (state['air_temperature'] == np.ones((3, 3)) * 275.).all()
+        assert same_list(new_state.keys(), ['time', 'air_temperature'])
+        assert (new_state['air_temperature'] == np.ones((3, 3)) * 276.).all()
+        state = new_state
+        diagnostics, new_state = time_stepper.__call__(state, timestep)
+        assert same_list(state.keys(), ['time', 'air_temperature'])
+        assert (state['air_temperature'] == np.ones((3, 3)) * 276.).all()
+        assert same_list(new_state.keys(), ['time', 'air_temperature'])
+        assert (new_state['air_temperature'] == np.ones((3, 3)) * 277.).all()
 
 
-class TestSSPRungeKuttaTwoStep(TimesteppingBase):
+class TestAdamsBashforthFirstOrder(TimesteppingBase, PrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['order'] = 1
+        return AdamsBashforth(*args, **kwargs)
+
+
+class TestAdamsBashforthFirstOrderImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['order'] = 1
+        return AdamsBashforth(*args, **kwargs)
+
+
+class TestSSPRungeKuttaTwoStep(TimesteppingBase, PrognosticBase):
 
     def timestepper_class(self, *args, **kwargs):
         kwargs['stages'] = 2
         return SSPRungeKutta(*args, **kwargs)
 
 
-class TestSSPRungeKuttaThreeStep(TimesteppingBase):
+class TestSSPRungeKuttaTwoStepImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['stages'] = 2
+        return SSPRungeKutta(*args, **kwargs)
+
+
+class TestSSPRungeKuttaThreeStep(TimesteppingBase, PrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['stages'] = 3
+        return SSPRungeKutta(*args, **kwargs)
+
+class TestSSPRungeKuttaThreeStepImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
 
     def timestepper_class(self, *args, **kwargs):
         kwargs['stages'] = 3
         return SSPRungeKutta(*args, **kwargs)
 
 
-class TestLeapfrog(TimesteppingBase):
+class TestLeapfrog(TimesteppingBase, PrognosticBase):
 
     timestepper_class = Leapfrog
 
 
-class TestAdamsBashforthSecondOrder(TimesteppingBase):
+class TestLeapfrogImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
+
+    timestepper_class = Leapfrog
+
+
+class TestAdamsBashforthSecondOrder(TimesteppingBase, PrognosticBase):
 
     def timestepper_class(self, *args, **kwargs):
         kwargs['order'] = 2
         return AdamsBashforth(*args, **kwargs)
 
 
-class TestAdamsBashforthThirdOrder(TimesteppingBase):
+class TestAdamsBashforthSecondOrderImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['order'] = 2
+        return AdamsBashforth(*args, **kwargs)
+
+
+class TestAdamsBashforthThirdOrder(TimesteppingBase, PrognosticBase):
 
     def timestepper_class(self, *args, **kwargs):
         kwargs['order'] = 3
         return AdamsBashforth(*args, **kwargs)
 
 
-class TestAdamsBashforthFourthOrder(TimesteppingBase):
+class TestAdamsBashforthThirdOrderImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['order'] = 3
+        return AdamsBashforth(*args, **kwargs)
+
+
+class TestAdamsBashforthFourthOrder(TimesteppingBase, PrognosticBase):
 
     def timestepper_class(self, *args, **kwargs):
         kwargs['order'] = 4
         return AdamsBashforth(*args, **kwargs)
 
-    @mock.patch.object(MockEmptyPrognostic, '__call__')
-    def test_array_four_steps(self, mock_prognostic_call):
-        mock_prognostic_call.return_value = (
-            {'air_temperature': np.ones((3, 3))*1.}, {})
-        state = {'time': timedelta(0), 'air_temperature': np.ones((3, 3))*273.}
-        timestep = timedelta(seconds=1.)
-        time_stepper = self.timestepper_class(MockEmptyPrognostic())
-        diagnostics, new_state = time_stepper.__call__(state, timestep)
-        assert same_list(state.keys(), ['time', 'air_temperature'])
-        assert (state['air_temperature'] == np.ones((3, 3))*273.).all()
-        assert same_list(new_state.keys(), ['time', 'air_temperature'])
-        assert (new_state['air_temperature'] == np.ones((3, 3))*274.).all()
-        state = new_state
-        diagnostics, new_state = time_stepper.__call__(new_state, timestep)
-        assert same_list(state.keys(), ['time', 'air_temperature'])
-        assert (state['air_temperature'] == np.ones((3, 3))*274.).all()
-        assert same_list(new_state.keys(), ['time', 'air_temperature'])
-        assert (new_state['air_temperature'] == np.ones((3, 3))*275.).all()
-        state = new_state
-        diagnostics, new_state = time_stepper.__call__(state, timestep)
-        assert same_list(state.keys(), ['time', 'air_temperature'])
-        assert (state['air_temperature'] == np.ones((3, 3))*275.).all()
-        assert same_list(new_state.keys(), ['time', 'air_temperature'])
-        assert (new_state['air_temperature'] == np.ones((3, 3))*276.).all()
-        state = new_state
-        diagnostics, new_state = time_stepper.__call__(state, timestep)
-        assert same_list(state.keys(), ['time', 'air_temperature'])
-        assert (state['air_temperature'] == np.ones((3, 3))*276.).all()
-        assert same_list(new_state.keys(), ['time', 'air_temperature'])
-        assert (new_state['air_temperature'] == np.ones((3, 3))*277.).all()
+
+class TestAdamsBashforthFourthOrderImplicitPrognostic(TimesteppingBase, ImplicitPrognosticBase):
+
+    def timestepper_class(self, *args, **kwargs):
+        kwargs['order'] = 4
+        return AdamsBashforth(*args, **kwargs)
 
 
 @mock.patch.object(MockEmptyPrognostic, '__call__')

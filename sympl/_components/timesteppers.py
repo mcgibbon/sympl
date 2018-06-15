@@ -16,7 +16,7 @@ class SSPRungeKutta(TimeStepper):
 
         Args
         ----
-        *args : Prognostic
+        *args : Prognostic or ImplicitPrognostic
             Objects to call for tendencies when doing time stepping.
         stages: int, optional
             Number of stages to use. Should be 2 or 3. Default is 3.
@@ -80,7 +80,7 @@ class AdamsBashforth(TimeStepper):
 
         Args
         ----
-        *args : Prognostic
+        *args : Prognostic or ImplicitPrognostic
             Objects to call for tendencies when doing time stepping.
         order : int, optional
             The order of accuracy to use. Must be between
@@ -126,7 +126,7 @@ class AdamsBashforth(TimeStepper):
         """
         self._ensure_constant_timestep(timestep)
         state = state.copy()
-        tendencies, diagnostics = self.prognostic(state)
+        tendencies, diagnostics = self.prognostic(state, timestep)
         convert_tendencies_units_for_state(tendencies, state)
         self._tendencies_list.append(tendencies)
         new_state = self._perform_step(state, timestep)
@@ -190,7 +190,7 @@ class Leapfrog(TimeStepper):
 
         Args
         ----
-        *args : Prognostic
+        *args : Prognostic or ImplicitPrognostic
             Objects to call for tendencies when doing time stepping.
         asselin_strength : float, optional
             The filter parameter used to determine the strength
@@ -247,7 +247,7 @@ class Leapfrog(TimeStepper):
         original_state = state
         state = state.copy()
         self._ensure_constant_timestep(timestep)
-        tendencies, diagnostics = self.prognostic(state)
+        tendencies, diagnostics = self.prognostic(state, timestep)
         convert_tendencies_units_for_state(tendencies, state)
         if self._old_state is None:
             new_state = step_forward_euler(state, tendencies, timestep)

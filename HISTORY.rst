@@ -13,6 +13,7 @@ Latest
   composited.
 * TimeSteppers now have a prognostic_list attribute which contains the
   prognostics used to calculate tendencies.
+* TimeSteppers from sympl can now handle ImplicitPrognostic components.
 * Added a check for netcdftime having the required objects, to fall back on not
   using netcdftime when those are missing. This is because most objects are missing in
   older versions of netcdftime (that come packaged with netCDF4) (closes #23).

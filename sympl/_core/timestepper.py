@@ -1,9 +1,10 @@
 import abc
-from .composite import PrognosticComposite
+from .composite import ImplicitPrognosticComposite
 from .time import timedelta
 from .util import combine_component_properties, combine_properties
 from .units import clean_units
 from .state import copy_untouched_quantities
+from .base_components import ImplicitPrognostic
 import warnings
 
 
@@ -25,9 +26,10 @@ class TimeStepper(object):
         for the new state are returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    prognostic : PrognosticComposite
-        A composite of the Prognostic objects used by the TimeStepper
-    prognostic_list: list of Prognostic
+    prognostic : ImplicitPrognosticComposite
+        A composite of the Prognostic and ImplicitPrognostic objects used by
+        the TimeStepper.
+    prognostic_list: list of Prognostic and ImplicitPrognostic
         A list of Prognostic objects called by the TimeStepper. These should
         be referenced when determining what inputs are necessary for the
         TimeStepper.
@@ -114,7 +116,7 @@ class TimeStepper(object):
 
         Parameters
         ----------
-        *args : Prognostic
+        *args : Prognostic or ImplicitPrognostic
             Objects to call for tendencies when doing time stepping.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
@@ -133,10 +135,16 @@ class TimeStepper(object):
         if len(args) == 1 and isinstance(args[0], list):
             warnings.warn(
                 'TimeSteppers should be given individual Prognostics rather '
-                'than a list, and will not accept lists in a later version.')
+                'than a list, and will not accept lists in a later version.',
+                DeprecationWarning)
             args = args[0]
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        self.prognostic = PrognosticComposite(*args)
+        # warnings.simplefilter('always')
+        if any(isinstance(a, ImplicitPrognostic) for a in args):
+            print('WARNING now')
+            warnings.warn('ImplicitPrognostic')
+            print(warnings)
+        self.prognostic = ImplicitPrognosticComposite(*args)
 
     @property
     def prognostic_list(self):

@@ -1,4 +1,4 @@
-from .base_components import Prognostic, Diagnostic, Monitor
+from .base_components import Prognostic, Diagnostic, Monitor, ImplicitPrognostic
 from .util import (
     update_dict_by_adding_another, ensure_no_shared_keys,
     combine_component_properties)
@@ -168,6 +168,80 @@ class PrognosticComposite(
 
     def array_call(self, state):
         raise NotImplementedError()
+
+
+class ImplicitPrognosticComposite(ComponentComposite, InputPropertiesCompositeMixin,
+        DiagnosticPropertiesCompositeMixin, ImplicitPrognostic):
+
+    component_class = (Prognostic, ImplicitPrognostic)
+
+    @property
+    def tendency_properties(self):
+        return combine_component_properties(
+            self.component_list, 'tendency_properties', self.input_properties)
+
+    def __init__(self, *args):
+        """
+        Args
+        ----
+        *args
+            The components that should be wrapped by this object.
+
+        Raises
+        ------
+        SharedKeyError
+            If two components compute the same diagnostic quantity.
+        InvalidPropertyDictError
+            If two components require the same input or compute the same
+            output quantity, and their dimensions or units are incompatible
+            with one another.
+        """
+        super(ImplicitPrognosticComposite, self).__init__(*args)
+        self.input_properties
+        self.tendency_properties
+        self.diagnostic_properties
+
+    def __call__(self, state, timestep):
+        """
+        Gets tendencies and diagnostics from the passed model state.
+
+        Args
+        ----
+        state : dict
+            A model state dictionary.
+
+        Returns
+        -------
+        tendencies : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the time derivative of those
+            quantities in units/second at the time of the input state.
+        diagnostics : dict
+            A dictionary whose keys are strings indicating
+            state quantities and values are the value of those quantities
+            at the time of the input state.
+
+        Raises
+        ------
+        KeyError
+            If a required quantity is missing from the state.
+        InvalidStateError
+            If state is not a valid input for a Prognostic instance.
+        """
+        return_tendencies = {}
+        return_diagnostics = {}
+        for prognostic in self.component_list:
+            if isinstance(prognostic, ImplicitPrognostic):
+                tendencies, diagnostics = prognostic(state, timestep)
+            elif isinstance(prognostic, Prognostic):
+                tendencies, diagnostics = prognostic(state)
+            update_dict_by_adding_another(return_tendencies, tendencies)
+            return_diagnostics.update(diagnostics)
+        return return_tendencies, return_diagnostics
+
+    def array_call(self, state):
+        raise NotImplementedError()
+
 
 
 class DiagnosticComposite(
