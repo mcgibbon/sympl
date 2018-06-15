@@ -141,9 +141,7 @@ class TimeStepper(object):
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
         # warnings.simplefilter('always')
         if any(isinstance(a, ImplicitPrognostic) for a in args):
-            print('WARNING now')
             warnings.warn('ImplicitPrognostic')
-            print(warnings)
         self.prognostic = ImplicitPrognosticComposite(*args)
 
     @property

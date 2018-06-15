@@ -170,7 +170,8 @@ class PrognosticComposite(
         raise NotImplementedError()
 
 
-class ImplicitPrognosticComposite(ComponentComposite, InputPropertiesCompositeMixin,
+class ImplicitPrognosticComposite(
+        ComponentComposite, InputPropertiesCompositeMixin,
         DiagnosticPropertiesCompositeMixin, ImplicitPrognostic):
 
     component_class = (Prognostic, ImplicitPrognostic)
@@ -241,7 +242,6 @@ class ImplicitPrognosticComposite(ComponentComposite, InputPropertiesCompositeMi
 
     def array_call(self, state):
         raise NotImplementedError()
-
 
 
 class DiagnosticComposite(
