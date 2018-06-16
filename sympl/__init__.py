@@ -14,6 +14,7 @@ from ._core.array import DataArray
 from ._core.constants import (
     get_constant, set_constant, set_condensible_name, reset_constants,
     get_constants_string)
+from ._core.tracers import register_tracer, get_tracer_unit_dict
 from ._core.util import (
     ensure_no_shared_keys,
     get_numpy_array, jit,
@@ -44,6 +45,7 @@ __all__ = (
     get_constants_string, TimeDifferencingWrapper,
     ensure_no_shared_keys,
     get_numpy_array, jit,
+    register_tracer, get_tracer_unit_dict,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     initialize_numpy_arrays_with_properties,

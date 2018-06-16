@@ -4,21 +4,32 @@ import numpy as np
 _tracer_unit_dict = {}
 
 
+def clear_tracer_unit_dict():
+    while len(_tracer_unit_dict) > 0:
+        _tracer_unit_dict.pop()
+
+
 def register_tracer(name, units):
     _tracer_unit_dict[name] = units
+
+
+def get_tracer_unit_dict():
+    return_dict = {}
+    return_dict.update(_tracer_unit_dict)
+    return return_dict
 
 
 def get_quantity_dims(tracer_dims):
     if 'tracer' not in tracer_dims:
         raise ValueError("Tracer dims must include a dimension named 'tracer'")
     quantity_dims = list(tracer_dims)
-    quantity_dims.pop('tracer')
+    quantity_dims.remove('tracer')
     return tuple(quantity_dims)
 
 
 class TracerPacker(object):
 
-    def __init__(self, tracer_dims, component=None):
+    def __init__(self, component, tracer_dims):
         self.tracer_names = []
         self._tracer_dims = tuple(tracer_dims)
         self._tracer_quantity_dims = get_quantity_dims(tracer_dims)
@@ -48,7 +59,7 @@ class TracerPacker(object):
     def _tracer_index(self):
         return self._tracer_dims.index('tracer')
 
-    def pack_tracers(self, raw_state):
+    def pack(self, raw_state):
         shape = list(raw_state[self.tracer_names[0]].shape)
         shape.insert(self._tracer_index, len(self.tracer_names))
         array = np.empty(shape, dtype=np.float64)
@@ -58,7 +69,7 @@ class TracerPacker(object):
             array[tracer_slice] = raw_state[name]
         return array
 
-    def unpack_tracers(self, tracer_array):
+    def unpack(self, tracer_array):
         return_state = {}
         for i, name in enumerate(self.tracer_names):
             tracer_slice = [slice(0, d) for d in tracer_array.shape]
