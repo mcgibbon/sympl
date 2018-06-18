@@ -47,6 +47,8 @@ Latest
 * Fixed bug where degrees Celcius or Fahrenheit could not be used as units on inputs
   because it would lead to an error.
 * Added combine_component_properties as a public function.
+* Added some unit helper functions (units_are_same, units_are_compatible,
+  is_valid_unit) to public API.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

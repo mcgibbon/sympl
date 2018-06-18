@@ -20,11 +20,41 @@ unit_registry.define('percent = 0.01*count = %')
 
 
 def units_are_compatible(unit1, unit2):
+    """
+    Determine whether a unit can be converted to another unit.
+
+    Parameters
+    ----------
+    unit1 : str
+    unit2 : str
+
+    Returns
+    -------
+    units_are_compatible : bool
+        True if the first unit can be converted to the second unit.
+    """
     try:
         unit_registry(unit1).to(unit2)
         return True
     except pint.errors.DimensionalityError:
         return False
+
+
+def units_are_same(unit1, unit2):
+    """
+    Compare two unit strings for equality.
+
+    Parameters
+    ----------
+    unit1 : str
+    unit2 : str
+
+    Returns
+    -------
+    units_are_same : bool
+        True if the two input unit strings represent the same unit.
+    """
+    return unit_registry(unit1) == unit_registry(unit2)
 
 
 def clean_units(unit_string):
