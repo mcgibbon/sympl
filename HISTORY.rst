@@ -49,6 +49,7 @@ Latest
 * Added combine_component_properties as a public function.
 * Added some unit helper functions (units_are_same, units_are_compatible,
   is_valid_unit) to public API.
+* Added tracer-handling funcitonality to component base classes.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~

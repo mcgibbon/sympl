@@ -6,6 +6,7 @@ from .exceptions import (
     ComponentMissingOutputError, InvalidStateError)
 from six import add_metaclass
 from .units import units_are_compatible
+from .tracers import TracerPacker
 try:
     from inspect import getfullargspec as getargspec
 except ImportError:
@@ -439,6 +440,8 @@ class Implicit(object):
 
     time_unit_name = 's'
     time_unit_timedelta = timedelta(seconds=1)
+    uses_tracers = False
+    tracer_dims = None
 
     @abc.abstractproperty
     def input_properties(self):
@@ -501,6 +504,12 @@ class Implicit(object):
             self._diagnostic_checker.set_ignored_diagnostics(
                 self._insert_tendency_properties())
         self.__initialized = True
+        if self.uses_tracers:
+            if self.tracer_dims is None:
+                raise ValueError(
+                    'Component of type {} must specify tracer_dims property '
+                    'when uses_tracers=True'.format(self.__class__.__name__))
+            self._tracer_packer = TracerPacker(self, self.tracer_dims)
         super(Implicit, self).__init__()
 
     def _insert_tendency_properties(self):
@@ -599,8 +608,15 @@ class Implicit(object):
         self.__check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        if self.uses_tracers:
+            raw_state['tracers'] = self._tracer_packer.pack(raw_state)
+            for name in self._tracer_packer.tracer_names:
+                raw_state.pop(name)
         raw_state['time'] = state['time']
         raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
+        if self.uses_tracers:
+            raw_new_state.update(self._tracer_packer.unpack(raw_new_state['tracers']))
+            raw_new_state.pop('tracers')
         self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         self._output_checker.check_outputs(raw_new_state)
         if self.tendencies_in_diagnostics:
@@ -688,6 +704,8 @@ class Prognostic(object):
         return {}
 
     name = None
+    uses_tracers = False
+    tracer_tendency_time_unit = 's'
 
     def __str__(self):
         return (
@@ -737,6 +755,12 @@ class Prognostic(object):
             self._diagnostic_checker.set_ignored_diagnostics(self._added_diagnostic_names)
         else:
             self._added_diagnostic_names = []
+        if self.uses_tracers:
+            if self.tracer_dims is None:
+                raise ValueError(
+                    'Component of type {} must specify tracer_dims property '
+                    'when uses_tracers=True'.format(self.__class__.__name__))
+            self._tracer_packer = TracerPacker(self, self.tracer_dims)
         self.__initialized = True
         super(Prognostic, self).__init__()
 
@@ -808,8 +832,15 @@ class Prognostic(object):
         self.__check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        if self.uses_tracers:
+            raw_state['tracers'] = self._tracer_packer.pack(raw_state)
+            for name in self._tracer_packer.tracer_names:
+                raw_state.pop(name)
         raw_state['time'] = state['time']
         raw_tendencies, raw_diagnostics = self.array_call(raw_state)
+        if self.uses_tracers:
+            raw_tendencies.update(self._tracer_packer.unpack(raw_tendencies['tracers']))
+            raw_tendencies.pop('tracers')
         self._tendency_checker.check_tendencies(raw_tendencies)
         self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         tendencies = restore_data_arrays_with_properties(
@@ -895,6 +926,8 @@ class ImplicitPrognostic(object):
         return {}
 
     name = None
+    uses_tracers = False
+    tracer_tendency_time_unit = 's'
 
     def __str__(self):
         return (
@@ -941,6 +974,12 @@ class ImplicitPrognostic(object):
         if self.tendencies_in_diagnostics:
             self._added_diagnostic_names = self._insert_tendency_properties()
             self._diagnostic_checker.set_ignored_diagnostics(self._added_diagnostic_names)
+        if self.uses_tracers:
+            if self.tracer_dims is None:
+                raise ValueError(
+                    'Component of type {} must specify tracer_dims property '
+                    'when uses_tracers=True'.format(self.__class__.__name__))
+            self._tracer_packer = TracerPacker(self, self.tracer_dims)
         self.__initialized = True
         super(ImplicitPrognostic, self).__init__()
 
@@ -1014,8 +1053,15 @@ class ImplicitPrognostic(object):
         self.__check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
+        if self.uses_tracers:
+            raw_state['tracers'] = self._tracer_packer.pack(raw_state)
+            for name in self._tracer_packer.tracer_names:
+                raw_state.pop(name)
         raw_state['time'] = state['time']
         raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
+        if self.uses_tracers:
+            raw_tendencies.update(self._tracer_packer.unpack(raw_tendencies['tracers']))
+            raw_tendencies.pop('tracers')
         self._tendency_checker.check_tendencies(raw_tendencies)
         self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         tendencies = restore_data_arrays_with_properties(
