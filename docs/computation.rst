@@ -325,4 +325,13 @@ always excited about new wrapped components.
     :special-members:
     :exclude-members: __weakref__,__metaclass__
 
+Tracer Properties
+-----------------
+
+You may notice some components have properties that mention tracers.
+`uses_tracers` is a boolean that tells you whether the component makes use of
+tracers or not, while `tracer_dims` contains the dimensions of tracer arrays
+used internally by the object. For more on tracers as a user, see :ref:`Tracers`,
+and for more on tracers as a component author, see :ref:`Writing Components`.
+
 .. _Python documentation for dicts: https://docs.python.org/3/tutorial/datastructures.html#dictionaries

@@ -189,7 +189,7 @@ The Computation
 ***************
 
 That brings us to the ``array_call`` method. In Sympl components, this is the
-method which takes in a state dictionary as numpy arrays (*not* ``DataArray``s)
+method which takes in a state dictionary as numpy arrays (*not* ``DataArray``)
 and returns dictionaries with numpy array outputs.
 
 .. code-block:: python
@@ -283,3 +283,53 @@ Also notice that even though the alias is set in input_properties, it is also
 used when restoring DataArrays. If there is an output that is not
 also an input, the alias could instead be set in ``diagnostic_properties``,
 ``tendency_properties``, or ``output_properties``, wherever is relevant.
+
+
+Using Tracers
+-------------
+
+.. note:: This feature is mostly used in dynamical cores. If you don't think you need
+          this, you probably don't.
+
+Sympl's base components have some features to automatically create tracer arrays
+for use by dynamical components. If an :py:class:`~sympl.Implicit`,
+:py:class:`~sympl.Prognostic`, or :py:class:`~sympl.ImplicitPrognostic`
+component specifies ``uses_tracers = True`` and sets ``tracer_dims``, this
+feature is enabled.
+
+.. code-block:: python
+
+        class MyDynamicalCore(Implicit):
+
+            uses_tracers = True
+            tracer_dims = ['tracer', '*', 'mid_levels']
+
+            [...]
+
+``tracer_dims`` is a list or tuple in the form of a ``dims`` attribute on one of its
+inputs, and must have a "tracer" dimension. This dimension refers to which
+tracer (you could call it "tracer number").
+
+Once this feature is enabled, the ``state`` passed to ``array_call`` on the
+component will include a quantity called "tracers" with the dimensions
+specified by ``tracer_dims``. It will also be required that these tracers
+are used in the output. For a :py:class:`~sympl.Implicit` component, "tracers"
+must be present in the output state, and for a :py:class:`~sympl.Prognostic` or
+:py:class:`~sympl.ImplicitPrognostic` component "tracers" must be present in
+the tendencies, with the same dimensions as the input "tracers".
+
+On these latter two components, you should also specify a
+``tracer_tendency_time_unit`` property, which refers to the time part of the
+tendency unit. For example, if the input tracer is in units of ``g m^-3``, and
+``tracer_tendency_time_unit`` is "s", then the output tendency will be in
+units of ``g m^-3 s^-1``. This value is set as "s" (or seconds) by default.
+
+.. code-block:: python
+
+        class MyDynamicalCore(Prognostic):
+
+            uses_tracers = True
+            tracer_dims = ['tracer', '*', 'mid_levels']
+            tracer_tendency_time_unit = 's'
+
+            [...]

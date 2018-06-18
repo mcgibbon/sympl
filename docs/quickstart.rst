@@ -109,17 +109,17 @@ for us:
     state = get_initial_state(nx=256, ny=128, nz=64)
     state['time'] = datetime(2000, 1, 1)
 
-An initialized `state` is a dictionary whose keys are strings (like
+An initialized ``state`` is a dictionary whose keys are strings (like
 'air_temperature') and values are :py:class:`~sympl.DataArray` objects, which
 store not only the data but also metadata like units. The one exception
-is the "time" quantity which is either a `datetime`-like or `timedelta`-like
+is the "time" quantity which is either a ``datetime``-like or ``timedelta``-like
 object. Here we are calling :py:func:`sympl.datetime` to initialize time,
 rather than directly creating a Python datetime. This is because
 :py:func:`sympl.datetime` can support a number of calendars using the
-`netcdftime` package, if installed, unlike the built-in `datetime` which only
+`netcdftime` package, if installed, unlike the built-in ``datetime`` which only
 supports the Proleptic Gregorian calendar.
 
-You can read more about the `state`, including :py:func:`sympl.datetime` in
+You can read more about the ``state``, including :py:func:`sympl.datetime` in
 :ref:`Model State`.
 
 Initialize Components
@@ -139,14 +139,14 @@ Those are the "components":
 
 :py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.TimeStepper`, which is
 created with a set of :py:class:`~sympl.Prognostic` components.
-The :py:class:`~sympl.Prognostic` components we have here are `Radiation`,
-`BoundaryLayer`, and `DeepConvection`. Each of these carries information about
+The :py:class:`~sympl.Prognostic` components we have here are ``Radiation``,
+``BoundaryLayer``, and ``DeepConvection``. Each of these carries information about
 what it takes as inputs and provides as outputs, and can be called with a model
 state to return tendencies for a set of quantities. The
 :py:class:`~sympl.TimeStepper` uses this information to step the model state
 forward in time.
 
-The :py:class:`~sympl.UpdateFrequencyWrapper` applied to the `Radiation` object
+The :py:class:`~sympl.UpdateFrequencyWrapper` applied to the ``Radiation`` object
 is an object that acts like a :py:class:`~sympl.Prognostic` but only computes
 its output if at least a certain amount of model time has passed since the last
 time the output was computed. Otherwise, it returns the last computed output.
