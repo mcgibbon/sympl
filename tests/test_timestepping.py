@@ -7,8 +7,6 @@ from sympl._core.units import units_are_compatible
 import numpy as np
 import warnings
 
-warnings.filterwarnings('always', 'ImplicitPrognostic')
-
 
 def same_list(list1, list2):
     return (len(list1) == len(list2) and all(
@@ -411,16 +409,6 @@ class PrognosticBase(object):
 class ImplicitPrognosticBase(PrognosticBase):
 
     prognostic_class = MockImplicitPrognostic
-
-    def test_warn_on_implicitprognostic(self):
-        prognostic = self.prognostic_class({}, {}, {}, {}, {})
-        with pytest.warns(UserWarning) as w:
-            self.timestepper_class(prognostic)
-        if isinstance(w, UserWarning):
-            w = [w]
-        print(list(i.message for i in w))
-        assert 'ImplicitPrognostic' in w[0].message.args[0]
-        assert 'scientifically invalid' in w[0].message.args[0]
 
 
 class TimesteppingBase(object):
