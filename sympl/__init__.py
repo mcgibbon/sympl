@@ -47,7 +47,7 @@ __all__ = (
     get_constants_string, TimeDifferencingWrapper,
     ensure_no_shared_keys,
     get_numpy_array, jit,
-    register_tracer, get_tracer_unit_dict,
+    register_tracer, get_tracer_unit_dict, get_tracer_names,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties,
     initialize_numpy_arrays_with_properties,
