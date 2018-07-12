@@ -41,6 +41,9 @@ class MockTracerPrognostic(Prognostic):
     tracer_dims = ('tracer', '*')
 
     def __init__(self, **kwargs):
+        prepend_tracers = kwargs.pop('prepend_tracers', None)
+        if prepend_tracers is not None:
+            self.prepend_tracers = prepend_tracers
         self.input_properties = {}
         self.diagnostic_properties = {}
         self.tendency_properties = {}
@@ -91,7 +94,10 @@ class MockTracerImplicitPrognostic(ImplicitPrognostic):
     uses_tracers = True
     tracer_dims = ('tracer', '*')
 
-    def __init__( self, **kwargs):
+    def __init__(self, **kwargs):
+        prepend_tracers = kwargs.pop('prepend_tracers', None)
+        if prepend_tracers is not None:
+            self.prepend_tracers = prepend_tracers
         self.input_properties = {}
         self.diagnostic_properties = {}
         self.tendency_properties = {}
@@ -164,6 +170,9 @@ class MockTracerImplicit(Implicit):
     tracer_dims = ('tracer', '*')
 
     def __init__(self, **kwargs):
+        prepend_tracers = kwargs.pop('prepend_tracers', None)
+        if prepend_tracers is not None:
+            self.prepend_tracers = prepend_tracers
         self.input_properties = {}
         self.diagnostic_properties = {}
         self.output_properties = {}
@@ -182,19 +191,6 @@ class MockTracerImplicit(Implicit):
         return_state.update(state)
         return_state.pop('time')
         return self.diagnostic_output, return_state
-
-"""
-On init and tracer registration, should update input properties of its
-component.
-
-On pack, should pack all tracers not already present in input_properties.
-
-On unpack, should unpack all tracers not present in input_properties
-
-Keep track of internal representation of tracer order.
-    On adding new tracer, add it to the end.
-    Allow global tracer order to be set.
-"""
 
 
 class RegisterTracerTests(unittest.TestCase):
@@ -507,6 +503,108 @@ class TracerComponentBase(object):
         assert isinstance(packed, np.ndarray)
         assert packed.shape == (1, 5)
         assert np.all(packed[0, :] == input_state['tracer1'].values)
+
+    def test_packs_one_prepended_tracer(self):
+        np.random.seed(0)
+        self.component = self.component.__class__(prepend_tracers=[('tracer1', 'g/m^3')])
+        input_state = {
+            'time': timedelta(0),
+            'tracer1': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'g/m^3'},
+            )
+        }
+        self.call_component(input_state)
+        packed = self.component.state_given['tracers']
+        assert isinstance(packed, np.ndarray)
+        assert packed.shape == (1, 5)
+        assert np.all(packed[0, :] == input_state['tracer1'].values)
+
+    def test_packs_two_prepended_tracers(self):
+        np.random.seed(0)
+        self.component = self.component.__class__(
+            prepend_tracers=[('tracer1', 'g/m^3'), ('tracer2', 'J/m^3')])
+        input_state = {
+            'time': timedelta(0),
+            'tracer1': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'g/m^3'},
+            ),
+            'tracer2': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'J/m^3'},
+            ),
+        }
+        unpacked = self.call_component(input_state)
+        packed = self.component.state_given['tracers']
+        assert isinstance(packed, np.ndarray)
+        assert packed.shape == (2, 5)
+        assert np.all(packed[0, :] == input_state['tracer1'].values)
+        assert np.all(packed[1, :] == input_state['tracer2'].values)
+        assert len(unpacked) == 2
+        assert np.all(unpacked['tracer1'].values == input_state['tracer1'].values)
+        assert np.all(unpacked['tracer2'].values == input_state['tracer2'].values)
+
+    def test_packs_prepended_and_normal_tracers_register_first(self):
+        register_tracer('tracer2', 'J/m^3')
+        self.component = self.component.__class__(
+            prepend_tracers=[('tracer1', 'g/m^3')])
+        input_state = {
+            'time': timedelta(0),
+            'tracer1': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'g/m^3'},
+            ),
+            'tracer2': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'J/m^3'},
+            ),
+        }
+        unpacked = self.call_component(input_state)
+        packed = self.component.state_given['tracers']
+        assert isinstance(packed, np.ndarray)
+        assert packed.shape == (2, 5)
+        assert np.all(packed[0, :] == input_state['tracer1'].values)
+        assert np.all(packed[1, :] == input_state['tracer2'].values)
+        assert len(unpacked) == 2
+        assert np.all(
+            unpacked['tracer1'].values == input_state['tracer1'].values)
+        assert np.all(
+            unpacked['tracer2'].values == input_state['tracer2'].values)
+
+    def test_packs_prepended_and_normal_tracers_register_after_init(self):
+        self.component = self.component.__class__(
+            prepend_tracers=[('tracer1', 'g/m^3')])
+        register_tracer('tracer2', 'J/m^3')
+        input_state = {
+            'time': timedelta(0),
+            'tracer1': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'g/m^3'},
+            ),
+            'tracer2': DataArray(
+                np.random.randn(5),
+                dims=['dim1'],
+                attrs={'units': 'J/m^3'},
+            ),
+        }
+        unpacked = self.call_component(input_state)
+        packed = self.component.state_given['tracers']
+        assert isinstance(packed, np.ndarray)
+        assert packed.shape == (2, 5)
+        assert np.all(packed[0, :] == input_state['tracer1'].values)
+        assert np.all(packed[1, :] == input_state['tracer2'].values)
+        assert len(unpacked) == 2
+        assert np.all(
+            unpacked['tracer1'].values == input_state['tracer1'].values)
+        assert np.all(
+            unpacked['tracer2'].values == input_state['tracer2'].values)
 
     def test_packs_one_3d_tracer(self):
         np.random.seed(0)

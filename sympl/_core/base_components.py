@@ -509,7 +509,9 @@ class Implicit(object):
                 raise ValueError(
                     'Component of type {} must specify tracer_dims property '
                     'when uses_tracers=True'.format(self.__class__.__name__))
-            self._tracer_packer = TracerPacker(self, self.tracer_dims)
+            prepend_tracers = getattr(self, 'prepend_tracers', None)
+            self._tracer_packer = TracerPacker(
+                self, self.tracer_dims, prepend_tracers=prepend_tracers)
         super(Implicit, self).__init__()
 
     def _insert_tendency_properties(self):
@@ -760,7 +762,9 @@ class Prognostic(object):
                 raise ValueError(
                     'Component of type {} must specify tracer_dims property '
                     'when uses_tracers=True'.format(self.__class__.__name__))
-            self._tracer_packer = TracerPacker(self, self.tracer_dims)
+            prepend_tracers = getattr(self, 'prepend_tracers', None)
+            self._tracer_packer = TracerPacker(
+                self, self.tracer_dims, prepend_tracers=prepend_tracers)
         self.__initialized = True
         super(Prognostic, self).__init__()
 
@@ -979,7 +983,9 @@ class ImplicitPrognostic(object):
                 raise ValueError(
                     'Component of type {} must specify tracer_dims property '
                     'when uses_tracers=True'.format(self.__class__.__name__))
-            self._tracer_packer = TracerPacker(self, self.tracer_dims)
+            prepend_tracers = getattr(self, 'prepend_tracers', None)
+            self._tracer_packer = TracerPacker(
+                self, self.tracer_dims, prepend_tracers=prepend_tracers)
         self.__initialized = True
         super(ImplicitPrognostic, self).__init__()
 

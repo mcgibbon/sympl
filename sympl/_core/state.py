@@ -147,7 +147,8 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
 
 
 def initialize_numpy_arrays_with_properties(
-        output_properties, raw_input_state, input_properties, tracer_dims=None):
+        output_properties, raw_input_state, input_properties, tracer_dims=None,
+        prepend_tracers=()):
     """
     Parameters
     ----------
@@ -182,7 +183,8 @@ def initialize_numpy_arrays_with_properties(
     dims_from_out_properties = extract_output_dims_properties(
         output_properties, input_properties, [])
     out_dict = {}
-    tracer_names = get_tracer_names()
+    tracer_names = list(get_tracer_names())
+    tracer_names.extend(entry[0] for entry in prepend_tracers)
     for name, out_dims in dims_from_out_properties.items():
         if tracer_dims is None or name not in tracer_names:
             out_shape = []
@@ -209,6 +211,8 @@ def properties_include_tracers(input_properties):
 def get_dim_lengths_from_raw_input(raw_input, input_properties):
     dim_lengths = {}
     for name, properties in input_properties.items():
+        if properties.get('tracer', False):
+            continue
         if 'alias' in properties.keys():
             name = properties['alias']
         for i, dim_name in enumerate(properties['dims']):
