@@ -561,7 +561,7 @@ class Implicit(object):
     def tendencies_in_diagnostics(self):
         return self._tendencies_in_diagnostics  # value cannot be modified
 
-    def __check_self_is_initialized(self):
+    def _check_self_is_initialized(self):
         try:
             initialized = self.__initialized
         except AttributeError:
@@ -605,7 +605,7 @@ class Implicit(object):
             If state is not a valid input for the Implicit instance
             for other reasons.
         """
-        self.__check_self_is_initialized()
+        self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         if self.uses_tracers:
@@ -786,7 +786,7 @@ class Prognostic(object):
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
 
-    def __check_self_is_initialized(self):
+    def _check_self_is_initialized(self):
         try:
             initialized = self.__initialized
         except AttributeError:
@@ -829,7 +829,7 @@ class Prognostic(object):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
-        self.__check_self_is_initialized()
+        self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         if self.uses_tracers:
@@ -1005,7 +1005,7 @@ class ImplicitPrognostic(object):
     def _get_tendency_name(self, name):
         return '{}_tendency_from_{}'.format(name, self.name)
 
-    def __check_self_is_initialized(self):
+    def _check_self_is_initialized(self):
         try:
             initialized = self.__initialized
         except AttributeError:
@@ -1050,7 +1050,7 @@ class ImplicitPrognostic(object):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
-        self.__check_self_is_initialized()
+        self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         if self.uses_tracers:
@@ -1163,7 +1163,7 @@ class Diagnostic(object):
         self.__initialized = True
         super(Diagnostic, self).__init__()
 
-    def __check_self_is_initialized(self):
+    def _check_self_is_initialized(self):
         try:
             initialized = self.__initialized
         except AttributeError:
@@ -1201,7 +1201,7 @@ class Diagnostic(object):
         InvalidStateError
             If state is not a valid input for the Prognostic instance.
         """
-        self.__check_self_is_initialized()
+        self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         raw_state['time'] = state['time']

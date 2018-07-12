@@ -75,7 +75,8 @@ def get_quantity_dims(tracer_dims):
 
 class TracerPacker(object):
 
-    def __init__(self, component, tracer_dims):
+    def __init__(self, component, tracer_dims, prepend_tracers=None):
+        self._prepend_tracers = prepend_tracers or ()
         self._tracer_dims = tuple(tracer_dims)
         self._tracer_quantity_dims = get_quantity_dims(tracer_dims)
         if hasattr(component, 'tendency_properties') or hasattr(component, 'output_properties'):
@@ -85,6 +86,9 @@ class TracerPacker(object):
                 'Expected a component object subclassing type Implicit, '
                 'ImplicitPrognostic, or Prognostic but received component of '
                 'type {}'.format(component.__class__.__name__))
+        for name, units in self._prepend_tracers:
+            if name not in _tracer_unit_dict.keys():
+                self.insert_tracer_to_properties(name, units)
         for name, units in _tracer_unit_dict.items():
             self.insert_tracer_to_properties(name, units)
         _packers.add(self)
@@ -97,6 +101,13 @@ class TracerPacker(object):
             self._insert_tracer_to_output_properties(name, units)
 
     def _insert_tracer_to_input_properties(self, name, units):
+        if name in self.component.input_properties.keys():
+            raise InvalidPropertyDictError(
+                'Attempted to insert {} as tracer to component of type {} but '
+                'it already has that quantity defined as an input.'.format(
+                    name, self.component.__class__.__name__
+                )
+            )
         if name not in self.component.input_properties:
             self.component.input_properties[name] = {
                 'dims': self._tracer_quantity_dims,
@@ -105,6 +116,13 @@ class TracerPacker(object):
             }
 
     def _insert_tracer_to_output_properties(self, name, units):
+        if name in self.component.output_properties.keys():
+            raise InvalidPropertyDictError(
+                'Attempted to insert {} as tracer to component of type {} but '
+                'it already has that quantity defined as an output.'.format(
+                    name, self.component.__class__.__name__
+                )
+            )
         if name not in self.component.output_properties:
             self.component.output_properties[name] = {
                 'dims': self._tracer_quantity_dims,
@@ -114,16 +132,20 @@ class TracerPacker(object):
 
     def _insert_tracer_to_tendency_properties(self, name, units):
         time_unit = getattr(self.component, 'tracer_tendency_time_unit', 's')
+        if name in self.component.tendency_properties.keys():
+            raise InvalidPropertyDictError(
+                'Attempted to insert {} as tracer to component of type {} but '
+                'it already has that quantity defined as a tendency '
+                'output.'.format(
+                    name, self.component.__class__.__name__
+                )
+            )
         if name not in self.component.tendency_properties:
             self.component.tendency_properties[name] = {
                 'dims': self._tracer_quantity_dims,
                 'units': '{} {}^-1'.format(units, time_unit),
                 'tracer': True,
             }
-
-    def remove_tracer_from_properties(self, name):
-        if self.is_tracer(name):
-            self.component.pop(name)
 
     def is_tracer(self, tracer_name):
         return self.component.input_properties.get(tracer_name, {}).get('tracer', False)
@@ -147,8 +169,10 @@ class TracerPacker(object):
     @property
     def tracer_names(self):
         return_list = []
+        for name, units in self._prepend_tracers:
+            return_list.append(name)
         for name in _tracer_names:
-            if self.is_tracer(name):
+            if name not in return_list and self.is_tracer(name):
                 return_list.append(name)
         return tuple(return_list)
 

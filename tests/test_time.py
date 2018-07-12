@@ -174,7 +174,7 @@ class JulianTests(unittest.TestCase, DatetimeBase):
         return ct.DatetimeJulian
 
 
-unittest.skipIf(ct is None, netcdftime_not_installed)
+@unittest.skipIf(ct is None, netcdftime_not_installed)
 class GregorianTests(unittest.TestCase, DatetimeBase):
     calendar = 'gregorian'
 

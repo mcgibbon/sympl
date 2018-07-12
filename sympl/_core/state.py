@@ -1,6 +1,7 @@
 from .exceptions import InvalidStateError, InvalidPropertyDictError
 import numpy as np
 from .array import DataArray
+from .tracers import get_tracer_names
 
 
 def copy_untouched_quantities(old_state, new_state):
@@ -146,7 +147,7 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
 
 
 def initialize_numpy_arrays_with_properties(
-        output_properties, raw_input_state, input_properties):
+        output_properties, raw_input_state, input_properties, tracer_dims=None):
     """
     Parameters
     ----------
@@ -181,18 +182,35 @@ def initialize_numpy_arrays_with_properties(
     dims_from_out_properties = extract_output_dims_properties(
         output_properties, input_properties, [])
     out_dict = {}
+    tracer_names = get_tracer_names()
     for name, out_dims in dims_from_out_properties.items():
+        if tracer_dims is None or name not in tracer_names:
+            out_shape = []
+            for dim in out_dims:
+                out_shape.append(dim_lengths[dim])
+            dtype = output_properties[name].get('dtype', np.float64)
+            out_dict[name] = np.zeros(out_shape, dtype=dtype)
+    if tracer_dims is not None:
         out_shape = []
-        for dim in out_dims:
+        dim_lengths['tracer'] = len(tracer_names)
+        for dim in tracer_dims:
             out_shape.append(dim_lengths[dim])
-        dtype = output_properties[name].get('dtype', np.float64)
-        out_dict[name] = np.zeros(out_shape, dtype=dtype)
+        out_dict['tracers'] = np.zeros(out_shape, dtype=np.float64)
     return out_dict
+
+
+def properties_include_tracers(input_properties):
+    for properties in input_properties.values():
+        if properties.get('tracer', False):
+            return True
+    return False
 
 
 def get_dim_lengths_from_raw_input(raw_input, input_properties):
     dim_lengths = {}
     for name, properties in input_properties.items():
+        if 'alias' in properties.keys():
+            name = properties['alias']
         for i, dim_name in enumerate(properties['dims']):
             if dim_name in dim_lengths:
                 if raw_input[name].shape[i] != dim_lengths[dim_name]:
