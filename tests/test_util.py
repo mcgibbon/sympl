@@ -2,8 +2,8 @@ import unittest
 import numpy as np
 import pytest
 from sympl import (
-    Prognostic, ensure_no_shared_keys, SharedKeyError, DataArray,
-    Implicit, Diagnostic,
+    PrognosticComponent, ensure_no_shared_keys, SharedKeyError, DataArray,
+    Stepper, DiagnosticComponent,
     InvalidPropertyDictError)
 from sympl._core.util import update_dict_by_adding_another, combine_dims, get_component_aliases
 
@@ -64,7 +64,7 @@ def test_update_dict_by_adding_another_adds_shared_arrays_reversed():
     assert len(dict2.keys()) == 2
 
 
-class DummyPrognostic(Prognostic):
+class DummyPrognosticComponent(PrognosticComponent):
     input_properties = {'temperature': {'alias': 'T'}}
     diagnostic_properties = {'pressure': {'alias': 'P'}}
     tendency_properties = {'temperature': {}}

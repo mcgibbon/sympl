@@ -3,7 +3,7 @@ import mock
 import numpy as np
 import unittest
 from sympl import (
-    Prognostic, Diagnostic, Monitor, Implicit, ImplicitPrognostic,
+    PrognosticComponent, DiagnosticComponent, Monitor, Stepper, ImplicitPrognosticComponent,
     datetime, timedelta, DataArray, InvalidPropertyDictError,
     ComponentMissingOutputError, ComponentExtraOutputError,
     InvalidStateError
@@ -14,7 +14,7 @@ def same_list(list1, list2):
         [item in list2 for item in list1] + [item in list1 for item in list2]))
 
 
-class MockPrognostic(Prognostic):
+class MockPrognosticComponent(PrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -30,7 +30,7 @@ class MockPrognostic(Prognostic):
         self.tendency_output = tendency_output
         self.times_called = 0
         self.state_given = None
-        super(MockPrognostic, self).__init__(**kwargs)
+        super(MockPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -38,7 +38,7 @@ class MockPrognostic(Prognostic):
         return self.tendency_output, self.diagnostic_output
 
 
-class MockImplicitPrognostic(ImplicitPrognostic):
+class MockImplicitPrognosticComponent(ImplicitPrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -55,7 +55,7 @@ class MockImplicitPrognostic(ImplicitPrognostic):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockImplicitPrognostic, self).__init__(**kwargs)
+        super(MockImplicitPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -64,7 +64,7 @@ class MockImplicitPrognostic(ImplicitPrognostic):
         return self.tendency_output, self.diagnostic_output
 
 
-class MockDiagnostic(Diagnostic):
+class MockDiagnosticComponent(DiagnosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -77,7 +77,7 @@ class MockDiagnostic(Diagnostic):
         self.diagnostic_output = diagnostic_output
         self.times_called = 0
         self.state_given = None
-        super(MockDiagnostic, self).__init__(**kwargs)
+        super(MockDiagnosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -85,7 +85,7 @@ class MockDiagnostic(Diagnostic):
         return self.diagnostic_output
 
 
-class MockImplicit(Implicit):
+class MockStepper(Stepper):
 
     input_properties = None
     diagnostic_properties = None
@@ -103,7 +103,7 @@ class MockImplicit(Implicit):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockImplicit, self).__init__(**kwargs)
+        super(MockStepper, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -117,7 +117,7 @@ class MockMonitor(Monitor):
     def store(self, state):
         return
 
-class BadMockPrognostic(Prognostic):
+class BadMockPrognosticComponent(PrognosticComponent):
 
     input_properties = {}
     tendency_properties = {}
@@ -130,7 +130,7 @@ class BadMockPrognostic(Prognostic):
         return {}, {}
 
 
-class BadMockImplicitPrognostic(ImplicitPrognostic):
+class BadMockImplicitPrognosticComponent(ImplicitPrognosticComponent):
 
     input_properties = {}
     tendency_properties = {}
@@ -143,7 +143,7 @@ class BadMockImplicitPrognostic(ImplicitPrognostic):
         return {}, {}
 
 
-class BadMockDiagnostic(Diagnostic):
+class BadMockDiagnosticComponent(DiagnosticComponent):
 
     input_properties = {}
     diagnostic_properties = {}
@@ -155,7 +155,7 @@ class BadMockDiagnostic(Diagnostic):
         return {}
 
 
-class BadMockImplicit(Implicit):
+class BadMockStepper(Stepper):
 
     input_properties = {}
     diagnostic_properties = {}
@@ -733,7 +733,7 @@ class DiagnosticTestBase():
 
 class PrognosticTests(unittest.TestCase, InputTestBase):
 
-    component_class = MockPrognostic
+    component_class = MockPrognosticComponent
 
     def call_component(self, component, state):
         return component(state)
@@ -742,7 +742,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
             self, input_properties=None, tendency_properties=None,
             diagnostic_properties=None, tendency_output=None,
             diagnostic_output=None):
-        return MockPrognostic(
+        return MockPrognosticComponent(
             input_properties=input_properties or {},
             tendency_properties=tendency_properties or {},
             diagnostic_properties=diagnostic_properties or {},
@@ -758,7 +758,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
             self.get_component(tendency_properties=({},))
 
     def test_cannot_use_bad_component(self):
-        component = BadMockPrognostic()
+        component = BadMockPrognosticComponent()
         with self.assertRaises(RuntimeError):
             self.call_component(component, {'time': timedelta(0)})
 
@@ -775,7 +775,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
                 pass
 
         instance = MyPrognostic()
-        assert isinstance(instance, Prognostic)
+        assert isinstance(instance, PrognosticComponent)
 
     def test_tendency_raises_when_units_incompatible_with_input(self):
         input_properties = {
@@ -791,7 +791,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
             )
 
     def test_two_components_are_not_instances_of_each_other(self):
-        class MyPrognostic1(Prognostic):
+        class MyPrognosticComponent1(PrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -800,7 +800,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
             def array_call(self, state):
                 pass
 
-        class MyPrognostic2(Prognostic):
+        class MyPrognosticComponent2(PrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -809,10 +809,10 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
             def array_call(self, state):
                 pass
 
-        prog1 = MyPrognostic1()
-        prog2 = MyPrognostic2()
-        assert not isinstance(prog1, MyPrognostic2)
-        assert not isinstance(prog2, MyPrognostic1)
+        prog1 = MyPrognosticComponent1()
+        prog2 = MyPrognosticComponent2()
+        assert not isinstance(prog1, MyPrognosticComponent2)
+        assert not isinstance(prog2, MyPrognosticComponent1)
 
     def test_ducktype_not_instance_of_subclass(self):
         class MyPrognostic1(object):
@@ -826,7 +826,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
             def array_call(self, state):
                 pass
 
-        class MyPrognostic2(Prognostic):
+        class MyPrognosticComponent2(PrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -836,7 +836,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
                 pass
 
         prog1 = MyPrognostic1()
-        assert not isinstance(prog1, MyPrognostic2)
+        assert not isinstance(prog1, MyPrognosticComponent2)
 
     def test_empty_prognostic(self):
         prognostic = self.component_class({}, {}, {}, {}, {})
@@ -1289,7 +1289,7 @@ class PrognosticTests(unittest.TestCase, InputTestBase):
 
 class ImplicitPrognosticTests(PrognosticTests):
 
-    component_class = MockImplicitPrognostic
+    component_class = MockImplicitPrognosticComponent
 
     def call_component(self, component, state):
         return component(state, timedelta(seconds=1))
@@ -1298,7 +1298,7 @@ class ImplicitPrognosticTests(PrognosticTests):
             self, input_properties=None, tendency_properties=None,
             diagnostic_properties=None, tendency_output=None,
             diagnostic_output=None):
-        return MockImplicitPrognostic(
+        return MockImplicitPrognosticComponent(
             input_properties=input_properties or {},
             tendency_properties=tendency_properties or {},
             diagnostic_properties=diagnostic_properties or {},
@@ -1307,7 +1307,7 @@ class ImplicitPrognosticTests(PrognosticTests):
         )
 
     def test_cannot_use_bad_component(self):
-        component = BadMockImplicitPrognostic()
+        component = BadMockImplicitPrognosticComponent()
         with self.assertRaises(RuntimeError):
             self.call_component(component, {'time': timedelta(0)})
 
@@ -1324,10 +1324,10 @@ class ImplicitPrognosticTests(PrognosticTests):
                 pass
 
         instance = MyImplicitPrognostic()
-        assert isinstance(instance, ImplicitPrognostic)
+        assert isinstance(instance, ImplicitPrognosticComponent)
 
     def test_two_components_are_not_instances_of_each_other(self):
-        class MyImplicitPrognostic1(ImplicitPrognostic):
+        class MyImplicitPrognosticComponent1(ImplicitPrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -1337,7 +1337,7 @@ class ImplicitPrognosticTests(PrognosticTests):
             def array_call(self, state, timestep):
                 pass
 
-        class MyImplicitPrognostic2(ImplicitPrognostic):
+        class MyImplicitPrognosticComponent2(ImplicitPrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -1347,10 +1347,10 @@ class ImplicitPrognosticTests(PrognosticTests):
             def array_call(self, state):
                 pass
 
-        prog1 = MyImplicitPrognostic1()
-        prog2 = MyImplicitPrognostic2()
-        assert not isinstance(prog1, MyImplicitPrognostic2)
-        assert not isinstance(prog2, MyImplicitPrognostic1)
+        prog1 = MyImplicitPrognosticComponent1()
+        prog2 = MyImplicitPrognosticComponent2()
+        assert not isinstance(prog1, MyImplicitPrognosticComponent2)
+        assert not isinstance(prog2, MyImplicitPrognosticComponent1)
 
     def test_ducktype_not_instance_of_subclass(self):
         class MyImplicitPrognostic1(object):
@@ -1364,7 +1364,7 @@ class ImplicitPrognosticTests(PrognosticTests):
             def array_call(self, state, timestep):
                 pass
 
-        class MyImplicitPrognostic2(ImplicitPrognostic):
+        class MyImplicitPrognosticComponent2(ImplicitPrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -1375,10 +1375,10 @@ class ImplicitPrognosticTests(PrognosticTests):
                 pass
 
         prog1 = MyImplicitPrognostic1()
-        assert not isinstance(prog1, MyImplicitPrognostic2)
+        assert not isinstance(prog1, MyImplicitPrognosticComponent2)
 
     def test_subclass_is_not_prognostic(self):
-        class MyImplicitPrognostic(ImplicitPrognostic):
+        class MyImplicitPrognosticComponent(ImplicitPrognosticComponent):
             input_properties = {}
             diagnostic_properties = {}
             tendency_properties = {}
@@ -1387,8 +1387,8 @@ class ImplicitPrognosticTests(PrognosticTests):
             def array_call(self, state, timestep):
                 pass
 
-        instance = MyImplicitPrognostic()
-        assert not isinstance(instance, Prognostic)
+        instance = MyImplicitPrognosticComponent()
+        assert not isinstance(instance, PrognosticComponent)
 
     def test_ducktype_is_not_prognostic(self):
         class MyImplicitPrognostic(object):
@@ -1403,10 +1403,10 @@ class ImplicitPrognosticTests(PrognosticTests):
                 pass
 
         instance = MyImplicitPrognostic()
-        assert not isinstance(instance, Prognostic)
+        assert not isinstance(instance, PrognosticComponent)
 
     def test_timedelta_is_passed(self):
-        prognostic = MockImplicitPrognostic({}, {}, {}, {}, {})
+        prognostic = MockImplicitPrognosticComponent({}, {}, {}, {}, {})
         tendencies, diagnostics = prognostic(
             {'time': timedelta(seconds=0)}, timedelta(seconds=5))
         assert tendencies == {}
@@ -1417,7 +1417,7 @@ class ImplicitPrognosticTests(PrognosticTests):
 
 class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
-    component_class = MockDiagnostic
+    component_class = MockDiagnosticComponent
 
     def call_component(self, component, state):
         return component(state)
@@ -1426,7 +1426,7 @@ class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             self, input_properties=None,
             diagnostic_properties=None,
             diagnostic_output=None):
-        return MockDiagnostic(
+        return MockDiagnosticComponent(
             input_properties=input_properties or {},
             diagnostic_properties=diagnostic_properties or {},
             diagnostic_output=diagnostic_output or {},
@@ -1436,7 +1436,7 @@ class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
         return result
 
     def test_cannot_use_bad_component(self):
-        component = BadMockDiagnostic()
+        component = BadMockDiagnosticComponent()
         with self.assertRaises(RuntimeError):
             self.call_component(component, {'time': timedelta(0)})
 
@@ -1450,27 +1450,27 @@ class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
                 pass
 
         instance = MyDiagnostic()
-        assert isinstance(instance, Diagnostic)
+        assert isinstance(instance, DiagnosticComponent)
 
     def test_two_components_are_not_instances_of_each_other(self):
-        class MyDiagnostic1(Diagnostic):
+        class MyDiagnosticComponent1(DiagnosticComponent):
             input_properties = {}
             diagnostic_properties = {}
 
             def array_call(self, state):
                 pass
 
-        class MyDiagnostic2(Diagnostic):
+        class MyDiagnosticComponent2(DiagnosticComponent):
             input_properties = {}
             diagnostic_properties = {}
 
             def array_call(self, state):
                 pass
 
-        diag1 = MyDiagnostic1()
-        diag2 = MyDiagnostic2()
-        assert not isinstance(diag1, MyDiagnostic2)
-        assert not isinstance(diag2, MyDiagnostic1)
+        diag1 = MyDiagnosticComponent1()
+        diag2 = MyDiagnosticComponent2()
+        assert not isinstance(diag1, MyDiagnosticComponent2)
+        assert not isinstance(diag2, MyDiagnosticComponent1)
 
     def test_ducktype_not_instance_of_subclass(self):
         class MyDiagnostic1(object):
@@ -1481,7 +1481,7 @@ class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             def array_call(self, state):
                 pass
 
-        class MyDiagnostic2(Diagnostic):
+        class MyDiagnosticComponent2(DiagnosticComponent):
             input_properties = {}
             diagnostic_properties = {}
 
@@ -1489,7 +1489,7 @@ class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
                 pass
 
         diag1 = MyDiagnostic1()
-        assert not isinstance(diag1, MyDiagnostic2)
+        assert not isinstance(diag1, MyDiagnosticComponent2)
 
     def test_empty_diagnostic(self):
         diagnostic = self.component_class({}, {}, {})
@@ -1503,7 +1503,7 @@ class DiagnosticTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
 class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
 
-    component_class = MockImplicit
+    component_class = MockStepper
 
     def call_component(self, component, state):
         return component(state, timedelta(seconds=1))
@@ -1512,7 +1512,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             self, input_properties=None, output_properties=None,
             diagnostic_properties=None, state_output=None,
             diagnostic_output=None):
-        return MockImplicit(
+        return MockStepper(
             input_properties=input_properties or {},
             output_properties=output_properties or {},
             diagnostic_properties=diagnostic_properties or {},
@@ -1528,7 +1528,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             self.get_component(output_properties=({},))
 
     def test_cannot_use_bad_component(self):
-        component = BadMockImplicit()
+        component = BadMockStepper()
         with self.assertRaises(RuntimeError):
             self.call_component(component, {'time': timedelta(0)})
 
@@ -1545,7 +1545,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
                 pass
 
         instance = MyImplicit()
-        assert isinstance(instance, Implicit)
+        assert isinstance(instance, Stepper)
 
     def test_output_raises_when_units_incompatible_with_input(self):
         input_properties = {
@@ -1561,7 +1561,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             )
 
     def test_two_components_are_not_instances_of_each_other(self):
-        class MyImplicit1(Implicit):
+        class MyStepper1(Stepper):
             input_properties = {}
             diagnostic_properties = {}
             output_properties = {}
@@ -1571,7 +1571,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             def array_call(self, state):
                 pass
 
-        class MyImplicit2(Implicit):
+        class MyStepper2(Stepper):
             input_properties = {}
             diagnostic_properties = {}
             output_properties = {}
@@ -1581,10 +1581,10 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             def array_call(self, state):
                 pass
 
-        implicit1 = MyImplicit1()
-        implicit2 = MyImplicit2()
-        assert not isinstance(implicit1, MyImplicit2)
-        assert not isinstance(implicit2, MyImplicit1)
+        implicit1 = MyStepper1()
+        implicit2 = MyStepper2()
+        assert not isinstance(implicit1, MyStepper2)
+        assert not isinstance(implicit2, MyStepper1)
 
     def test_ducktype_not_instance_of_subclass(self):
         class MyImplicit1(object):
@@ -1598,7 +1598,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             def array_call(self, state):
                 pass
 
-        class MyImplicit2(Implicit):
+        class MyStepper2(Stepper):
             input_properties = {}
             diagnostic_properties = {}
             output_properties = {}
@@ -1609,7 +1609,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
                 pass
 
         implicit1 = MyImplicit1()
-        assert not isinstance(implicit1, MyImplicit2)
+        assert not isinstance(implicit1, MyStepper2)
 
     def test_empty_implicit(self):
         implicit = self.component_class(
@@ -1693,7 +1693,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             )
 
     def test_timedelta_is_passed(self):
-        implicit = MockImplicit({}, {}, {}, {}, {})
+        implicit = MockStepper({}, {}, {}, {}, {})
         tendencies, diagnostics = implicit(
             {'time': timedelta(seconds=0)}, timedelta(seconds=5))
         assert tendencies == {}
@@ -1877,7 +1877,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
         output_properties = {}
         diagnostic_output = {}
         output_state = {}
-        implicit = MockImplicit(
+        implicit = MockStepper(
             input_properties, diagnostic_properties, output_properties,
             diagnostic_output, output_state, tendencies_in_diagnostics=True
         )
@@ -1901,17 +1901,17 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
         output_state = {
             'output1': np.ones([10]) * 20.,
         }
-        implicit = MockImplicit(
+        implicit = MockStepper(
             input_properties, diagnostic_properties, output_properties,
             diagnostic_output, output_state, tendencies_in_diagnostics=True,
         )
         assert len(implicit.diagnostic_properties) == 1
-        assert 'output1_tendency_from_mockimplicit' in implicit.diagnostic_properties.keys()
-        assert 'output1' in input_properties.keys(), 'Implicit needs original value to calculate tendency'
+        assert 'output1_tendency_from_MockStepper' in implicit.diagnostic_properties.keys()
+        assert 'output1' in input_properties.keys(), 'Stepper needs original value to calculate tendency'
         assert input_properties['output1']['dims'] == ['dim1']
         assert input_properties['output1']['units'] == 'm'
         properties = implicit.diagnostic_properties[
-            'output1_tendency_from_mockimplicit']
+            'output1_tendency_from_MockStepper']
         assert properties['dims'] == ['dim1']
         assert properties['units'] == 'm s^-1'
         state = {
@@ -1923,13 +1923,13 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             ),
         }
         diagnostics, _ = implicit(state, timedelta(seconds=5))
-        assert 'output1_tendency_from_mockimplicit' in diagnostics.keys()
+        assert 'output1_tendency_from_MockStepper' in diagnostics.keys()
         assert len(
-            diagnostics['output1_tendency_from_mockimplicit'].dims) == 1
-        assert 'dim1' in diagnostics['output1_tendency_from_mockimplicit'].dims
-        assert diagnostics['output1_tendency_from_mockimplicit'].attrs['units'] == 'm s^-1'
+            diagnostics['output1_tendency_from_MockStepper'].dims) == 1
+        assert 'dim1' in diagnostics['output1_tendency_from_MockStepper'].dims
+        assert diagnostics['output1_tendency_from_MockStepper'].attrs['units'] == 'm s^-1'
         assert np.all(
-            diagnostics['output1_tendency_from_mockimplicit'].values == 2.)
+            diagnostics['output1_tendency_from_MockStepper'].values == 2.)
 
     def test_tendencies_in_diagnostics_one_tendency_dims_from_input(self):
         input_properties = {
@@ -1948,17 +1948,17 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
         output_state = {
             'output1': np.ones([10]) * 20.,
         }
-        implicit = MockImplicit(
+        implicit = MockStepper(
             input_properties, diagnostic_properties, output_properties,
             diagnostic_output, output_state, tendencies_in_diagnostics=True,
         )
         assert len(implicit.diagnostic_properties) == 1
-        assert 'output1_tendency_from_mockimplicit' in implicit.diagnostic_properties.keys()
-        assert 'output1' in input_properties.keys(), 'Implicit needs original value to calculate tendency'
+        assert 'output1_tendency_from_MockStepper' in implicit.diagnostic_properties.keys()
+        assert 'output1' in input_properties.keys(), 'Stepper needs original value to calculate tendency'
         assert input_properties['output1']['dims'] == ['dim1']
         assert input_properties['output1']['units'] == 'm'
         properties = implicit.diagnostic_properties[
-            'output1_tendency_from_mockimplicit']
+            'output1_tendency_from_MockStepper']
         assert properties['dims'] == ['dim1']
         assert properties['units'] == 'm s^-1'
         state = {
@@ -1970,13 +1970,13 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             ),
         }
         diagnostics, _ = implicit(state, timedelta(seconds=5))
-        assert 'output1_tendency_from_mockimplicit' in diagnostics.keys()
+        assert 'output1_tendency_from_MockStepper' in diagnostics.keys()
         assert len(
-            diagnostics['output1_tendency_from_mockimplicit'].dims) == 1
-        assert 'dim1' in diagnostics['output1_tendency_from_mockimplicit'].dims
-        assert diagnostics['output1_tendency_from_mockimplicit'].attrs['units'] == 'm s^-1'
+            diagnostics['output1_tendency_from_MockStepper'].dims) == 1
+        assert 'dim1' in diagnostics['output1_tendency_from_MockStepper'].dims
+        assert diagnostics['output1_tendency_from_MockStepper'].attrs['units'] == 'm s^-1'
         assert np.all(
-            diagnostics['output1_tendency_from_mockimplicit'].values == 2.)
+            diagnostics['output1_tendency_from_MockStepper'].values == 2.)
 
     def test_tendencies_in_diagnostics_one_tendency_mismatched_units(self):
         input_properties = {
@@ -1997,7 +1997,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             'output1': np.ones([10]) * 20.,
         }
         with self.assertRaises(InvalidPropertyDictError):
-            implicit = MockImplicit(
+            implicit = MockStepper(
                 input_properties, diagnostic_properties, output_properties,
                 diagnostic_output, output_state, tendencies_in_diagnostics=True,
             )
@@ -2021,7 +2021,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
             'output1': np.ones([10]) * 20.,
         }
         with self.assertRaises(InvalidPropertyDictError):
-            implicit = MockImplicit(
+            implicit = MockStepper(
                 input_properties, diagnostic_properties, output_properties,
                 diagnostic_output, output_state, tendencies_in_diagnostics=True,
             )
@@ -2039,7 +2039,7 @@ class ImplicitTests(unittest.TestCase, InputTestBase, DiagnosticTestBase):
         output_state = {
             'output1': np.ones([10]) * 7.,
         }
-        implicit = MockImplicit(
+        implicit = MockStepper(
             input_properties, diagnostic_properties, output_properties,
             diagnostic_output, output_state, tendencies_in_diagnostics=True,
             name='component'

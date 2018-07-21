@@ -87,7 +87,7 @@ else:
             Raises
             ------
             InvalidStateError
-                If state is not a valid input for the Diagnostic instance.
+                If state is not a valid input for the DiagnosticComponent instance.
             """
             if self._store_names is not None:
                 name_list = set(state.keys()).intersection(self._store_names)

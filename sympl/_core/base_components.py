@@ -26,11 +26,11 @@ def apply_scale_factors(array_state, scale_factors):
 
 
 def is_component_class(cls):
-    return any(issubclass(cls, cls2) for cls2 in (Implicit, Prognostic, ImplicitPrognostic, Diagnostic))
+    return any(issubclass(cls, cls2) for cls2 in (Stepper, PrognosticComponent, ImplicitPrognosticComponent, DiagnosticComponent))
 
 
 def is_component_base_class(cls):
-    return cls in (Implicit, Prognostic, ImplicitPrognostic, Diagnostic)
+    return cls in (Stepper, PrognosticComponent, ImplicitPrognosticComponent, DiagnosticComponent)
 
 
 def get_kwarg_defaults(func):
@@ -226,7 +226,7 @@ class TendencyChecker(object):
         if len(missing_tendencies) > 0:
             raise ComponentMissingOutputError(
                 'Component {} did not compute tendencies for {}'.format(
-                    self.__class__.__name__, ', '.join(missing_tendencies)))
+                    self.component.__class__.__name__, ', '.join(missing_tendencies)))
 
     def _check_extra_tendencies(self, tendency_dict):
         wanted_set = set()
@@ -238,7 +238,7 @@ class TendencyChecker(object):
             raise ComponentExtraOutputError(
                 'Component {} computed tendencies for {} which are not in '
                 'tendency_properties'.format(
-                    self.__class__.__name__, ', '.join(extra_tendencies)))
+                    self.component.__class__.__name__, ', '.join(extra_tendencies)))
 
     def check_tendencies(self, tendency_dict):
         self._check_missing_tendencies(tendency_dict)
@@ -265,10 +265,10 @@ class DiagnosticChecker(object):
         for name, properties in component.diagnostic_properties.items():
             if 'units' not in properties.keys():
                 raise InvalidPropertyDictError(
-                    'Diagnostic properties do not have units defined for {}'.format(name))
+                    'DiagnosticComponent properties do not have units defined for {}'.format(name))
             if 'dims' not in properties.keys() and name not in component.input_properties.keys():
                 raise InvalidPropertyDictError(
-                    'Diagnostic properties do not have dims defined for {}'.format(name)
+                    'DiagnosticComponent properties do not have dims defined for {}'.format(name)
                 )
         incompatible_name = get_name_with_incompatible_units(
             self.component.input_properties, self.component.diagnostic_properties)
@@ -385,7 +385,7 @@ class OutputChecker(object):
         if len(missing_outputs) > 0:
             raise ComponentMissingOutputError(
                 'Component {} did not compute output(s) {}'.format(
-                    self.__class__.__name__, ', '.join(missing_outputs)))
+                    self.component.__class__.__name__, ', '.join(missing_outputs)))
 
     def _check_extra_outputs(self, outputs_dict):
         wanted_set = set()
@@ -397,7 +397,7 @@ class OutputChecker(object):
             raise ComponentExtraOutputError(
                 'Component {} computed output(s) {} which are not in '
                 'output_properties'.format(
-                    self.__class__.__name__, ', '.join(extra_outputs)))
+                    self.component.__class__.__name__, ', '.join(extra_outputs)))
 
     def check_outputs(self, output_dict):
         self._check_missing_outputs(output_dict)
@@ -405,7 +405,7 @@ class OutputChecker(object):
 
 
 @add_metaclass(ComponentMeta)
-class Implicit(object):
+class Stepper(object):
     """
     Attributes
     ----------
@@ -457,7 +457,7 @@ class Implicit(object):
 
     def __str__(self):
         return (
-            'instance of {}(Implicit)\n'
+            'instance of {}(Stepper)\n'
             '    inputs: {}\n'
             '    outputs: {}\n'
             '    diagnostics: {}'.format(
@@ -481,7 +481,7 @@ class Implicit(object):
 
     def __init__(self, tendencies_in_diagnostics=False, name=None):
         """
-        Initializes the Implicit object.
+        Initializes the Stepper object.
 
         Args
         ----
@@ -495,8 +495,8 @@ class Implicit(object):
             lowercase is used.
         """
         self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        self.name = name or self.__class__.__name__.lower()
-        super(Implicit, self).__init__()
+        self.name = name or self.__class__.__name__
+        super(Stepper, self).__init__()
         self._input_checker = InputChecker(self)
         self._diagnostic_checker = DiagnosticChecker(self)
         self._output_checker = OutputChecker(self)
@@ -512,7 +512,7 @@ class Implicit(object):
             prepend_tracers = getattr(self, 'prepend_tracers', None)
             self._tracer_packer = TracerPacker(
                 self, self.tracer_dims, prepend_tracers=prepend_tracers)
-        super(Implicit, self).__init__()
+        super(Stepper, self).__init__()
 
     def _insert_tendency_properties(self):
         added_names = []
@@ -604,7 +604,7 @@ class Implicit(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the Implicit instance
+            If state is not a valid input for the Stepper instance
             for other reasons.
         """
         self._check_self_is_initialized()
@@ -668,7 +668,7 @@ class Implicit(object):
 
 
 @add_metaclass(ComponentMeta)
-class Prognostic(object):
+class PrognosticComponent(object):
     """
     Attributes
     ----------
@@ -711,7 +711,7 @@ class Prognostic(object):
 
     def __str__(self):
         return (
-            'instance of {}(Prognostic)\n'
+            'instance of {}(PrognosticComponent)\n'
             '    inputs: {}\n'
             '    tendencies: {}\n'
             '    diagnostics: {}'.format(
@@ -735,7 +735,7 @@ class Prognostic(object):
 
     def __init__(self, tendencies_in_diagnostics=False, name=None):
         """
-        Initializes the Implicit object.
+        Initializes the Stepper object.
 
         Args
         ----
@@ -766,7 +766,7 @@ class Prognostic(object):
             self._tracer_packer = TracerPacker(
                 self, self.tracer_dims, prepend_tracers=prepend_tracers)
         self.__initialized = True
-        super(Prognostic, self).__init__()
+        super(PrognosticComponent, self).__init__()
 
     @property
     def tendencies_in_diagnostics(self):
@@ -831,7 +831,7 @@ class Prognostic(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the Prognostic instance.
+            If state is not a valid input for the PrognosticComponent instance.
         """
         self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
@@ -892,7 +892,7 @@ class Prognostic(object):
 
 
 @add_metaclass(ComponentMeta)
-class ImplicitPrognostic(object):
+class ImplicitPrognosticComponent(object):
     """
     Attributes
     ----------
@@ -935,7 +935,7 @@ class ImplicitPrognostic(object):
 
     def __str__(self):
         return (
-            'instance of {}(Prognostic)\n'
+            'instance of {}(PrognosticComponent)\n'
             '    inputs: {}\n'
             '    tendencies: {}\n'
             '    diagnostics: {}'.format(
@@ -957,7 +957,7 @@ class ImplicitPrognostic(object):
 
     def __init__(self, tendencies_in_diagnostics=False, name=None):
         """
-        Initializes the Implicit object.
+        Initializes the Stepper object.
 
         Args
         ----
@@ -987,7 +987,7 @@ class ImplicitPrognostic(object):
             self._tracer_packer = TracerPacker(
                 self, self.tracer_dims, prepend_tracers=prepend_tracers)
         self.__initialized = True
-        super(ImplicitPrognostic, self).__init__()
+        super(ImplicitPrognosticComponent, self).__init__()
 
     @property
     def tendencies_in_diagnostics(self):
@@ -1054,7 +1054,7 @@ class ImplicitPrognostic(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the Prognostic instance.
+            If state is not a valid input for the PrognosticComponent instance.
         """
         self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
@@ -1117,7 +1117,7 @@ class ImplicitPrognostic(object):
 
 
 @add_metaclass(ComponentMeta)
-class Diagnostic(object):
+class DiagnosticComponent(object):
     """
     Attributes
     ----------
@@ -1141,7 +1141,7 @@ class Diagnostic(object):
 
     def __str__(self):
         return (
-            'instance of {}(Diagnostic)\n'
+            'instance of {}(DiagnosticComponent)\n'
             '    inputs: {}\n'
             '    diagnostics: {}'.format(
                 self.__class__, self.inputs, self.diagnostics)
@@ -1162,12 +1162,12 @@ class Diagnostic(object):
 
     def __init__(self):
         """
-        Initializes the Implicit object.
+        Initializes the Stepper object.
         """
         self._input_checker = InputChecker(self)
         self._diagnostic_checker = DiagnosticChecker(self)
         self.__initialized = True
-        super(Diagnostic, self).__init__()
+        super(DiagnosticComponent, self).__init__()
 
     def _check_self_is_initialized(self):
         try:
@@ -1205,7 +1205,7 @@ class Diagnostic(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the Prognostic instance.
+            If state is not a valid input for the PrognosticComponent instance.
         """
         self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
@@ -1272,5 +1272,5 @@ class Monitor(object):
         Raises
         ------
         InvalidStateError
-            If state is not a valid input for the Diagnostic instance.
+            If state is not a valid input for the DiagnosticComponent instance.
         """

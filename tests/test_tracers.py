@@ -1,6 +1,6 @@
 from sympl._core.tracers import TracerPacker, clear_tracers, clear_packers
 from sympl import (
-    Prognostic, Implicit, Diagnostic, ImplicitPrognostic, register_tracer,
+    PrognosticComponent, Stepper, DiagnosticComponent, ImplicitPrognosticComponent, register_tracer,
     get_tracer_unit_dict, units_are_compatible, DataArray
 )
 import unittest
@@ -9,7 +9,7 @@ import pytest
 from datetime import timedelta
 
 
-class MockPrognostic(Prognostic):
+class MockPrognosticComponent(PrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -23,7 +23,7 @@ class MockPrognostic(Prognostic):
         self.tendency_output = {}
         self.times_called = 0
         self.state_given = None
-        super(MockPrognostic, self).__init__(**kwargs)
+        super(MockPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -31,7 +31,7 @@ class MockPrognostic(Prognostic):
         return self.tendency_output, self.diagnostic_output
 
 
-class MockTracerPrognostic(Prognostic):
+class MockTracerPrognosticComponent(PrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -50,7 +50,7 @@ class MockTracerPrognostic(Prognostic):
         self.diagnostic_output = {}
         self.times_called = 0
         self.state_given = None
-        super(MockTracerPrognostic, self).__init__(**kwargs)
+        super(MockTracerPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -61,7 +61,7 @@ class MockTracerPrognostic(Prognostic):
         return return_state, self.diagnostic_output
 
 
-class MockImplicitPrognostic(ImplicitPrognostic):
+class MockImplicitPrognosticComponent(ImplicitPrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -76,7 +76,7 @@ class MockImplicitPrognostic(ImplicitPrognostic):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockImplicitPrognostic, self).__init__(**kwargs)
+        super(MockImplicitPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -85,7 +85,7 @@ class MockImplicitPrognostic(ImplicitPrognostic):
         return self.tendency_output, self.diagnostic_output
 
 
-class MockTracerImplicitPrognostic(ImplicitPrognostic):
+class MockTracerImplicitPrognosticComponent(ImplicitPrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -105,7 +105,7 @@ class MockTracerImplicitPrognostic(ImplicitPrognostic):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockTracerImplicitPrognostic, self).__init__(**kwargs)
+        super(MockTracerImplicitPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -117,7 +117,7 @@ class MockTracerImplicitPrognostic(ImplicitPrognostic):
         return return_state, self.diagnostic_output
 
 
-class MockDiagnostic(Diagnostic):
+class MockDiagnosticComponent(DiagnosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -128,7 +128,7 @@ class MockDiagnostic(Diagnostic):
         self.diagnostic_output = {}
         self.times_called = 0
         self.state_given = None
-        super(MockDiagnostic, self).__init__(**kwargs)
+        super(MockDiagnosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -136,7 +136,7 @@ class MockDiagnostic(Diagnostic):
         return self.diagnostic_output
 
 
-class MockImplicit(Implicit):
+class MockStepper(Stepper):
 
     input_properties = None
     diagnostic_properties = None
@@ -151,7 +151,7 @@ class MockImplicit(Implicit):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockImplicit, self).__init__(**kwargs)
+        super(MockStepper, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -160,7 +160,7 @@ class MockImplicit(Implicit):
         return self.diagnostic_output, self.state_output
 
 
-class MockTracerImplicit(Implicit):
+class MockTracerStepper(Stepper):
 
     input_properties = None
     diagnostic_properties = None
@@ -181,7 +181,7 @@ class MockTracerImplicit(Implicit):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockTracerImplicit, self).__init__(**kwargs)
+        super(MockTracerStepper, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -375,7 +375,7 @@ class TracerPackerBase(object):
 class PrognosticTracerPackerTests(TracerPackerBase, unittest.TestCase):
 
     def setUp(self):
-        self.component = MockPrognostic()
+        self.component = MockPrognosticComponent()
         super(PrognosticTracerPackerTests, self).setUp()
 
     def tearDown(self):
@@ -408,7 +408,7 @@ class PrognosticTracerPackerTests(TracerPackerBase, unittest.TestCase):
 class ImplicitPrognosticTracerPackerTests(PrognosticTracerPackerTests):
 
     def setUp(self):
-        self.component = MockImplicitPrognostic()
+        self.component = MockImplicitPrognosticComponent()
         super(ImplicitPrognosticTracerPackerTests, self).setUp()
 
     def tearDown(self):
@@ -419,7 +419,7 @@ class ImplicitPrognosticTracerPackerTests(PrognosticTracerPackerTests):
 class ImplicitTracerPackerTests(TracerPackerBase, unittest.TestCase):
 
     def setUp(self):
-        self.component = MockImplicit()
+        self.component = MockStepper()
         super(ImplicitTracerPackerTests, self).setUp()
 
     def tearDown(self):
@@ -452,7 +452,7 @@ class ImplicitTracerPackerTests(TracerPackerBase, unittest.TestCase):
 class DiagnosticTracerPackerTests(unittest.TestCase):
 
     def test_raises_on_diagnostic_init(self):
-        diagnostic = MockDiagnostic()
+        diagnostic = MockDiagnosticComponent()
         with self.assertRaises(TypeError):
             TracerPacker(diagnostic, ['tracer', '*'])
 
@@ -702,7 +702,7 @@ class PrognosticTracerComponentTests(TracerComponentBase, unittest.TestCase):
 
     def setUp(self):
         super(PrognosticTracerComponentTests, self).setUp()
-        self.component = MockTracerPrognostic()
+        self.component = MockTracerPrognosticComponent()
 
     def tearDown(self):
         super(PrognosticTracerComponentTests, self).tearDown()
@@ -716,7 +716,7 @@ class ImplicitPrognosticTracerComponentTests(TracerComponentBase, unittest.TestC
 
     def setUp(self):
         super(ImplicitPrognosticTracerComponentTests, self).setUp()
-        self.component = MockTracerImplicitPrognostic()
+        self.component = MockTracerImplicitPrognosticComponent()
 
     def tearDown(self):
         super(ImplicitPrognosticTracerComponentTests, self).tearDown()
@@ -730,7 +730,7 @@ class ImplicitTracerComponentTests(TracerComponentBase, unittest.TestCase):
 
     def setUp(self):
         super(ImplicitTracerComponentTests, self).setUp()
-        self.component = MockTracerImplicit()
+        self.component = MockTracerStepper()
 
     def tearDown(self):
         super(ImplicitTracerComponentTests, self).tearDown()

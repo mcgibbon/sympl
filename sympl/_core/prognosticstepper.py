@@ -1,17 +1,17 @@
 import abc
-from .composite import ImplicitPrognosticComposite
+from .composite import ImplicitPrognosticComponentComposite
 from .time import timedelta
 from .util import combine_component_properties, combine_properties
 from .units import clean_units
 from .state import copy_untouched_quantities
-from .base_components import ImplicitPrognostic
+from .base_components import ImplicitPrognosticComponent, Stepper
 import warnings
 
 
-class TimeStepper(object):
+class PrognosticStepper(Stepper):
     """An object which integrates model state forward in time.
 
-    It uses Prognostic and Diagnostic objects to update the current model state
+    It uses PrognosticComponent and DiagnosticComponent objects to update the current model state
     with diagnostics, and to return the model state at the next timestep.
 
     Attributes
@@ -26,13 +26,13 @@ class TimeStepper(object):
         for the new state are returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    prognostic : ImplicitPrognosticComposite
-        A composite of the Prognostic and ImplicitPrognostic objects used by
-        the TimeStepper.
-    prognostic_list: list of Prognostic and ImplicitPrognostic
-        A list of Prognostic objects called by the TimeStepper. These should
+    prognostic : ImplicitPrognosticComponentComposite
+        A composite of the PrognosticComponent and ImplicitPrognostic objects used by
+        the PrognosticStepper.
+    prognostic_list: list of PrognosticComponent and ImplicitPrognosticComponent
+        A list of PrognosticComponent objects called by the PrognosticStepper. These should
         be referenced when determining what inputs are necessary for the
-        TimeStepper.
+        PrognosticStepper.
     tendencies_in_diagnostics : bool
         A boolean indicating whether this object will put tendencies of
         quantities in its diagnostic output.
@@ -93,8 +93,8 @@ class TimeStepper(object):
 
     def __str__(self):
         return (
-            'instance of {}(TimeStepper)\n'
-            '    Prognostic components: {}'.format(self.prognostic_list)
+            'instance of {}(PrognosticStepper)\n'
+            '    PrognosticComponent components: {}'.format(self.prognostic_list)
         )
 
     def __repr__(self):
@@ -110,13 +110,16 @@ class TimeStepper(object):
             self._making_repr = False
             return return_value
 
+    def array_call(self, state, timestep):
+        raise NotImplementedError('PrognosticStepper objects do not implement array_call')
+
     def __init__(self, *args, **kwargs):
         """
-        Initialize the TimeStepper.
+        Initialize the PrognosticStepper.
 
         Parameters
         ----------
-        *args : Prognostic or ImplicitPrognostic
+        *args : PrognosticComponent or ImplicitPrognosticComponent
             Objects to call for tendencies when doing time stepping.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
@@ -126,26 +129,19 @@ class TimeStepper(object):
             A label to be used for this object, for example as would be used for
             Y in the name "X_tendency_from_Y". By default the class name is used.
         """
-        self.name = kwargs.pop('name', self.__class__.__name__)
-        tendencies_in_diagnostics = kwargs.pop('tendencies_in_diagnostics', False)
-        if len(kwargs) > 0:
-            raise TypeError(
-                "TimeStepper.__init__ got an unexpected keyword argument '{}'".format(
-                    kwargs.popitem()[0]))
         if len(args) == 1 and isinstance(args[0], list):
             warnings.warn(
                 'TimeSteppers should be given individual Prognostics rather '
                 'than a list, and will not accept lists in a later version.',
                 DeprecationWarning)
             args = args[0]
-        self._tendencies_in_diagnostics = tendencies_in_diagnostics
-        # warnings.simplefilter('always')
-        if any(isinstance(a, ImplicitPrognostic) for a in args):
+        if any(isinstance(a, ImplicitPrognosticComponent) for a in args):
             warnings.warn(
-                'Using an ImplicitPrognostic in sympl TimeStepper objects may '
+                'Using an ImplicitPrognosticComponent in sympl PrognosticStepper objects may '
                 'lead to scientifically invalid results. Make sure the component '
-                'follows the same numerical assumptions as the TimeStepper used.')
-        self.prognostic = ImplicitPrognosticComposite(*args)
+                'follows the same numerical assumptions as the PrognosticStepper used.')
+        self.prognostic = ImplicitPrognosticComponentComposite(*args)
+        super(PrognosticStepper, self).__init__(**kwargs)
 
     @property
     def prognostic_list(self):
@@ -192,10 +188,10 @@ class TimeStepper(object):
             tendency_name = self._get_tendency_name(name)
             if tendency_name in diagnostics.keys():
                 raise RuntimeError(
-                    'A Prognostic has output tendencies as a diagnostic and has'
+                    'A PrognosticComponent has output tendencies as a diagnostic and has'
                     ' caused a name clash when trying to do so from this '
-                    'TimeStepper ({}). You must disable '
-                    'tendencies_in_diagnostics for this TimeStepper.'.format(
+                    'PrognosticStepper ({}). You must disable '
+                    'tendencies_in_diagnostics for this PrognosticStepper.'.format(
                         tendency_name))
             base_units = input_properties[name]['units']
             diagnostics[tendency_name] = (
@@ -209,7 +205,6 @@ class TimeStepper(object):
                 diagnostics[tendency_name].attrs['units'] = '{} {}^-1'.format(
                     base_units, self.time_unit_name)
 
-    @abc.abstractmethod
     def _call(self, state, timestep):
         """
         Retrieves any diagnostics and returns a new state corresponding
@@ -229,3 +224,4 @@ class TimeStepper(object):
         new_state : dict
             The model state at the next timestep.
         """
+        raise NotImplementedError()

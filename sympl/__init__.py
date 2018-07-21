@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from ._core.base_components import (
-    Prognostic, Diagnostic, Implicit, Monitor, ImplicitPrognostic
+    PrognosticComponent, DiagnosticComponent, Stepper, Monitor, ImplicitPrognosticComponent
 )
-from ._core.composite import PrognosticComposite, DiagnosticComposite, \
+from ._core.composite import PrognosticComponentComposite, DiagnosticComponentComposite, \
     MonitorComposite
-from ._core.timestepper import TimeStepper
+from ._core.prognosticstepper import PrognosticStepper
 from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
 from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
@@ -28,16 +28,16 @@ from ._core.state import (
     initialize_numpy_arrays_with_properties)
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
-    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
+    ConstantPrognosticComponent, ConstantDiagnosticComponent, RelaxationPrognosticComponent,
     TimeDifferencingWrapper)
 from ._core.wrappers import UpdateFrequencyWrapper, ScalingWrapper
 from ._core.time import datetime, timedelta
 
 __version__ = '0.3.2'
 __all__ = (
-    Prognostic, Diagnostic, Implicit, Monitor, PrognosticComposite,
-    DiagnosticComposite, MonitorComposite, ImplicitPrognostic,
-    TimeStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
+    PrognosticComponent, DiagnosticComponent, Stepper, Monitor, PrognosticComponentComposite,
+    DiagnosticComponentComposite, MonitorComposite, ImplicitPrognosticComponent,
+    PrognosticStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError,
@@ -53,7 +53,7 @@ __all__ = (
     initialize_numpy_arrays_with_properties,
     get_component_aliases, combine_component_properties,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
-    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic,
+    ConstantPrognosticComponent, ConstantDiagnosticComponent, RelaxationPrognosticComponent,
     UpdateFrequencyWrapper, ScalingWrapper,
     datetime, timedelta
 )

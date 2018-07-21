@@ -1,13 +1,13 @@
 import pytest
 from sympl import (
-    ConstantPrognostic, ConstantDiagnostic, RelaxationPrognostic, DataArray,
+    ConstantPrognosticComponent, ConstantDiagnosticComponent, RelaxationPrognosticComponent, DataArray,
     timedelta,
 )
 import numpy as np
 
 
 def test_constant_prognostic_empty_dicts():
-    prog = ConstantPrognostic({}, {})
+    prog = ConstantPrognosticComponent({}, {})
     tendencies, diagnostics = prog({'time': timedelta(0)})
     assert isinstance(tendencies, dict)
     assert isinstance(diagnostics, dict)
@@ -18,7 +18,7 @@ def test_constant_prognostic_empty_dicts():
 def test_constant_prognostic_cannot_modify_through_input_dict():
     in_tendencies = {}
     in_diagnostics = {}
-    prog = ConstantPrognostic(in_tendencies, in_diagnostics)
+    prog = ConstantPrognosticComponent(in_tendencies, in_diagnostics)
     in_tendencies['a'] = 'b'
     in_diagnostics['c'] = 'd'
     tendencies, diagnostics = prog({'time': timedelta(0)})
@@ -27,7 +27,7 @@ def test_constant_prognostic_cannot_modify_through_input_dict():
 
 
 def test_constant_prognostic_cannot_modify_through_output_dict():
-    prog = ConstantPrognostic({}, {})
+    prog = ConstantPrognosticComponent({}, {})
     tendencies, diagnostics = prog({'time': timedelta(0)})
     tendencies['a'] = 'b'
     diagnostics['c'] = 'd'
@@ -49,7 +49,7 @@ def test_constant_prognostic_tendency_properties():
             attrs={'units': 'degK/s'},
         )
     }
-    prog = ConstantPrognostic(tendencies)
+    prog = ConstantPrognosticComponent(tendencies)
     assert prog.tendency_properties == {
         'tend1': {
             'dims': ('dim1',),
@@ -78,7 +78,7 @@ def test_constant_prognostic_diagnostic_properties():
             attrs={'units': 'degK'},
         )
     }
-    prog = ConstantPrognostic(tendencies, diagnostics)
+    prog = ConstantPrognosticComponent(tendencies, diagnostics)
     assert prog.diagnostic_properties == {
         'diag1': {
             'dims': ('dim1',),
@@ -94,7 +94,7 @@ def test_constant_prognostic_diagnostic_properties():
 
 
 def test_constant_diagnostic_empty_dict():
-    diag = ConstantDiagnostic({})
+    diag = ConstantDiagnosticComponent({})
     diagnostics = diag({'time': timedelta(0)})
     assert isinstance(diagnostics, dict)
     assert len(diagnostics) == 0
@@ -102,7 +102,7 @@ def test_constant_diagnostic_empty_dict():
 
 def test_constant_diagnostic_cannot_modify_through_input_dict():
     in_diagnostics = {}
-    diag = ConstantDiagnostic(in_diagnostics)
+    diag = ConstantDiagnosticComponent(in_diagnostics)
     in_diagnostics['a'] = 'b'
     diagnostics = diag({'time': timedelta(0)})
     assert isinstance(diagnostics, dict)
@@ -110,7 +110,7 @@ def test_constant_diagnostic_cannot_modify_through_input_dict():
 
 
 def test_constant_diagnostic_cannot_modify_through_output_dict():
-    diag = ConstantDiagnostic({})
+    diag = ConstantDiagnosticComponent({})
     diagnostics = diag({'time': timedelta(0)})
     diagnostics['c'] = 'd'
     diagnostics = diag({'time': timedelta(0)})
@@ -130,7 +130,7 @@ def test_constant_diagnostic_diagnostic_properties():
             attrs={'units': 'degK'},
         )
     }
-    diagnostic = ConstantDiagnostic(diagnostics)
+    diagnostic = ConstantDiagnosticComponent(diagnostics)
     assert diagnostic.diagnostic_properties == {
         'diag1': {
             'dims': ('dim1',),
@@ -145,7 +145,7 @@ def test_constant_diagnostic_diagnostic_properties():
 
 
 def test_relaxation_prognostic_at_equilibrium():
-    prognostic = RelaxationPrognostic('quantity', 'degK')
+    prognostic = RelaxationPrognosticComponent('quantity', 'degK')
     state = {
         'time': timedelta(0),
         'quantity': DataArray(np.array([0., 1., 2.]), attrs={'units': 'degK'}),
@@ -159,7 +159,7 @@ def test_relaxation_prognostic_at_equilibrium():
 
 
 def test_relaxation_prognostic_with_change():
-    prognostic = RelaxationPrognostic('quantity', 'degK')
+    prognostic = RelaxationPrognosticComponent('quantity', 'degK')
     state = {
         'time': timedelta(0),
         'quantity': DataArray(np.array([0., 1., 2.]), attrs={'units': 'degK'}),
@@ -173,7 +173,7 @@ def test_relaxation_prognostic_with_change():
 
 
 def test_relaxation_prognostic_with_change_different_timescale_units():
-    prognostic = RelaxationPrognostic('quantity', 'degK')
+    prognostic = RelaxationPrognosticComponent('quantity', 'degK')
     state = {
         'time': timedelta(0),
         'quantity': DataArray(np.array([0., 1., 2.]), attrs={'units': 'degK'}),
@@ -187,7 +187,7 @@ def test_relaxation_prognostic_with_change_different_timescale_units():
 
 
 def test_relaxation_prognostic_with_change_different_equilibrium_units():
-    prognostic = RelaxationPrognostic('quantity', 'm')
+    prognostic = RelaxationPrognosticComponent('quantity', 'm')
     state = {
         'time': timedelta(0),
         'quantity': DataArray(np.array([0., 1., 2.]), attrs={'units': 'm'}),

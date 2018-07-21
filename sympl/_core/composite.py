@@ -1,4 +1,4 @@
-from .base_components import Prognostic, Diagnostic, Monitor, ImplicitPrognostic
+from .base_components import PrognosticComponent, DiagnosticComponent, Monitor, ImplicitPrognosticComponent
 from .util import (
     update_dict_by_adding_another, ensure_no_shared_keys,
     combine_component_properties)
@@ -99,11 +99,11 @@ def ensure_components_have_class(components, component_class):
                     component_class, type(component)))
 
 
-class PrognosticComposite(
+class PrognosticComponentComposite(
         ComponentComposite, InputPropertiesCompositeMixin,
-        DiagnosticPropertiesCompositeMixin, Prognostic):
+        DiagnosticPropertiesCompositeMixin, PrognosticComponent):
 
-    component_class = Prognostic
+    component_class = PrognosticComponent
 
     @property
     def tendency_properties(self):
@@ -126,7 +126,7 @@ class PrognosticComposite(
             output quantity, and their dimensions or units are incompatible
             with one another.
         """
-        super(PrognosticComposite, self).__init__(*args)
+        super(PrognosticComponentComposite, self).__init__(*args)
         self.input_properties
         self.tendency_properties
         self.diagnostic_properties
@@ -156,7 +156,7 @@ class PrognosticComposite(
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for a Prognostic instance.
+            If state is not a valid input for a PrognosticComponent instance.
         """
         return_tendencies = {}
         return_diagnostics = {}
@@ -170,11 +170,11 @@ class PrognosticComposite(
         raise NotImplementedError()
 
 
-class ImplicitPrognosticComposite(
+class ImplicitPrognosticComponentComposite(
         ComponentComposite, InputPropertiesCompositeMixin,
-        DiagnosticPropertiesCompositeMixin, ImplicitPrognostic):
+        DiagnosticPropertiesCompositeMixin, ImplicitPrognosticComponent):
 
-    component_class = (Prognostic, ImplicitPrognostic)
+    component_class = (PrognosticComponent, ImplicitPrognosticComponent)
 
     @property
     def tendency_properties(self):
@@ -197,7 +197,7 @@ class ImplicitPrognosticComposite(
             output quantity, and their dimensions or units are incompatible
             with one another.
         """
-        super(ImplicitPrognosticComposite, self).__init__(*args)
+        super(ImplicitPrognosticComponentComposite, self).__init__(*args)
         self.input_properties
         self.tendency_properties
         self.diagnostic_properties
@@ -227,14 +227,14 @@ class ImplicitPrognosticComposite(
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for a Prognostic instance.
+            If state is not a valid input for a PrognosticComponent instance.
         """
         return_tendencies = {}
         return_diagnostics = {}
         for prognostic in self.component_list:
-            if isinstance(prognostic, ImplicitPrognostic):
+            if isinstance(prognostic, ImplicitPrognosticComponent):
                 tendencies, diagnostics = prognostic(state, timestep)
-            elif isinstance(prognostic, Prognostic):
+            elif isinstance(prognostic, PrognosticComponent):
                 tendencies, diagnostics = prognostic(state)
             update_dict_by_adding_another(return_tendencies, tendencies)
             return_diagnostics.update(diagnostics)
@@ -244,11 +244,11 @@ class ImplicitPrognosticComposite(
         raise NotImplementedError()
 
 
-class DiagnosticComposite(
+class DiagnosticComponentComposite(
         ComponentComposite, InputPropertiesCompositeMixin,
-        DiagnosticPropertiesCompositeMixin, Diagnostic):
+        DiagnosticPropertiesCompositeMixin, DiagnosticComponent):
 
-    component_class = Diagnostic
+    component_class = DiagnosticComponent
 
     def __call__(self, state):
         """
@@ -271,7 +271,7 @@ class DiagnosticComposite(
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for a Diagnostic instance.
+            If state is not a valid input for a DiagnosticComponent instance.
         """
         return_diagnostics = {}
         for diagnostic_component in self.component_list:

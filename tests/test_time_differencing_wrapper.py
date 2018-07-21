@@ -1,14 +1,14 @@
 from datetime import timedelta, datetime
 import unittest
 from sympl import (
-    Prognostic, Implicit, Diagnostic, TimeDifferencingWrapper, DataArray
+    PrognosticComponent, Stepper, DiagnosticComponent, TimeDifferencingWrapper, DataArray
 )
 import pytest
 from numpy.testing import assert_allclose
 from copy import deepcopy
 
 
-class MockPrognostic(Prognostic):
+class MockPrognosticComponent(PrognosticComponent):
 
     def __init__(self):
         self._num_updates = 0
@@ -18,7 +18,7 @@ class MockPrognostic(Prognostic):
         return {}, {'num_updates': self._num_updates}
 
 
-class MockImplicit(Implicit):
+class MockStepper(Stepper):
 
     input_properties = {}
 
@@ -38,7 +38,7 @@ class MockImplicit(Implicit):
 
     def __init__(self):
         self._num_updates = 0
-        super(MockImplicit, self).__init__()
+        super(MockStepper, self).__init__()
 
     def array_call(self, state, timestep):
         self._num_updates += 1
@@ -49,7 +49,7 @@ class MockImplicit(Implicit):
         )
 
 
-class MockImplicitThatExpects(Implicit):
+class MockStepperThatExpects(Stepper):
 
     input_properties = {'expected_field': {}}
     output_properties = {'expected_field': {}}
@@ -68,7 +68,7 @@ class MockImplicitThatExpects(Implicit):
         return deepcopy(state), state
 
 
-class MockPrognosticThatExpects(Prognostic):
+class MockPrognosticComponentThatExpects(PrognosticComponent):
 
     input_properties = {'expected_field': {}}
     tendency_properties = {'expected_field': {}}
@@ -87,7 +87,7 @@ class MockPrognosticThatExpects(Prognostic):
         return deepcopy(state), state
 
 
-class MockDiagnosticThatExpects(Diagnostic):
+class MockDiagnosticComponentThatExpects(DiagnosticComponent):
 
     input_properties = {'expected_field': {}}
     diagnostic_properties = {'expected_field': {}}
@@ -108,7 +108,7 @@ class MockDiagnosticThatExpects(Diagnostic):
 class TimeDifferencingTests(unittest.TestCase):
 
     def setUp(self):
-        self.implicit = MockImplicit()
+        self.implicit = MockStepper()
         self.wrapped = TimeDifferencingWrapper(self.implicit)
         self.state = {
             'time': timedelta(0),

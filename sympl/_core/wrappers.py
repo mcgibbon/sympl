@@ -1,5 +1,5 @@
 from .._core.base_components import (
-    Prognostic, Diagnostic, ImplicitPrognostic, Implicit
+    PrognosticComponent, DiagnosticComponent, ImplicitPrognosticComponent, Stepper
 )
 
 
@@ -10,7 +10,7 @@ class ScalingWrapper(object):
 
     Example
     -------
-    This is how the ScalingWrapper can be used to wrap a Prognostic.
+    This is how the ScalingWrapper can be used to wrap a PrognosticComponent.
     >>> scaled_component = ScalingWrapper(
     >>>     RRTMRadiation(),
     >>>     input_scale_factors = {
@@ -30,7 +30,7 @@ class ScalingWrapper(object):
 
         Args
         ----
-        component : Prognostic, Implicit, Diagnostic, ImplicitPrognostic
+        component : PrognosticComponent, Stepper, DiagnosticComponent, ImplicitPrognosticComponent
             The component to be wrapped.
         input_scale_factors : dict
             a dictionary whose keys are the inputs that will be scaled
@@ -53,17 +53,17 @@ class ScalingWrapper(object):
         Raises
         ------
         TypeError
-            The component is not of type Implicit or Prognostic.
+            The component is not of type Stepper or PrognosticComponent.
         ValueError
             The keys in the scale factors do not correspond to valid
             input/output/tendency for this component.
         """
         if not any(
                 isinstance(component, t) for t in [
-                    Diagnostic, Prognostic, ImplicitPrognostic, Implicit]):
+                    DiagnosticComponent, PrognosticComponent, ImplicitPrognosticComponent, Stepper]):
             raise TypeError(
-                'component must be a component type (Diagnostic, Prognostic, '
-                'ImplicitPrognostic, or Implicit)'
+                'component must be a component type (DiagnosticComponent, PrognosticComponent, '
+                'ImplicitPrognosticComponent, or Stepper)'
             )
 
         self._component = component
@@ -147,9 +147,9 @@ class ScalingWrapper(object):
             else:
                 scaled_state[input_field] = state[input_field]
 
-        if isinstance(self._component, Implicit):
+        if isinstance(self._component, Stepper):
             if timestep is None:
-                raise TypeError('Must give timestep to call Implicit.')
+                raise TypeError('Must give timestep to call Stepper.')
             diagnostics, new_state = self._component(scaled_state, timestep)
             for name in self._output_scale_factors.keys():
                 scale_factor = self._output_scale_factors[name]
@@ -158,7 +158,7 @@ class ScalingWrapper(object):
                 scale_factor = self._diagnostic_scale_factors[name]
                 diagnostics[name] *= float(scale_factor)
             return diagnostics, new_state
-        elif isinstance(self._component, Prognostic):
+        elif isinstance(self._component, PrognosticComponent):
             tendencies, diagnostics = self._component(scaled_state)
             for tend_field in self._tendency_scale_factors.keys():
                 scale_factor = self._tendency_scale_factors[tend_field]
@@ -167,9 +167,9 @@ class ScalingWrapper(object):
                 scale_factor = self._diagnostic_scale_factors[name]
                 diagnostics[name] *= float(scale_factor)
             return tendencies, diagnostics
-        elif isinstance(self._component, ImplicitPrognostic):
+        elif isinstance(self._component, ImplicitPrognosticComponent):
             if timestep is None:
-                raise TypeError('Must give timestep to call ImplicitPrognostic.')
+                raise TypeError('Must give timestep to call ImplicitPrognosticComponent.')
             tendencies, diagnostics = self._component(scaled_state, timestep)
             for tend_field in self._tendency_scale_factors.keys():
                 scale_factor = self._tendency_scale_factors[tend_field]
@@ -178,7 +178,7 @@ class ScalingWrapper(object):
                 scale_factor = self._diagnostic_scale_factors[name]
                 diagnostics[name] *= float(scale_factor)
             return tendencies, diagnostics
-        elif isinstance(self._component, Diagnostic):
+        elif isinstance(self._component, DiagnosticComponent):
             diagnostics = self._component(scaled_state)
             for name in self._diagnostic_scale_factors.keys():
                 scale_factor = self._diagnostic_scale_factors[name]
@@ -197,7 +197,7 @@ class UpdateFrequencyWrapper(object):
 
     Example
     -------
-    This how the wrapper should be used on a fictional Prognostic class
+    This how the wrapper should be used on a fictional PrognosticComponent class
     called MyPrognostic.
     >>> from datetime import timedelta
     >>> prognostic = UpdateFrequencyWrapper(MyPrognostic(), timedelta(hours=1))
@@ -209,7 +209,7 @@ class UpdateFrequencyWrapper(object):
 
         Args
         ----
-        component : Prognostic, Implicit, Diagnostic, ImplicitPrognostic
+        component : PrognosticComponent, Stepper, DiagnosticComponent, ImplicitPrognosticComponent
             The component to be wrapped.
         update_timedelta : timedelta
             The amount that state['time'] must differ from when output

@@ -1,9 +1,9 @@
 from .._core.array import DataArray
-from .._core.base_components import ImplicitPrognostic, Prognostic, Diagnostic
+from .._core.base_components import ImplicitPrognosticComponent, PrognosticComponent, DiagnosticComponent
 from .._core.units import unit_registry as ureg
 
 
-class ConstantPrognostic(Prognostic):
+class ConstantPrognosticComponent(PrognosticComponent):
     """
     Prescribes constant tendencies provided at initialization.
 
@@ -83,11 +83,11 @@ class ConstantPrognostic(Prognostic):
         tendencies : dict
             A dictionary whose keys are strings indicating
             state quantities and values are the time derivative of those
-            quantities in units/second to be returned by this Prognostic.
+            quantities in units/second to be returned by this PrognosticComponent.
         diagnostics : dict, optional
             A dictionary whose keys are strings indicating
             state quantities and values are the value of those quantities
-            to be returned by this Prognostic. By default an empty dictionary
+            to be returned by this PrognosticComponent. By default an empty dictionary
             is used.
         input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
@@ -118,7 +118,7 @@ class ConstantPrognostic(Prognostic):
             self.__diagnostics = diagnostics.copy()
         else:
             self.__diagnostics = {}
-        super(ConstantPrognostic, self).__init__(**kwargs)
+        super(ConstantPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         tendencies = {}
@@ -130,7 +130,7 @@ class ConstantPrognostic(Prognostic):
         return tendencies, diagnostics
 
 
-class ConstantDiagnostic(Diagnostic):
+class ConstantDiagnosticComponent(DiagnosticComponent):
     """
     Yields constant diagnostics provided at initialization.
 
@@ -186,7 +186,7 @@ class ConstantDiagnostic(Diagnostic):
             A dictionary whose keys are strings indicating
             state quantities and values are the value of those quantities.
             The values in the dictionary will be returned when this
-            Diagnostic is called.
+            DiagnosticComponent is called.
         input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
             values are floats by which input values are scaled before being used
@@ -201,7 +201,7 @@ class ConstantDiagnostic(Diagnostic):
             output was given. Otherwise, it would return that cached output.
         """
         self.__diagnostics = diagnostics.copy()
-        super(ConstantDiagnostic, self).__init__(**kwargs)
+        super(ConstantDiagnosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         return_state = {}
@@ -210,7 +210,7 @@ class ConstantDiagnostic(Diagnostic):
         return return_state
 
 
-class RelaxationPrognostic(Prognostic):
+class RelaxationPrognosticComponent(PrognosticComponent):
     r"""
     Applies Newtonian relaxation to a single quantity.
 
@@ -319,7 +319,7 @@ class RelaxationPrognostic(Prognostic):
         """
         self._quantity_name = quantity_name
         self._units = units
-        super(RelaxationPrognostic, self).__init__(**kwargs)
+        super(RelaxationPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         """
@@ -359,14 +359,14 @@ class RelaxationPrognostic(Prognostic):
         return tendencies, {}
 
 
-class TimeDifferencingWrapper(ImplicitPrognostic):
+class TimeDifferencingWrapper(ImplicitPrognosticComponent):
     """
-    Wraps an Implicit object and turns it into an ImplicitPrognostic by applying
+    Wraps an Stepper object and turns it into an ImplicitPrognosticComponent by applying
     simple first-order time differencing to determine tendencies.
 
     Example
     -------
-    This how the wrapper should be used on an Implicit class
+    This how the wrapper should be used on an Stepper class
     called GridScaleCondensation.
 
     >>> component = TimeDifferencingWrapper(GridScaleCondensation())
@@ -388,14 +388,14 @@ class TimeDifferencingWrapper(ImplicitPrognostic):
 
     def __init__(self, implicit, **kwargs):
         """
-        Initializes the TimeDifferencingWrapper. Some kwargs of Implicit
+        Initializes the TimeDifferencingWrapper. Some kwargs of Stepper
         objects are not implemented, and should be applied instead on the
-        Implicit object which is wrapped by this one.
+        Stepper object which is wrapped by this one.
 
         Parameters
         ----------
-        implicit: Implicit
-            An Implicit component to wrap.
+        implicit: Stepper
+            An Stepper component to wrap.
         """
         if len(kwargs) > 0:
             raise TypeError('Received unexpected keyword argument {}'.format(

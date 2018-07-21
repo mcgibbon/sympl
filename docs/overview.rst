@@ -73,21 +73,21 @@ set to initial values. Code to do this may be present in other packages, or you
 can write this code yourself. The state and its initialization is discussed
 further in :ref:`Model State`.
 
-The state dictionary is evolved by :py:class:`~sympl.TimeStepper` and
-:py:class:`~sympl.Implicit` objects. These types of objects take in the state
+The state dictionary is evolved by :py:class:`~sympl.PrognosticStepper` and
+:py:class:`~sympl.Stepper` objects. These types of objects take in the state
 and a timedelta object that indicates the time step, and return the next
-model state. :py:class:`~sympl.TimeStepper` objects do this by wrapping
-:py:class:`~sympl.Prognostic` objects, which calculate tendencies using the
-state dictionary. We should note that the meaning of "Implicit" in Sympl is
-slightly different than its traditional definition. Here an "Implicit" object is
+model state. :py:class:`~sympl.PrognosticStepper` objects do this by wrapping
+:py:class:`~sympl.PrognosticComponent` objects, which calculate tendencies using the
+state dictionary. We should note that the meaning of "Stepper" in Sympl is
+slightly different than its traditional definition. Here an "Stepper" object is
 one that calculates the new state directly from the current state, or any
 object that requires the timestep to calculate the new state, while
-"Prognostic" objects are ones that calculate tendencies without using the
-timestep. If a :py:class:`~sympl.TimeStepper` or :py:class:`~sympl.Implicit`
+"PrognosticComponent" objects are ones that calculate tendencies without using the
+timestep. If a :py:class:`~sympl.PrognosticStepper` or :py:class:`~sympl.Stepper`
 object needs to use multiple time steps in its calculation, it does so by
 storing states it was previously given until they are no longer needed.
 
-The state is also calculated using :py:class:`~sympl.Diagnostic` objects which
+The state is also calculated using :py:class:`~sympl.DiagnosticComponent` objects which
 determine diagnostic quantities at the current time from the current state,
 returning them in a new dictionary. This type of object is particularly useful
 if you want to write your own online diagnostics.

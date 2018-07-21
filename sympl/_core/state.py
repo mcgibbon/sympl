@@ -307,7 +307,7 @@ def check_array_shape(out_dims, raw_array, name, dim_lengths):
 
 def restore_data_arrays_with_properties(
         raw_arrays, output_properties, input_state, input_properties,
-        ignore_names=None):
+        ignore_names=None, ignore_missing=False):
     """
     Parameters
     ----------
@@ -328,9 +328,12 @@ def restore_data_arrays_with_properties(
         with input properties for those quantities. The property "dims" must be
         present, indicating the dimensions that the quantity was transformed to
         when taken as input to a component.
-    ignore_names : iterable of str
+    ignore_names : iterable of str, optional
         Names to ignore when encountered in output_properties, will not be
         included in the returned dictionary.
+    ignore_missing : bool, optional
+        If True, ignore any values in output_properties not present in
+        raw_arrays rather than raising an exception. Default is False.
 
     Returns
     -------
@@ -349,6 +352,8 @@ def restore_data_arrays_with_properties(
     raw_arrays = raw_arrays.copy()
     if ignore_names is None:
         ignore_names = []
+    if ignore_missing:
+        ignore_names = set(output_properties.keys()).difference(raw_arrays.keys()).union(ignore_names)
     wildcard_names, dim_lengths = get_wildcard_matches_and_dim_lengths(
         input_state, input_properties)
     ensure_values_are_arrays(raw_arrays)

@@ -1,11 +1,11 @@
-from .._core.timestepper import TimeStepper
+from .._core.prognosticstepper import PrognosticStepper
 from .._core.array import DataArray
 from .._core.state import copy_untouched_quantities, add, multiply
 
 
-class SSPRungeKutta(TimeStepper):
+class SSPRungeKutta(PrognosticStepper):
     """
-    A TimeStepper using the Strong Stability Preserving Runge-Kutta scheme,
+    A PrognosticStepper using the Strong Stability Preserving Runge-Kutta scheme,
     as in Numerical Methods for Fluid Dynamics by Dale Durran (2nd ed) and
     as proposed by Shu and Osher (1988).
     """
@@ -16,7 +16,7 @@ class SSPRungeKutta(TimeStepper):
 
         Args
         ----
-        *args : Prognostic or ImplicitPrognostic
+        *args : PrognosticComponent or ImplicitPrognosticComponent
             Objects to call for tendencies when doing time stepping.
         stages: int, optional
             Number of stages to use. Should be 2 or 3. Default is 3.
@@ -71,8 +71,8 @@ class SSPRungeKutta(TimeStepper):
         return diagnostics, out_state
 
 
-class AdamsBashforth(TimeStepper):
-    """A TimeStepper using the Adams-Bashforth scheme."""
+class AdamsBashforth(PrognosticStepper):
+    """A PrognosticStepper using the Adams-Bashforth scheme."""
 
     def __init__(self, *args, **kwargs):
         """
@@ -80,7 +80,7 @@ class AdamsBashforth(TimeStepper):
 
         Args
         ----
-        *args : Prognostic or ImplicitPrognostic
+        *args : PrognosticComponent or ImplicitPrognosticComponent
             Objects to call for tendencies when doing time stepping.
         order : int, optional
             The order of accuracy to use. Must be between
@@ -173,8 +173,8 @@ def convert_tendencies_units_for_state(tendencies, state):
             tendencies[quantity_name] = tendencies[quantity_name].to_units(desired_units)
 
 
-class Leapfrog(TimeStepper):
-    """A TimeStepper using the Leapfrog scheme.
+class Leapfrog(PrognosticStepper):
+    """A PrognosticStepper using the Leapfrog scheme.
 
     This scheme calculates the
     values at time $t_{n+1}$ using the derivatives at $t_{n}$ and values at
@@ -190,7 +190,7 @@ class Leapfrog(TimeStepper):
 
         Args
         ----
-        *args : Prognostic or ImplicitPrognostic
+        *args : PrognosticComponent or ImplicitPrognosticComponent
             Objects to call for tendencies when doing time stepping.
         asselin_strength : float, optional
             The filter parameter used to determine the strength
@@ -238,7 +238,7 @@ class Leapfrog(TimeStepper):
         Raises
         ------
         SharedKeyError
-            If a Diagnostic object has an output that is
+            If a DiagnosticComponent object has an output that is
             already in the state at the start of the timestep.
         ValueError
             If the timestep is not the same as the last time

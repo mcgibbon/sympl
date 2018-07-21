@@ -4,7 +4,7 @@ Composites
 
 There are a set of objects in Sympl that wrap multiple components into a single
 object so they can be called as if they were one component. There is one each
-for :py:class:`~sympl.Prognostic`, :py:class:`~sympl.Diagnostic`, and
+for :py:class:`~sympl.PrognosticComponent`, :py:class:`~sympl.DiagnosticComponent`, and
 :py:class:`~sympl.Monitor`. These can be used to simplify code, so that
 the way you call a list of components is the same as the way you would
 call a single component. For example, *instead* of writing:
@@ -35,7 +35,7 @@ You could write:
 
 .. code-block:: python
 
-    prognostic_composite = PrognosticComposite([
+    prognostic_composite = PrognosticComponentComposite([
         MyPrognostic(),
         MyOtherPrognostic(),
         YetAnotherPrognostic(),
@@ -46,7 +46,7 @@ This second call is much cleaner. It will also automatically detect whether
 multiple components are trying to write out the same diagnostic, and raise
 an exception if that is the case (so no results are being silently
 overwritten). You can get similar simplifications for
-:py:class:`~sympl.Diagnostic` and :py:class:`~sympl.Monitor`.
+:py:class:`~sympl.DiagnosticComponent` and :py:class:`~sympl.Monitor`.
 
 .. note:: PrognosticComposites are mainly useful inside of TimeSteppers, so
           if you're only writing a model script it's unlikely you'll need them.
@@ -54,12 +54,12 @@ overwritten). You can get similar simplifications for
 API Reference
 -------------
 
-.. autoclass:: sympl.PrognosticComposite
+.. autoclass:: sympl.PrognosticComponentComposite
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
 
-.. autoclass:: sympl.DiagnosticComposite
+.. autoclass:: sympl.DiagnosticComponentComposite
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__

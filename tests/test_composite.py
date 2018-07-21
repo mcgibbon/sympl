@@ -2,7 +2,7 @@ import pytest
 import unittest
 import mock
 from sympl import (
-    Prognostic, Diagnostic, Monitor, PrognosticComposite, DiagnosticComposite,
+    PrognosticComponent, DiagnosticComponent, Monitor, PrognosticComponentComposite, DiagnosticComponentComposite,
     MonitorComposite, SharedKeyError, DataArray, InvalidPropertyDictError
 )
 from sympl._core.units import units_are_compatible
@@ -13,7 +13,7 @@ def same_list(list1, list2):
         [item in list2 for item in list1] + [item in list1 for item in list2]))
 
 
-class MockPrognostic(Prognostic):
+class MockPrognosticComponent(PrognosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -29,7 +29,7 @@ class MockPrognostic(Prognostic):
         self._tendency_output = tendency_output
         self.times_called = 0
         self.state_given = None
-        super(MockPrognostic, self).__init__(**kwargs)
+        super(MockPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -37,7 +37,7 @@ class MockPrognostic(Prognostic):
         return self._tendency_output, self._diagnostic_output
 
 
-class MockDiagnostic(Diagnostic):
+class MockDiagnosticComponent(DiagnosticComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -50,7 +50,7 @@ class MockDiagnostic(Diagnostic):
         self._diagnostic_output = diagnostic_output
         self.times_called = 0
         self.state_given = None
-        super(MockDiagnostic, self).__init__(**kwargs)
+        super(MockDiagnosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -58,39 +58,39 @@ class MockDiagnostic(Diagnostic):
         return self._diagnostic_output
 
 
-class MockEmptyPrognostic(Prognostic):
+class MockEmptyPrognosticComponent(PrognosticComponent):
 
     input_properties = {}
     diagnostic_properties = {}
     tendency_properties = {}
 
     def __init__(self, **kwargs):
-        super(MockEmptyPrognostic, self).__init__(**kwargs)
+        super(MockEmptyPrognosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         return {}, {}
 
 
-class MockEmptyPrognostic2(Prognostic):
+class MockEmptyPrognosticComponent2(PrognosticComponent):
 
     input_properties = {}
     diagnostic_properties = {}
     tendency_properties = {}
 
     def __init__(self, **kwargs):
-        super(MockEmptyPrognostic2, self).__init__(**kwargs)
+        super(MockEmptyPrognosticComponent2, self).__init__(**kwargs)
 
     def array_call(self, state):
         return {}, {}
 
 
-class MockEmptyDiagnostic(Diagnostic):
+class MockEmptyDiagnosticComponent(DiagnosticComponent):
 
     input_properties = {}
     diagnostic_properties = {}
 
     def __init__(self, **kwargs):
-        super(MockEmptyDiagnostic, self).__init__(**kwargs)
+        super(MockEmptyDiagnosticComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         return {}
@@ -103,7 +103,7 @@ class MockMonitor(Monitor):
 
 
 def test_empty_prognostic_composite():
-    prognostic_composite = PrognosticComposite()
+    prognostic_composite = PrognosticComponentComposite()
     state = {'air_temperature': 273.15}
     tendencies, diagnostics = prognostic_composite(state)
     assert len(tendencies) == 0
@@ -112,10 +112,10 @@ def test_empty_prognostic_composite():
     assert isinstance(diagnostics, dict)
 
 
-@mock.patch.object(MockEmptyPrognostic, '__call__')
+@mock.patch.object(MockEmptyPrognosticComponent, '__call__')
 def test_prognostic_composite_calls_one_prognostic(mock_call):
     mock_call.return_value = ({'air_temperature': 0.5}, {'foo': 50.})
-    prognostic_composite = PrognosticComposite(MockEmptyPrognostic())
+    prognostic_composite = PrognosticComponentComposite(MockEmptyPrognosticComponent())
     state = {'air_temperature': 273.15}
     tendencies, diagnostics = prognostic_composite(state)
     assert mock_call.called
@@ -123,11 +123,11 @@ def test_prognostic_composite_calls_one_prognostic(mock_call):
     assert diagnostics == {'foo': 50.}
 
 
-@mock.patch.object(MockEmptyPrognostic, '__call__')
+@mock.patch.object(MockEmptyPrognosticComponent, '__call__')
 def test_prognostic_composite_calls_two_prognostics(mock_call):
     mock_call.return_value = ({'air_temperature': 0.5}, {})
-    prognostic_composite = PrognosticComposite(
-        MockEmptyPrognostic(), MockEmptyPrognostic())
+    prognostic_composite = PrognosticComponentComposite(
+        MockEmptyPrognosticComponent(), MockEmptyPrognosticComponent())
     state = {'air_temperature': 273.15}
     tendencies, diagnostics = prognostic_composite(state)
     assert mock_call.called
@@ -137,17 +137,17 @@ def test_prognostic_composite_calls_two_prognostics(mock_call):
 
 
 def test_empty_diagnostic_composite():
-    diagnostic_composite = DiagnosticComposite()
+    diagnostic_composite = DiagnosticComponentComposite()
     state = {'air_temperature': 273.15}
     diagnostics = diagnostic_composite(state)
     assert len(diagnostics) == 0
     assert isinstance(diagnostics, dict)
 
 
-@mock.patch.object(MockEmptyDiagnostic, '__call__')
+@mock.patch.object(MockEmptyDiagnosticComponent, '__call__')
 def test_diagnostic_composite_calls_one_diagnostic(mock_call):
     mock_call.return_value = {'foo': 50.}
-    diagnostic_composite = DiagnosticComposite(MockEmptyDiagnostic())
+    diagnostic_composite = DiagnosticComponentComposite(MockEmptyDiagnosticComponent())
     state = {'air_temperature': 273.15}
     diagnostics = diagnostic_composite(state)
     assert mock_call.called
@@ -182,7 +182,7 @@ def test_monitor_collection_calls_two_monitors(mock_store):
 
 def test_prognostic_composite_cannot_use_diagnostic():
     try:
-        PrognosticComposite(MockEmptyDiagnostic())
+        PrognosticComponentComposite(MockEmptyDiagnosticComponent())
     except TypeError:
         pass
     except Exception as err:
@@ -193,7 +193,7 @@ def test_prognostic_composite_cannot_use_diagnostic():
 
 def test_diagnostic_composite_cannot_use_prognostic():
     try:
-        DiagnosticComposite(MockEmptyPrognostic())
+        DiagnosticComponentComposite(MockEmptyPrognosticComponent())
     except TypeError:
         pass
     except Exception as err:
@@ -202,11 +202,11 @@ def test_diagnostic_composite_cannot_use_prognostic():
         raise AssertionError('TypeError should have been raised')
 
 
-@mock.patch.object(MockEmptyDiagnostic, '__call__')
+@mock.patch.object(MockEmptyDiagnosticComponent, '__call__')
 def test_diagnostic_composite_call(mock_call):
     mock_call.return_value = {'foo': 5.}
     state = {'bar': 10.}
-    diagnostics = DiagnosticComposite(MockEmptyDiagnostic())
+    diagnostics = DiagnosticComponentComposite(MockEmptyDiagnosticComponent())
     new_state = diagnostics(state)
     assert list(state.keys()) == ['bar']
     assert state['bar'] == 10.
@@ -214,16 +214,16 @@ def test_diagnostic_composite_call(mock_call):
     assert new_state['foo'] == 5.
 
 
-@mock.patch.object(MockEmptyPrognostic, '__call__')
-@mock.patch.object(MockEmptyPrognostic2, '__call__')
+@mock.patch.object(MockEmptyPrognosticComponent, '__call__')
+@mock.patch.object(MockEmptyPrognosticComponent2, '__call__')
 def test_prognostic_component_handles_units_when_combining(mock_call, mock2_call):
     mock_call.return_value = ({
         'eastward_wind': DataArray(1., attrs={'units': 'm/s'})}, {})
     mock2_call.return_value = ({
         'eastward_wind': DataArray(50., attrs={'units': 'cm/s'})}, {})
-    prognostic1 = MockEmptyPrognostic()
-    prognostic2 = MockEmptyPrognostic2()
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    prognostic1 = MockEmptyPrognosticComponent()
+    prognostic2 = MockEmptyPrognosticComponent2()
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     tendencies, diagnostics = composite({})
     assert tendencies['eastward_wind'].to_units('m/s').values.item() == 1.5
 
@@ -241,9 +241,9 @@ def test_diagnostic_composite_single_component_input():
     }
     diagnostic_properties = {}
     diagnostic_output = {}
-    diagnostic = MockDiagnostic(
+    diagnostic = MockDiagnosticComponent(
         input_properties, diagnostic_properties, diagnostic_output)
-    composite = DiagnosticComposite(diagnostic)
+    composite = DiagnosticComponentComposite(diagnostic)
     assert composite.input_properties == input_properties
     assert composite.diagnostic_properties == diagnostic_properties
 
@@ -261,9 +261,9 @@ def test_diagnostic_composite_single_component_diagnostic():
         },
     }
     diagnostic_output = {}
-    diagnostic = MockDiagnostic(
+    diagnostic = MockDiagnosticComponent(
         input_properties, diagnostic_properties, diagnostic_output)
-    composite = DiagnosticComposite(diagnostic)
+    composite = DiagnosticComponentComposite(diagnostic)
     assert composite.input_properties == input_properties
     assert composite.diagnostic_properties == diagnostic_properties
 
@@ -272,9 +272,9 @@ def test_diagnostic_composite_single_empty_component():
     input_properties = {}
     diagnostic_properties = {}
     diagnostic_output = {}
-    diagnostic = MockDiagnostic(
+    diagnostic = MockDiagnosticComponent(
         input_properties, diagnostic_properties, diagnostic_output)
-    composite = DiagnosticComposite(diagnostic)
+    composite = DiagnosticComponentComposite(diagnostic)
     assert composite.input_properties == input_properties
     assert composite.diagnostic_properties == diagnostic_properties
 
@@ -301,9 +301,9 @@ def test_diagnostic_composite_single_full_component():
         },
     }
     diagnostic_output = {}
-    diagnostic = MockDiagnostic(
+    diagnostic = MockDiagnosticComponent(
         input_properties, diagnostic_properties, diagnostic_output)
-    composite = DiagnosticComposite(diagnostic)
+    composite = DiagnosticComponentComposite(diagnostic)
     assert composite.input_properties == input_properties
     assert composite.diagnostic_properties == diagnostic_properties
 
@@ -321,9 +321,9 @@ def test_diagnostic_composite_single_component_no_dims_on_diagnostic():
         },
     }
     diagnostic_output = {}
-    diagnostic = MockDiagnostic(
+    diagnostic = MockDiagnosticComponent(
         input_properties, diagnostic_properties, diagnostic_output)
-    composite = DiagnosticComposite(diagnostic)
+    composite = DiagnosticComponentComposite(diagnostic)
     assert composite.input_properties == input_properties
     assert composite.diagnostic_properties == diagnostic_properties
 
@@ -337,9 +337,9 @@ def test_diagnostic_composite_single_component_missing_dims_on_diagnostic():
     }
     diagnostic_output = {}
     try:
-        diagnostic = MockDiagnostic(
+        diagnostic = MockDiagnosticComponent(
             input_properties, diagnostic_properties, diagnostic_output)
-        DiagnosticComposite(diagnostic)
+        DiagnosticComponentComposite(diagnostic)
     except InvalidPropertyDictError:
         pass
     else:
@@ -347,7 +347,7 @@ def test_diagnostic_composite_single_component_missing_dims_on_diagnostic():
 
 
 def test_diagnostic_composite_two_components_no_overlap():
-    diagnostic1 = MockDiagnostic(
+    diagnostic1 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim1'],
@@ -362,7 +362,7 @@ def test_diagnostic_composite_two_components_no_overlap():
         },
         diagnostic_output={}
     )
-    diagnostic2 = MockDiagnostic(
+    diagnostic2 = MockDiagnosticComponent(
         input_properties={
             'input2': {
                 'dims': ['dim2'],
@@ -377,7 +377,7 @@ def test_diagnostic_composite_two_components_no_overlap():
         },
         diagnostic_output={}
     )
-    composite = DiagnosticComposite(diagnostic1, diagnostic2)
+    composite = DiagnosticComponentComposite(diagnostic1, diagnostic2)
     input_properties = {
         'input1': {
             'dims': ['dim1'],
@@ -403,7 +403,7 @@ def test_diagnostic_composite_two_components_no_overlap():
 
 
 def test_diagnostic_composite_two_components_overlap_input():
-    diagnostic1 = MockDiagnostic(
+    diagnostic1 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim1'],
@@ -422,7 +422,7 @@ def test_diagnostic_composite_two_components_overlap_input():
         },
         diagnostic_output={}
     )
-    diagnostic2 = MockDiagnostic(
+    diagnostic2 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim1'],
@@ -441,7 +441,7 @@ def test_diagnostic_composite_two_components_overlap_input():
         },
         diagnostic_output={}
     )
-    composite = DiagnosticComposite(diagnostic1, diagnostic2)
+    composite = DiagnosticComponentComposite(diagnostic1, diagnostic2)
     input_properties = {
         'input1': {
             'dims': ['dim1'],
@@ -467,7 +467,7 @@ def test_diagnostic_composite_two_components_overlap_input():
 
 
 def test_diagnostic_composite_two_components_overlap_diagnostic():
-    diagnostic1 = MockDiagnostic(
+    diagnostic1 = MockDiagnosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag1': {
@@ -477,7 +477,7 @@ def test_diagnostic_composite_two_components_overlap_diagnostic():
         },
         diagnostic_output={}
     )
-    diagnostic2 = MockDiagnostic(
+    diagnostic2 = MockDiagnosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag1': {
@@ -488,7 +488,7 @@ def test_diagnostic_composite_two_components_overlap_diagnostic():
         diagnostic_output={}
     )
     try:
-        DiagnosticComposite(diagnostic1, diagnostic2)
+        DiagnosticComponentComposite(diagnostic1, diagnostic2)
     except SharedKeyError:
         pass
     else:
@@ -496,7 +496,7 @@ def test_diagnostic_composite_two_components_overlap_diagnostic():
 
 
 def test_diagnostic_composite_two_components_incompatible_input_dims():
-    diagnostic1 = MockDiagnostic(
+    diagnostic1 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim1'],
@@ -506,7 +506,7 @@ def test_diagnostic_composite_two_components_incompatible_input_dims():
         diagnostic_properties={},
         diagnostic_output={}
     )
-    diagnostic2 = MockDiagnostic(
+    diagnostic2 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim2'],
@@ -517,7 +517,7 @@ def test_diagnostic_composite_two_components_incompatible_input_dims():
         diagnostic_output={}
     )
     try:
-        composite = DiagnosticComposite(diagnostic1, diagnostic2)
+        composite = DiagnosticComponentComposite(diagnostic1, diagnostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -525,7 +525,7 @@ def test_diagnostic_composite_two_components_incompatible_input_dims():
 
 
 def test_diagnostic_composite_two_components_incompatible_input_units():
-    diagnostic1 = MockDiagnostic(
+    diagnostic1 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim1'],
@@ -535,7 +535,7 @@ def test_diagnostic_composite_two_components_incompatible_input_units():
         diagnostic_properties={},
         diagnostic_output={}
     )
-    diagnostic2 = MockDiagnostic(
+    diagnostic2 = MockDiagnosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dim1'],
@@ -546,7 +546,7 @@ def test_diagnostic_composite_two_components_incompatible_input_units():
         diagnostic_output={}
     )
     try:
-        DiagnosticComposite(diagnostic1, diagnostic2)
+        DiagnosticComponentComposite(diagnostic1, diagnostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -554,7 +554,7 @@ def test_diagnostic_composite_two_components_incompatible_input_units():
 
 
 def test_prognostic_composite_single_input():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1'],
@@ -566,14 +566,14 @@ def test_prognostic_composite_single_input():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic)
+    composite = PrognosticComponentComposite(prognostic)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_prognostic_composite_single_diagnostic():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag1': {
@@ -585,14 +585,14 @@ def test_prognostic_composite_single_diagnostic():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic)
+    composite = PrognosticComponentComposite(prognostic)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_prognostic_composite_single_tendency():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -604,14 +604,14 @@ def test_prognostic_composite_single_tendency():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic)
+    composite = PrognosticComponentComposite(prognostic)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_prognostic_composite_implicit_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -627,7 +627,7 @@ def test_prognostic_composite_implicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic)
+    composite = PrognosticComponentComposite(prognostic)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == {
@@ -639,7 +639,7 @@ def test_prognostic_composite_implicit_dims():
 
 
 def test_two_prognostic_composite_implicit_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -655,7 +655,7 @@ def test_two_prognostic_composite_implicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -671,7 +671,7 @@ def test_two_prognostic_composite_implicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic, prognostic2)
+    composite = PrognosticComponentComposite(prognostic, prognostic2)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == {
@@ -683,7 +683,7 @@ def test_two_prognostic_composite_implicit_dims():
 
 
 def test_prognostic_composite_explicit_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -700,14 +700,14 @@ def test_prognostic_composite_explicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic)
+    composite = PrognosticComponentComposite(prognostic)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_two_prognostic_composite_explicit_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -724,7 +724,7 @@ def test_two_prognostic_composite_explicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -741,14 +741,14 @@ def test_two_prognostic_composite_explicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic, prognostic2)
+    composite = PrognosticComponentComposite(prognostic, prognostic2)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_two_prognostic_composite_explicit_and_implicit_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -765,7 +765,7 @@ def test_two_prognostic_composite_explicit_and_implicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'tend1': {
                 'dims': ['dims1', 'dims2'],
@@ -781,14 +781,14 @@ def test_two_prognostic_composite_explicit_and_implicit_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic, prognostic2)
+    composite = PrognosticComponentComposite(prognostic, prognostic2)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_prognostic_composite_explicit_dims_not_in_input():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -805,14 +805,14 @@ def test_prognostic_composite_explicit_dims_not_in_input():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic)
+    composite = PrognosticComponentComposite(prognostic)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_two_prognostic_composite_incompatible_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -833,7 +833,7 @@ def test_two_prognostic_composite_incompatible_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -855,7 +855,7 @@ def test_two_prognostic_composite_incompatible_dims():
         tendency_output={},
     )
     try:
-        PrognosticComposite(prognostic, prognostic2)
+        PrognosticComponentComposite(prognostic, prognostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -863,7 +863,7 @@ def test_two_prognostic_composite_incompatible_dims():
 
 
 def test_two_prognostic_composite_compatible_dims():
-    prognostic = MockPrognostic(
+    prognostic = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -884,7 +884,7 @@ def test_two_prognostic_composite_compatible_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -905,14 +905,14 @@ def test_two_prognostic_composite_compatible_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic, prognostic2)
+    composite = PrognosticComponentComposite(prognostic, prognostic2)
     assert composite.input_properties == prognostic.input_properties
     assert composite.diagnostic_properties == prognostic.diagnostic_properties
     assert composite.tendency_properties == prognostic.tendency_properties
 
 
 def test_prognostic_composite_two_components_input():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -928,7 +928,7 @@ def test_prognostic_composite_two_components_input():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -944,7 +944,7 @@ def test_prognostic_composite_two_components_input():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     input_properties = {
         'input1': {
             'dims': ['dims1', 'dims2'],
@@ -967,7 +967,7 @@ def test_prognostic_composite_two_components_input():
 
 
 def test_prognostic_composite_two_components_swapped_input_dims():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -979,7 +979,7 @@ def test_prognostic_composite_two_components_swapped_input_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims2', 'dims1'],
@@ -991,7 +991,7 @@ def test_prognostic_composite_two_components_swapped_input_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     diagnostic_properties = {}
     tendency_properties = {}
     assert (composite.input_properties == prognostic1.input_properties or
@@ -1001,7 +1001,7 @@ def test_prognostic_composite_two_components_swapped_input_dims():
 
 
 def test_prognostic_composite_two_components_incompatible_input_dims():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -1013,7 +1013,7 @@ def test_prognostic_composite_two_components_incompatible_input_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims3'],
@@ -1026,7 +1026,7 @@ def test_prognostic_composite_two_components_incompatible_input_dims():
         tendency_output={},
     )
     try:
-        PrognosticComposite(prognostic1, prognostic2)
+        PrognosticComponentComposite(prognostic1, prognostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -1034,7 +1034,7 @@ def test_prognostic_composite_two_components_incompatible_input_dims():
 
 
 def test_prognostic_composite_two_components_incompatible_input_units():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -1046,7 +1046,7 @@ def test_prognostic_composite_two_components_incompatible_input_units():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -1059,7 +1059,7 @@ def test_prognostic_composite_two_components_incompatible_input_units():
         tendency_output={},
     )
     try:
-        PrognosticComposite(prognostic1, prognostic2)
+        PrognosticComponentComposite(prognostic1, prognostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -1067,7 +1067,7 @@ def test_prognostic_composite_two_components_incompatible_input_units():
 
 
 def test_prognostic_composite_two_components_compatible_input_units():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -1079,7 +1079,7 @@ def test_prognostic_composite_two_components_compatible_input_units():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={
             'input1': {
                 'dims': ['dims1', 'dims2'],
@@ -1091,14 +1091,14 @@ def test_prognostic_composite_two_components_compatible_input_units():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     assert 'input1' in composite.input_properties.keys()
     assert composite.input_properties['input1']['dims'] == ['dims1', 'dims2']
     assert units_are_compatible(composite.input_properties['input1']['units'], 'm')
 
 
 def test_prognostic_composite_two_components_tendency():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1110,7 +1110,7 @@ def test_prognostic_composite_two_components_tendency():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1126,7 +1126,7 @@ def test_prognostic_composite_two_components_tendency():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     input_properties = {}
     diagnostic_properties = {}
     tendency_properties = {
@@ -1145,7 +1145,7 @@ def test_prognostic_composite_two_components_tendency():
 
 
 def test_prognostic_composite_two_components_tendency_incompatible_dims():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1157,7 +1157,7 @@ def test_prognostic_composite_two_components_tendency_incompatible_dims():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1174,7 +1174,7 @@ def test_prognostic_composite_two_components_tendency_incompatible_dims():
         tendency_output={},
     )
     try:
-        PrognosticComposite(prognostic1, prognostic2)
+        PrognosticComponentComposite(prognostic1, prognostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -1182,7 +1182,7 @@ def test_prognostic_composite_two_components_tendency_incompatible_dims():
 
 
 def test_prognostic_composite_two_components_tendency_incompatible_units():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1194,7 +1194,7 @@ def test_prognostic_composite_two_components_tendency_incompatible_units():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1211,7 +1211,7 @@ def test_prognostic_composite_two_components_tendency_incompatible_units():
         tendency_output={},
     )
     try:
-        PrognosticComposite(prognostic1, prognostic2)
+        PrognosticComponentComposite(prognostic1, prognostic2)
     except InvalidPropertyDictError:
         pass
     else:
@@ -1219,7 +1219,7 @@ def test_prognostic_composite_two_components_tendency_incompatible_units():
 
 
 def test_prognostic_composite_two_components_tendency_compatible_units():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1231,7 +1231,7 @@ def test_prognostic_composite_two_components_tendency_compatible_units():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={},
         tendency_properties={
@@ -1243,14 +1243,14 @@ def test_prognostic_composite_two_components_tendency_compatible_units():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     assert 'tend1' in composite.tendency_properties.keys()
     assert composite.tendency_properties['tend1']['dims'] == ['dim1']
     assert units_are_compatible(composite.tendency_properties['tend1']['units'], 'm/s')
 
 
 def test_prognostic_composite_two_components_diagnostic():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag1': {
@@ -1262,7 +1262,7 @@ def test_prognostic_composite_two_components_diagnostic():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag2': {
@@ -1274,7 +1274,7 @@ def test_prognostic_composite_two_components_diagnostic():
         diagnostic_output={},
         tendency_output={},
     )
-    composite = PrognosticComposite(prognostic1, prognostic2)
+    composite = PrognosticComponentComposite(prognostic1, prognostic2)
     input_properties = {}
     diagnostic_properties = {
         'diag1': {
@@ -1293,7 +1293,7 @@ def test_prognostic_composite_two_components_diagnostic():
 
 
 def test_prognostic_composite_two_components_overlapping_diagnostic():
-    prognostic1 = MockPrognostic(
+    prognostic1 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag1': {
@@ -1305,7 +1305,7 @@ def test_prognostic_composite_two_components_overlapping_diagnostic():
         diagnostic_output={},
         tendency_output={},
     )
-    prognostic2 = MockPrognostic(
+    prognostic2 = MockPrognosticComponent(
         input_properties={},
         diagnostic_properties={
             'diag1': {
@@ -1318,7 +1318,7 @@ def test_prognostic_composite_two_components_overlapping_diagnostic():
         tendency_output={},
     )
     try:
-        PrognosticComposite(prognostic1, prognostic2)
+        PrognosticComponentComposite(prognostic1, prognostic2)
     except SharedKeyError:
         pass
     else:
