@@ -1,14 +1,14 @@
 from datetime import timedelta, datetime
 import unittest
 from sympl import (
-    PrognosticComponent, Stepper, DiagnosticComponent, UpdateFrequencyWrapper, ScalingWrapper,
-    TimeDifferencingWrapper, DataArray, ImplicitPrognosticComponent
+    TendencyComponent, Stepper, DiagnosticComponent, UpdateFrequencyWrapper, ScalingWrapper,
+    TimeDifferencingWrapper, DataArray, ImplicitTendencyComponent
 )
 import pytest
 import numpy as np
 
 
-class MockPrognosticComponent(PrognosticComponent):
+class MockTendencyComponent(TendencyComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -24,7 +24,7 @@ class MockPrognosticComponent(PrognosticComponent):
         self.tendency_output = tendency_output
         self.times_called = 0
         self.state_given = None
-        super(MockPrognosticComponent, self).__init__(**kwargs)
+        super(MockTendencyComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         self.times_called += 1
@@ -32,7 +32,7 @@ class MockPrognosticComponent(PrognosticComponent):
         return self.tendency_output, self.diagnostic_output
 
 
-class MockImplicitPrognosticComponent(ImplicitPrognosticComponent):
+class MockImplicitTendencyComponent(ImplicitTendencyComponent):
 
     input_properties = None
     diagnostic_properties = None
@@ -49,7 +49,7 @@ class MockImplicitPrognosticComponent(ImplicitPrognosticComponent):
         self.times_called = 0
         self.state_given = None
         self.timestep_given = None
-        super(MockImplicitPrognosticComponent, self).__init__(**kwargs)
+        super(MockImplicitTendencyComponent, self).__init__(**kwargs)
 
     def array_call(self, state, timestep):
         self.times_called += 1
@@ -106,7 +106,7 @@ class MockStepper(Stepper):
         return self.diagnostic_output, self.state_output
 
 
-class MockEmptyPrognostic(MockPrognosticComponent):
+class MockEmptyPrognostic(MockTendencyComponent):
 
     def __init__(self, **kwargs):
         super(MockEmptyPrognostic, self).__init__(
@@ -119,7 +119,7 @@ class MockEmptyPrognostic(MockPrognosticComponent):
         )
 
 
-class MockEmptyImplicitPrognostic(MockImplicitPrognosticComponent):
+class MockEmptyImplicitPrognostic(MockImplicitTendencyComponent):
     def __init__(self, **kwargs):
         super(MockEmptyImplicitPrognostic, self).__init__(
             input_properties={},
@@ -210,7 +210,7 @@ class UpdateFrequencyBase(object):
 
 class PrognosticUpdateFrequencyTests(unittest.TestCase, UpdateFrequencyBase):
 
-    component_type = PrognosticComponent
+    component_type = TendencyComponent
 
     def get_component(self):
         return MockEmptyPrognostic()
@@ -221,7 +221,7 @@ class PrognosticUpdateFrequencyTests(unittest.TestCase, UpdateFrequencyBase):
 
 class ImplicitPrognosticUpdateFrequencyTests(unittest.TestCase, UpdateFrequencyBase):
 
-    component_type = ImplicitPrognosticComponent
+    component_type = ImplicitTendencyComponent
 
     def get_component(self):
         return MockEmptyImplicitPrognostic()
@@ -679,7 +679,7 @@ class DiagnosticScalingTests(
 class PrognosticScalingTests(
     unittest.TestCase, ScalingInputMixin, ScalingDiagnosticMixin, ScalingTendencyMixin):
 
-    component_type = PrognosticComponent
+    component_type = TendencyComponent
 
     def setUp(self):
         self.input_properties = {}
@@ -689,7 +689,7 @@ class PrognosticScalingTests(
         self.tendency_output = {}
 
     def get_component(self):
-        return MockPrognosticComponent(
+        return MockTendencyComponent(
             self.input_properties,
             self.diagnostic_properties,
             self.tendency_properties,
@@ -711,7 +711,7 @@ class ImplicitPrognosticScalingTests(
     unittest.TestCase, ScalingInputMixin, ScalingDiagnosticMixin,
     ScalingTendencyMixin):
 
-    component_type = ImplicitPrognosticComponent
+    component_type = ImplicitTendencyComponent
 
     def setUp(self):
         self.input_properties = {}
@@ -721,7 +721,7 @@ class ImplicitPrognosticScalingTests(
         self.tendency_output = {}
 
     def get_component(self):
-        return MockImplicitPrognosticComponent(
+        return MockImplicitTendencyComponent(
             self.input_properties,
             self.diagnostic_properties,
             self.tendency_properties,

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from ._core.base_components import (
-    PrognosticComponent, DiagnosticComponent, Stepper, Monitor, ImplicitPrognosticComponent
+    TendencyComponent, DiagnosticComponent, Stepper, Monitor, ImplicitTendencyComponent
 )
-from ._core.composite import PrognosticComponentComposite, DiagnosticComponentComposite, \
+from ._core.composite import TendencyComponentComposite, DiagnosticComponentComposite, \
     MonitorComposite
 from ._core.prognosticstepper import PrognosticStepper
 from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
@@ -28,15 +28,15 @@ from ._core.state import (
     initialize_numpy_arrays_with_properties)
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
-    ConstantPrognosticComponent, ConstantDiagnosticComponent, RelaxationPrognosticComponent,
+    ConstantTendencyComponent, ConstantDiagnosticComponent, RelaxationTendencyComponent,
     TimeDifferencingWrapper)
 from ._core.wrappers import UpdateFrequencyWrapper, ScalingWrapper
 from ._core.time import datetime, timedelta
 
 __version__ = '0.3.2'
 __all__ = (
-    PrognosticComponent, DiagnosticComponent, Stepper, Monitor, PrognosticComponentComposite,
-    DiagnosticComponentComposite, MonitorComposite, ImplicitPrognosticComponent,
+    TendencyComponent, DiagnosticComponent, Stepper, Monitor, TendencyComponentComposite,
+    DiagnosticComponentComposite, MonitorComposite, ImplicitTendencyComponent,
     PrognosticStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError, ComponentExtraOutputError,
@@ -53,7 +53,7 @@ __all__ = (
     initialize_numpy_arrays_with_properties,
     get_component_aliases, combine_component_properties,
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
-    ConstantPrognosticComponent, ConstantDiagnosticComponent, RelaxationPrognosticComponent,
+    ConstantTendencyComponent, ConstantDiagnosticComponent, RelaxationTendencyComponent,
     UpdateFrequencyWrapper, ScalingWrapper,
     datetime, timedelta
 )

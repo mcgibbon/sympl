@@ -2,8 +2,8 @@ Timestepping
 ============
 
 :py:class:`~sympl.PrognosticStepper` objects use time derivatives from
-:py:class:`~sympl.PrognosticComponent` objects to step a model state forward in time.
-They are initialized using any number of :py:class:`~sympl.PrognosticComponent` objects.
+:py:class:`~sympl.TendencyComponent` objects to step a model state forward in time.
+They are initialized using any number of :py:class:`~sympl.TendencyComponent` objects.
 
 .. code-block:: python
 
@@ -46,13 +46,13 @@ For that reason, :py:class:`~sympl.PrognosticStepper` objects do not update
 
 There are also
 :py:class:`~sympl.Stepper` objects which evolve the state forward in time
-without the use of PrognosticComponent objects. These function exactly the same as a
+without the use of TendencyComponent objects. These function exactly the same as a
 :py:class:`~sympl.PrognosticStepper` once they are created, but do not accept
-:py:class:`~sympl.PrognosticComponent` objects when you create them. One example might
+:py:class:`~sympl.TendencyComponent` objects when you create them. One example might
 be a component that condenses all supersaturated moisture over some time period.
 :py:class:`~sympl.Stepper` objects are generally used for parameterizations
 that work by determining the target model state in some way, or involve
-limiters, and cannot be represented as a :py:class:`~sympl.PrognosticComponent`.
+limiters, and cannot be represented as a :py:class:`~sympl.TendencyComponent`.
 
 .. autoclass:: sympl.PrognosticStepper
     :members:

@@ -2,17 +2,17 @@
 Component Types
 ===============
 
-In Sympl, computation is mainly performed using :py:class:`~sympl.PrognosticComponent`,
+In Sympl, computation is mainly performed using :py:class:`~sympl.TendencyComponent`,
 :py:class:`~sympl.DiagnosticComponent`, and :py:class:`~sympl.Stepper` objects.
 Each of these types, once initialized, can be passed in a current model state.
-:py:class:`~sympl.PrognosticComponent` objects use the state to return tendencies and
+:py:class:`~sympl.TendencyComponent` objects use the state to return tendencies and
 diagnostics at the current time. :py:class:`~sympl.DiagnosticComponent` objects
 return only diagnostics from the current time. :py:class:`~sympl.Stepper`
 objects will take in a timestep along with the state, and then return the
 next state as well as modifying the current state to include more diagnostics
 (it is similar to a :py:class:`~sympl.PrognosticStepper` in how it is called).
 
-In specific cases, it may be necessary to use a :py:class:`~sympl.ImplicitPrognosticComponent`
+In specific cases, it may be necessary to use a :py:class:`~sympl.ImplicitTendencyComponent`
 object, which is discussed at the end of this section.
 
 These classes themselves (listed in the previous paragraph) are not ones you
@@ -27,15 +27,15 @@ for their inputs and outputs, which are described in the section
 Details on the internals of components and how to write them are in the section on
 :ref:`Writing Components`.
 
-PrognosticComponent
+TendencyComponent
 ----------
 
-As stated above, :py:class:`~sympl.PrognosticComponent` objects use the state to return
+As stated above, :py:class:`~sympl.TendencyComponent` objects use the state to return
 tendencies and diagnostics at the current time. In a full model, the tendencies
 are used by a time stepping scheme (in Sympl, a :py:class:`~sympl.PrognosticStepper`)
 to determine the values of quantities at the next time.
 
-You can call a :py:class:`~sympl.PrognosticComponent` directly to get diagnostics and
+You can call a :py:class:`~sympl.TendencyComponent` directly to get diagnostics and
 tendencies like so:
 
 .. code-block:: python
@@ -44,25 +44,25 @@ tendencies like so:
     diagnostics, tendencies = radiation(state)
 
 ``diagnostics`` and ``tendencies`` in this case will both be dictionaries,
-similar to ``state``. Even if the :py:class:`~sympl.PrognosticComponent` being called
+similar to ``state``. Even if the :py:class:`~sympl.TendencyComponent` being called
 does not compute any diagnostics, it will still return an empty
 diagnostics dictionary.
 
-Usually, you will call a PrognosticComponent object through a
+Usually, you will call a TendencyComponent object through a
 :py:class:`~sympl.PrognosticStepper` that uses it to determine values at the next
 timestep.
 
-.. autoclass:: sympl.PrognosticComponent
+.. autoclass:: sympl.TendencyComponent
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
 
-.. autoclass:: sympl.ConstantPrognosticComponent
+.. autoclass:: sympl.ConstantTendencyComponent
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
 
-.. autoclass:: sympl.RelaxationPrognosticComponent
+.. autoclass:: sympl.RelaxationTendencyComponent
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__
@@ -140,7 +140,7 @@ there are a number of attributes with names like ``input_properties`` for
 components. These attributes give a fairly complete description of the inputs
 and outputs of the component.
 
-You can access them like this (for an example :py:class:`~sympl.PrognosticComponent`
+You can access them like this (for an example :py:class:`~sympl.TendencyComponent`
 class ``RRTMRadiation``):
 
 .. code-block:: python
@@ -282,22 +282,22 @@ equal to:
 that the object will output ``cloud_fraction`` in its diagnostics on the
 same grid as ``air_temperature``, in dimensionless units.
 
-ImplicitPrognosticComponent
+ImplicitTendencyComponent
 ------------------
 
 .. warning:: This component type should be avoided unless you know you need it,
              for reasons discussed in this section.
 
 In addition to the component types described above, computation may be performed by a
-:py:class:`~sympl.ImplicitPrognosticComponent`. This class should be avoided unless you
+:py:class:`~sympl.ImplicitTendencyComponent`. This class should be avoided unless you
 know what you are doing, but it may be necessary in certain cases. An
-:py:class:`~sympl.ImplicitPrognosticComponent`, like a :py:class:`~sympl.PrognosticComponent`,
+:py:class:`~sympl.ImplicitTendencyComponent`, like a :py:class:`~sympl.TendencyComponent`,
 calculates tendencies, but it does so using both the model state and a timestep.
 Certain components, like ones handling advection using a spectral method, may
 need to derive tendencies from an :py:class:`~sympl.Stepper` object by
-representing it using an :py:class:`~sympl.ImplicitPrognosticComponent`.
+representing it using an :py:class:`~sympl.ImplicitTendencyComponent`.
 
-The reason to avoid using an :py:class:`~sympl.ImplicitPrognosticComponent` is that if
+The reason to avoid using an :py:class:`~sympl.ImplicitTendencyComponent` is that if
 a component requires a timestep, it is making internal assumptions about how
 you are timestepping. For example, it may use the timestep to ensure that all
 supersaturated water is condensed by the end of the timestep using an assumption
@@ -306,7 +306,7 @@ which does not obey those assumptions, you may get unintended behavior, such as
 some supersaturated water remaining, or too much water being condensed.
 
 For this reason, the :py:class:`~sympl.PrognosticStepper` objects included in Sympl
-do not wrap :py:class:`~sympl.ImplicitPrognosticComponent` components. If you would like
+do not wrap :py:class:`~sympl.ImplicitTendencyComponent` components. If you would like
 to use this type of component, and know what you are doing, it is pretty easy
 to write your own :py:class:`~sympl.PrognosticStepper` to do so (you can base the code
 off of the code in Sympl), or the model you are using might already have
@@ -314,13 +314,13 @@ components to do this for you.
 
 If you are wrapping a parameterization and notice that it needs a timestep to
 compute its tendencies, that is likely *not* a good reason to write an
-:py:class:`~sympl.ImplicitPrognosticComponent`. If at all possible you should modify the
+:py:class:`~sympl.ImplicitTendencyComponent`. If at all possible you should modify the
 code to compute the value at the next timestep, and write an
 :py:class:`~sympl.Stepper` component. You are welcome to reach out to the
 developers of Sympl if you would like advice on your specific situation! We're
 always excited about new wrapped components.
 
-.. autoclass:: sympl.ImplicitPrognosticComponent
+.. autoclass:: sympl.ImplicitTendencyComponent
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__

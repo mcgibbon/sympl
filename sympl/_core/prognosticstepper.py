@@ -1,17 +1,18 @@
 import abc
-from .composite import ImplicitPrognosticComponentComposite
+from .composite import ImplicitTendencyComponentComposite
 from .time import timedelta
 from .util import combine_component_properties, combine_properties
 from .units import clean_units
 from .state import copy_untouched_quantities
-from .base_components import ImplicitPrognosticComponent, Stepper
+from .base_components import ImplicitTendencyComponent, Stepper
+from .exceptions import InvalidPropertyDictError
 import warnings
 
 
 class PrognosticStepper(Stepper):
     """An object which integrates model state forward in time.
 
-    It uses PrognosticComponent and DiagnosticComponent objects to update the current model state
+    It uses TendencyComponent and DiagnosticComponent objects to update the current model state
     with diagnostics, and to return the model state at the next timestep.
 
     Attributes
@@ -26,11 +27,11 @@ class PrognosticStepper(Stepper):
         for the new state are returned when the
         object is called, and values are dictionaries which indicate 'dims' and
         'units'.
-    prognostic : ImplicitPrognosticComponentComposite
-        A composite of the PrognosticComponent and ImplicitPrognostic objects used by
+    prognostic : ImplicitTendencyComponentComposite
+        A composite of the TendencyComponent and ImplicitPrognostic objects used by
         the PrognosticStepper.
-    prognostic_list: list of PrognosticComponent and ImplicitPrognosticComponent
-        A list of PrognosticComponent objects called by the PrognosticStepper. These should
+    prognostic_list: list of TendencyComponent and ImplicitPrognosticComponent
+        A list of TendencyComponent objects called by the PrognosticStepper. These should
         be referenced when determining what inputs are necessary for the
         PrognosticStepper.
     tendencies_in_diagnostics : bool
@@ -94,7 +95,7 @@ class PrognosticStepper(Stepper):
     def __str__(self):
         return (
             'instance of {}(PrognosticStepper)\n'
-            '    PrognosticComponent components: {}'.format(self.prognostic_list)
+            '    TendencyComponent components: {}'.format(self.prognostic_list)
         )
 
     def __repr__(self):
@@ -119,7 +120,7 @@ class PrognosticStepper(Stepper):
 
         Parameters
         ----------
-        *args : PrognosticComponent or ImplicitPrognosticComponent
+        *args : TendencyComponent or ImplicitTendencyComponent
             Objects to call for tendencies when doing time stepping.
         tendencies_in_diagnostics : bool, optional
             A boolean indicating whether this object will put tendencies of
@@ -135,13 +136,20 @@ class PrognosticStepper(Stepper):
                 'than a list, and will not accept lists in a later version.',
                 DeprecationWarning)
             args = args[0]
-        if any(isinstance(a, ImplicitPrognosticComponent) for a in args):
+        if any(isinstance(a, ImplicitTendencyComponent) for a in args):
             warnings.warn(
-                'Using an ImplicitPrognosticComponent in sympl PrognosticStepper objects may '
+                'Using an ImplicitTendencyComponent in sympl PrognosticStepper objects may '
                 'lead to scientifically invalid results. Make sure the component '
                 'follows the same numerical assumptions as the PrognosticStepper used.')
-        self.prognostic = ImplicitPrognosticComponentComposite(*args)
+        self.prognostic = ImplicitTendencyComponentComposite(*args)
         super(PrognosticStepper, self).__init__(**kwargs)
+        for name in self.prognostic.tendency_properties.keys():
+            if name not in self.output_properties.keys():
+                raise InvalidPropertyDictError(
+                    'Prognostic object has tendency output for {} but '
+                    'PrognosticStepper containing it does not have it in '
+                    'output_properties.'.format(name))
+        self.__initialized = True
 
     @property
     def prognostic_list(self):
@@ -173,6 +181,13 @@ class PrognosticStepper(Stepper):
         new_state : dict
             The model state at the next timestep.
         """
+        if not self.__initialized:
+            raise AssertionError(
+                'PrognosticStepper component has not had its base class '
+                '__init__ called, likely due to a missing call to '
+                'super(ClassName, self).__init__(*args, **kwargs) in its '
+                '__init__ method.'
+            )
         diagnostics, new_state = self._call(state, timestep)
         copy_untouched_quantities(state, new_state)
         if self.tendencies_in_diagnostics:
@@ -188,7 +203,7 @@ class PrognosticStepper(Stepper):
             tendency_name = self._get_tendency_name(name)
             if tendency_name in diagnostics.keys():
                 raise RuntimeError(
-                    'A PrognosticComponent has output tendencies as a diagnostic and has'
+                    'A TendencyComponent has output tendencies as a diagnostic and has'
                     ' caused a name clash when trying to do so from this '
                     'PrognosticStepper ({}). You must disable '
                     'tendencies_in_diagnostics for this PrognosticStepper.'.format(

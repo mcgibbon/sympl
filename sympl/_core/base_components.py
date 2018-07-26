@@ -26,11 +26,11 @@ def apply_scale_factors(array_state, scale_factors):
 
 
 def is_component_class(cls):
-    return any(issubclass(cls, cls2) for cls2 in (Stepper, PrognosticComponent, ImplicitPrognosticComponent, DiagnosticComponent))
+    return any(issubclass(cls, cls2) for cls2 in (Stepper, TendencyComponent, ImplicitTendencyComponent, DiagnosticComponent))
 
 
 def is_component_base_class(cls):
-    return cls in (Stepper, PrognosticComponent, ImplicitPrognosticComponent, DiagnosticComponent)
+    return cls in (Stepper, TendencyComponent, ImplicitTendencyComponent, DiagnosticComponent)
 
 
 def get_kwarg_defaults(func):
@@ -668,7 +668,7 @@ class Stepper(object):
 
 
 @add_metaclass(ComponentMeta)
-class PrognosticComponent(object):
+class TendencyComponent(object):
     """
     Attributes
     ----------
@@ -711,7 +711,7 @@ class PrognosticComponent(object):
 
     def __str__(self):
         return (
-            'instance of {}(PrognosticComponent)\n'
+            'instance of {}(TendencyComponent)\n'
             '    inputs: {}\n'
             '    tendencies: {}\n'
             '    diagnostics: {}'.format(
@@ -766,7 +766,7 @@ class PrognosticComponent(object):
             self._tracer_packer = TracerPacker(
                 self, self.tracer_dims, prepend_tracers=prepend_tracers)
         self.__initialized = True
-        super(PrognosticComponent, self).__init__()
+        super(TendencyComponent, self).__init__()
 
     @property
     def tendencies_in_diagnostics(self):
@@ -831,7 +831,7 @@ class PrognosticComponent(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the PrognosticComponent instance.
+            If state is not a valid input for the TendencyComponent instance.
         """
         self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
@@ -892,7 +892,7 @@ class PrognosticComponent(object):
 
 
 @add_metaclass(ComponentMeta)
-class ImplicitPrognosticComponent(object):
+class ImplicitTendencyComponent(object):
     """
     Attributes
     ----------
@@ -935,7 +935,7 @@ class ImplicitPrognosticComponent(object):
 
     def __str__(self):
         return (
-            'instance of {}(PrognosticComponent)\n'
+            'instance of {}(TendencyComponent)\n'
             '    inputs: {}\n'
             '    tendencies: {}\n'
             '    diagnostics: {}'.format(
@@ -987,7 +987,7 @@ class ImplicitPrognosticComponent(object):
             self._tracer_packer = TracerPacker(
                 self, self.tracer_dims, prepend_tracers=prepend_tracers)
         self.__initialized = True
-        super(ImplicitPrognosticComponent, self).__init__()
+        super(ImplicitTendencyComponent, self).__init__()
 
     @property
     def tendencies_in_diagnostics(self):
@@ -1054,7 +1054,7 @@ class ImplicitPrognosticComponent(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the PrognosticComponent instance.
+            If state is not a valid input for the TendencyComponent instance.
         """
         self._check_self_is_initialized()
         self._input_checker.check_inputs(state)
@@ -1205,7 +1205,7 @@ class DiagnosticComponent(object):
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for the PrognosticComponent instance.
+            If state is not a valid input for the TendencyComponent instance.
         """
         self._check_self_is_initialized()
         self._input_checker.check_inputs(state)

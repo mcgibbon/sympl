@@ -16,7 +16,7 @@ class SSPRungeKutta(PrognosticStepper):
 
         Args
         ----
-        *args : PrognosticComponent or ImplicitPrognosticComponent
+        *args : TendencyComponent or ImplicitTendencyComponent
             Objects to call for tendencies when doing time stepping.
         stages: int, optional
             Number of stages to use. Should be 2 or 3. Default is 3.
@@ -80,7 +80,7 @@ class AdamsBashforth(PrognosticStepper):
 
         Args
         ----
-        *args : PrognosticComponent or ImplicitPrognosticComponent
+        *args : TendencyComponent or ImplicitTendencyComponent
             Objects to call for tendencies when doing time stepping.
         order : int, optional
             The order of accuracy to use. Must be between
@@ -190,7 +190,7 @@ class Leapfrog(PrognosticStepper):
 
         Args
         ----
-        *args : PrognosticComponent or ImplicitPrognosticComponent
+        *args : TendencyComponent or ImplicitTendencyComponent
             Objects to call for tendencies when doing time stepping.
         asselin_strength : float, optional
             The filter parameter used to determine the strength

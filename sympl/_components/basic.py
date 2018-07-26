@@ -1,9 +1,9 @@
 from .._core.array import DataArray
-from .._core.base_components import ImplicitPrognosticComponent, PrognosticComponent, DiagnosticComponent
+from .._core.base_components import ImplicitTendencyComponent, TendencyComponent, DiagnosticComponent
 from .._core.units import unit_registry as ureg
 
 
-class ConstantPrognosticComponent(PrognosticComponent):
+class ConstantTendencyComponent(TendencyComponent):
     """
     Prescribes constant tendencies provided at initialization.
 
@@ -83,11 +83,11 @@ class ConstantPrognosticComponent(PrognosticComponent):
         tendencies : dict
             A dictionary whose keys are strings indicating
             state quantities and values are the time derivative of those
-            quantities in units/second to be returned by this PrognosticComponent.
+            quantities in units/second to be returned by this TendencyComponent.
         diagnostics : dict, optional
             A dictionary whose keys are strings indicating
             state quantities and values are the value of those quantities
-            to be returned by this PrognosticComponent. By default an empty dictionary
+            to be returned by this TendencyComponent. By default an empty dictionary
             is used.
         input_scale_factors : dict, optional
             A (possibly empty) dictionary whose keys are quantity names and
@@ -118,7 +118,7 @@ class ConstantPrognosticComponent(PrognosticComponent):
             self.__diagnostics = diagnostics.copy()
         else:
             self.__diagnostics = {}
-        super(ConstantPrognosticComponent, self).__init__(**kwargs)
+        super(ConstantTendencyComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         tendencies = {}
@@ -210,7 +210,7 @@ class ConstantDiagnosticComponent(DiagnosticComponent):
         return return_state
 
 
-class RelaxationPrognosticComponent(PrognosticComponent):
+class RelaxationTendencyComponent(TendencyComponent):
     r"""
     Applies Newtonian relaxation to a single quantity.
 
@@ -319,7 +319,7 @@ class RelaxationPrognosticComponent(PrognosticComponent):
         """
         self._quantity_name = quantity_name
         self._units = units
-        super(RelaxationPrognosticComponent, self).__init__(**kwargs)
+        super(RelaxationTendencyComponent, self).__init__(**kwargs)
 
     def array_call(self, state):
         """
@@ -359,9 +359,9 @@ class RelaxationPrognosticComponent(PrognosticComponent):
         return tendencies, {}
 
 
-class TimeDifferencingWrapper(ImplicitPrognosticComponent):
+class TimeDifferencingWrapper(ImplicitTendencyComponent):
     """
-    Wraps an Stepper object and turns it into an ImplicitPrognosticComponent by applying
+    Wraps an Stepper object and turns it into an ImplicitTendencyComponent by applying
     simple first-order time differencing to determine tendencies.
 
     Example

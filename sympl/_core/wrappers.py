@@ -1,5 +1,5 @@
 from .._core.base_components import (
-    PrognosticComponent, DiagnosticComponent, ImplicitPrognosticComponent, Stepper
+    TendencyComponent, DiagnosticComponent, ImplicitTendencyComponent, Stepper
 )
 
 
@@ -10,7 +10,7 @@ class ScalingWrapper(object):
 
     Example
     -------
-    This is how the ScalingWrapper can be used to wrap a PrognosticComponent.
+    This is how the ScalingWrapper can be used to wrap a TendencyComponent.
     >>> scaled_component = ScalingWrapper(
     >>>     RRTMRadiation(),
     >>>     input_scale_factors = {
@@ -30,7 +30,7 @@ class ScalingWrapper(object):
 
         Args
         ----
-        component : PrognosticComponent, Stepper, DiagnosticComponent, ImplicitPrognosticComponent
+        component : TendencyComponent, Stepper, DiagnosticComponent, ImplicitTendencyComponent
             The component to be wrapped.
         input_scale_factors : dict
             a dictionary whose keys are the inputs that will be scaled
@@ -53,17 +53,17 @@ class ScalingWrapper(object):
         Raises
         ------
         TypeError
-            The component is not of type Stepper or PrognosticComponent.
+            The component is not of type Stepper or TendencyComponent.
         ValueError
             The keys in the scale factors do not correspond to valid
             input/output/tendency for this component.
         """
         if not any(
                 isinstance(component, t) for t in [
-                    DiagnosticComponent, PrognosticComponent, ImplicitPrognosticComponent, Stepper]):
+                    DiagnosticComponent, TendencyComponent, ImplicitTendencyComponent, Stepper]):
             raise TypeError(
-                'component must be a component type (DiagnosticComponent, PrognosticComponent, '
-                'ImplicitPrognosticComponent, or Stepper)'
+                'component must be a component type (DiagnosticComponent, TendencyComponent, '
+                'ImplicitTendencyComponent, or Stepper)'
             )
 
         self._component = component
@@ -158,7 +158,7 @@ class ScalingWrapper(object):
                 scale_factor = self._diagnostic_scale_factors[name]
                 diagnostics[name] *= float(scale_factor)
             return diagnostics, new_state
-        elif isinstance(self._component, PrognosticComponent):
+        elif isinstance(self._component, TendencyComponent):
             tendencies, diagnostics = self._component(scaled_state)
             for tend_field in self._tendency_scale_factors.keys():
                 scale_factor = self._tendency_scale_factors[tend_field]
@@ -167,9 +167,9 @@ class ScalingWrapper(object):
                 scale_factor = self._diagnostic_scale_factors[name]
                 diagnostics[name] *= float(scale_factor)
             return tendencies, diagnostics
-        elif isinstance(self._component, ImplicitPrognosticComponent):
+        elif isinstance(self._component, ImplicitTendencyComponent):
             if timestep is None:
-                raise TypeError('Must give timestep to call ImplicitPrognosticComponent.')
+                raise TypeError('Must give timestep to call ImplicitTendencyComponent.')
             tendencies, diagnostics = self._component(scaled_state, timestep)
             for tend_field in self._tendency_scale_factors.keys():
                 scale_factor = self._tendency_scale_factors[tend_field]
@@ -197,7 +197,7 @@ class UpdateFrequencyWrapper(object):
 
     Example
     -------
-    This how the wrapper should be used on a fictional PrognosticComponent class
+    This how the wrapper should be used on a fictional TendencyComponent class
     called MyPrognostic.
     >>> from datetime import timedelta
     >>> prognostic = UpdateFrequencyWrapper(MyPrognostic(), timedelta(hours=1))
@@ -209,7 +209,7 @@ class UpdateFrequencyWrapper(object):
 
         Args
         ----
-        component : PrognosticComponent, Stepper, DiagnosticComponent, ImplicitPrognosticComponent
+        component : TendencyComponent, Stepper, DiagnosticComponent, ImplicitTendencyComponent
             The component to be wrapped.
         update_timedelta : timedelta
             The amount that state['time'] must differ from when output

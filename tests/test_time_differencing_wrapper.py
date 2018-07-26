@@ -1,14 +1,14 @@
 from datetime import timedelta, datetime
 import unittest
 from sympl import (
-    PrognosticComponent, Stepper, DiagnosticComponent, TimeDifferencingWrapper, DataArray
+    TendencyComponent, Stepper, DiagnosticComponent, TimeDifferencingWrapper, DataArray
 )
 import pytest
 from numpy.testing import assert_allclose
 from copy import deepcopy
 
 
-class MockPrognosticComponent(PrognosticComponent):
+class MockTendencyComponent(TendencyComponent):
 
     def __init__(self):
         self._num_updates = 0
@@ -68,7 +68,7 @@ class MockStepperThatExpects(Stepper):
         return deepcopy(state), state
 
 
-class MockPrognosticComponentThatExpects(PrognosticComponent):
+class MockTendencyComponentThatExpects(TendencyComponent):
 
     input_properties = {'expected_field': {}}
     tendency_properties = {'expected_field': {}}

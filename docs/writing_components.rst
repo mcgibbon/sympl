@@ -13,17 +13,17 @@ to talk about the parts of their code.
 Writing an Example
 ------------------
 
-Let's start with a PrognosticComponent component which relaxes temperature towards some
+Let's start with a TendencyComponent component which relaxes temperature towards some
 target temperature. We'll go over the sections of this example step-by-step
 below.
 
 .. code-block:: python
 
     from sympl import (
-        PrognosticComponent, get_numpy_arrays_with_properties,
+        TendencyComponent, get_numpy_arrays_with_properties,
         restore_data_arrays_with_properties)
 
-    class TemperatureRelaxation(PrognosticComponent):
+    class TemperatureRelaxation(TendencyComponent):
 
         input_properties = {
             'air_temperature': {
@@ -68,7 +68,7 @@ so that it can be found right away by anyone reading your code.
 .. code-block:: python
 
     from sympl import (
-        PrognosticComponent, get_numpy_arrays_with_properties,
+        TendencyComponent, get_numpy_arrays_with_properties,
         restore_data_arrays_with_properties)
 
 Define an Object
@@ -78,13 +78,13 @@ Once these are imported, there's this line:
 
 .. code-block:: python
 
-    class TemperatureRelaxation(PrognosticComponent):
+    class TemperatureRelaxation(TendencyComponent):
 
 This is the syntax for defining an object in Python. ``TemperatureRelaxation``
-will be the name of the new object. The :py:class:`~sympl.PrognosticComponent`
+will be the name of the new object. The :py:class:`~sympl.TendencyComponent`
 in parentheses is telling Python that ``TemperatureRelaxation`` is a *subclass* of
-:py:class:`~sympl.PrognosticComponent`. This tells Sympl that it can expect your object
-to behave like a :py:class:`~sympl.PrognosticComponent`.
+:py:class:`~sympl.TendencyComponent`. This tells Sympl that it can expect your object
+to behave like a :py:class:`~sympl.TendencyComponent`.
 
 Define Attributes
 *****************
@@ -293,7 +293,7 @@ Using Tracers
 
 Sympl's base components have some features to automatically create tracer arrays
 for use by dynamical components. If an :py:class:`~sympl.Stepper`,
-:py:class:`~sympl.PrognosticComponent`, or :py:class:`~sympl.ImplicitPrognosticComponent`
+:py:class:`~sympl.TendencyComponent`, or :py:class:`~sympl.ImplicitTendencyComponent`
 component specifies ``uses_tracers = True`` and sets ``tracer_dims``, this
 feature is enabled.
 
@@ -314,8 +314,8 @@ Once this feature is enabled, the ``state`` passed to ``array_call`` on the
 component will include a quantity called "tracers" with the dimensions
 specified by ``tracer_dims``. It will also be required that these tracers
 are used in the output. For a :py:class:`~sympl.Stepper` component, "tracers"
-must be present in the output state, and for a :py:class:`~sympl.PrognosticComponent` or
-:py:class:`~sympl.ImplicitPrognosticComponent` component "tracers" must be present in
+must be present in the output state, and for a :py:class:`~sympl.TendencyComponent` or
+:py:class:`~sympl.ImplicitTendencyComponent` component "tracers" must be present in
 the tendencies, with the same dimensions as the input "tracers".
 
 On these latter two components, you should also specify a
@@ -326,7 +326,7 @@ units of ``g m^-3 s^-1``. This value is set as "s" (or seconds) by default.
 
 .. code-block:: python
 
-        class MyDynamicalCore(PrognosticComponent):
+        class MyDynamicalCore(TendencyComponent):
 
             uses_tracers = True
             tracer_dims = ['tracer', '*', 'mid_levels']

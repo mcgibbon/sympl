@@ -4,7 +4,7 @@ Composites
 
 There are a set of objects in Sympl that wrap multiple components into a single
 object so they can be called as if they were one component. There is one each
-for :py:class:`~sympl.PrognosticComponent`, :py:class:`~sympl.DiagnosticComponent`, and
+for :py:class:`~sympl.TendencyComponent`, :py:class:`~sympl.DiagnosticComponent`, and
 :py:class:`~sympl.Monitor`. These can be used to simplify code, so that
 the way you call a list of components is the same as the way you would
 call a single component. For example, *instead* of writing:
@@ -35,7 +35,7 @@ You could write:
 
 .. code-block:: python
 
-    prognostic_composite = PrognosticComponentComposite([
+    prognostic_composite = TendencyComponentComposite([
         MyPrognostic(),
         MyOtherPrognostic(),
         YetAnotherPrognostic(),
@@ -54,7 +54,7 @@ overwritten). You can get similar simplifications for
 API Reference
 -------------
 
-.. autoclass:: sympl.PrognosticComponentComposite
+.. autoclass:: sympl.TendencyComponentComposite
     :members:
     :special-members:
     :exclude-members: __weakref__,__metaclass__

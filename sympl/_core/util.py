@@ -420,8 +420,8 @@ def combine_properties(property_list, input_properties=None):
 
 def get_component_aliases(*args):
     """
-    Returns aliases for variables in the properties of Components (PrognosticComponent,
-    DiagnosticComponent, Stepper, and ImplicitPrognosticComponent objects).
+    Returns aliases for variables in the properties of Components (TendencyComponent,
+    DiagnosticComponent, Stepper, and ImplicitTendencyComponent objects).
 
     If multiple aliases are present for the same variable, the following
     properties have priority in descending order: input, output, diagnostic,

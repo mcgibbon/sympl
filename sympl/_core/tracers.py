@@ -84,7 +84,7 @@ class TracerPacker(object):
         else:
             raise TypeError(
                 'Expected a component object subclassing type Stepper, '
-                'ImplicitPrognosticComponent, or PrognosticComponent but received component of '
+                'ImplicitTendencyComponent, or TendencyComponent but received component of '
                 'type {}'.format(component.__class__.__name__))
         for name, units in self._prepend_tracers:
             if name not in _tracer_unit_dict.keys():

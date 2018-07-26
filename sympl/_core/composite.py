@@ -1,4 +1,4 @@
-from .base_components import PrognosticComponent, DiagnosticComponent, Monitor, ImplicitPrognosticComponent
+from .base_components import TendencyComponent, DiagnosticComponent, Monitor, ImplicitTendencyComponent
 from .util import (
     update_dict_by_adding_another, ensure_no_shared_keys,
     combine_component_properties)
@@ -99,11 +99,11 @@ def ensure_components_have_class(components, component_class):
                     component_class, type(component)))
 
 
-class PrognosticComponentComposite(
+class TendencyComponentComposite(
         ComponentComposite, InputPropertiesCompositeMixin,
-        DiagnosticPropertiesCompositeMixin, PrognosticComponent):
+        DiagnosticPropertiesCompositeMixin, TendencyComponent):
 
-    component_class = PrognosticComponent
+    component_class = TendencyComponent
 
     @property
     def tendency_properties(self):
@@ -126,7 +126,7 @@ class PrognosticComponentComposite(
             output quantity, and their dimensions or units are incompatible
             with one another.
         """
-        super(PrognosticComponentComposite, self).__init__(*args)
+        super(TendencyComponentComposite, self).__init__(*args)
         self.input_properties
         self.tendency_properties
         self.diagnostic_properties
@@ -156,7 +156,7 @@ class PrognosticComponentComposite(
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for a PrognosticComponent instance.
+            If state is not a valid input for a TendencyComponent instance.
         """
         return_tendencies = {}
         return_diagnostics = {}
@@ -170,11 +170,11 @@ class PrognosticComponentComposite(
         raise NotImplementedError()
 
 
-class ImplicitPrognosticComponentComposite(
+class ImplicitTendencyComponentComposite(
         ComponentComposite, InputPropertiesCompositeMixin,
-        DiagnosticPropertiesCompositeMixin, ImplicitPrognosticComponent):
+        DiagnosticPropertiesCompositeMixin, ImplicitTendencyComponent):
 
-    component_class = (PrognosticComponent, ImplicitPrognosticComponent)
+    component_class = (TendencyComponent, ImplicitTendencyComponent)
 
     @property
     def tendency_properties(self):
@@ -197,7 +197,7 @@ class ImplicitPrognosticComponentComposite(
             output quantity, and their dimensions or units are incompatible
             with one another.
         """
-        super(ImplicitPrognosticComponentComposite, self).__init__(*args)
+        super(ImplicitTendencyComponentComposite, self).__init__(*args)
         self.input_properties
         self.tendency_properties
         self.diagnostic_properties
@@ -227,14 +227,14 @@ class ImplicitPrognosticComponentComposite(
         KeyError
             If a required quantity is missing from the state.
         InvalidStateError
-            If state is not a valid input for a PrognosticComponent instance.
+            If state is not a valid input for a TendencyComponent instance.
         """
         return_tendencies = {}
         return_diagnostics = {}
         for prognostic in self.component_list:
-            if isinstance(prognostic, ImplicitPrognosticComponent):
+            if isinstance(prognostic, ImplicitTendencyComponent):
                 tendencies, diagnostics = prognostic(state, timestep)
-            elif isinstance(prognostic, PrognosticComponent):
+            elif isinstance(prognostic, TendencyComponent):
                 tendencies, diagnostics = prognostic(state)
             update_dict_by_adding_another(return_tendencies, tendencies)
             return_diagnostics.update(diagnostics)

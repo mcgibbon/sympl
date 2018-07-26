@@ -138,8 +138,8 @@ Those are the "components":
     implicit_dynamics = ImplicitDynamics()
 
 :py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.PrognosticStepper`, which is
-created with a set of :py:class:`~sympl.PrognosticComponent` components.
-The :py:class:`~sympl.PrognosticComponent` components we have here are ``Radiation``,
+created with a set of :py:class:`~sympl.TendencyComponent` components.
+The :py:class:`~sympl.TendencyComponent` components we have here are ``Radiation``,
 ``BoundaryLayer``, and ``DeepConvection``. Each of these carries information about
 what it takes as inputs and provides as outputs, and can be called with a model
 state to return tendencies for a set of quantities. The
@@ -147,16 +147,16 @@ state to return tendencies for a set of quantities. The
 forward in time.
 
 The :py:class:`~sympl.UpdateFrequencyWrapper` applied to the ``Radiation`` object
-is an object that acts like a :py:class:`~sympl.PrognosticComponent` but only computes
+is an object that acts like a :py:class:`~sympl.TendencyComponent` but only computes
 its output if at least a certain amount of model time has passed since the last
 time the output was computed. Otherwise, it returns the last computed output.
 This is commonly used in atmospheric models to avoid doing radiation
 calculations (which are very expensive) every timestep, but it can be applied
-to any PrognosticComponent.
+to any TendencyComponent.
 
 The :py:class:`ImplicitDynamics` class is a :py:class:`~sympl.Stepper` object, which
 steps the model state forward in time in the same way that a :py:class:`~sympl.PrognosticStepper`
-would, but doesn't use :py:class:`~sympl.PrognosticComponent` objects in doing so.
+would, but doesn't use :py:class:`~sympl.TendencyComponent` objects in doing so.
 
 The Main Loop
 -------------

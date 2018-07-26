@@ -5,7 +5,7 @@ What's New
 Latest
 ------
 
-* Stepper, DiagnosticComponent, ImplicitPrognosticComponent, and PrognosticComponent base classes were
+* Stepper, DiagnosticComponent, ImplicitTendencyComponent, and TendencyComponent base classes were
   modified to include functionality that was previously in ScalingWrapper,
   UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper. The functionality of
   TendencyInDiagnosticsWrapper is now to be used in Stepper and PrognosticStepper objects.
@@ -13,7 +13,7 @@ Latest
   composited.
 * TimeSteppers now have a prognostic_list attribute which contains the
   prognostics used to calculate tendencies.
-* TimeSteppers from sympl can now handle ImplicitPrognosticComponent components.
+* TimeSteppers from sympl can now handle ImplicitTendencyComponent components.
 * Added a check for netcdftime having the required objects, to fall back on not
   using netcdftime when those are missing. This is because most objects are missing in
   older versions of netcdftime (that come packaged with netCDF4) (closes #23).
@@ -31,7 +31,7 @@ Latest
 * Added a priority order of property types for determining which aliases are
   returned by get_component_aliases.
 * Fixed a bug where PrognosticStepper objects would modify the arrays passed to them by
-  PrognosticComponent objects, leading to unexpected value changes.
+  TendencyComponent objects, leading to unexpected value changes.
 * Fixed a bug where constants were missing from the string returned by
   get_constants_string, particularly any new constants (issue #27)
 * Fixed a bug in NetCDFMonitor which led to some aliases being skipped.
@@ -55,7 +55,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 * Implicit, Timestepper, Prognostic, ImplicitPrognostic, and Diagnostic objects have been renamed to
-  PrognosticStepper, Stepper, PrognosticComponent, ImplicitPrognosticComponent,
+  PrognosticStepper, Stepper, TendencyComponent, ImplicitTendencyComponent,
   and DiagnosticComponent. These changes are also reflected in subclass names.
 * inputs, outputs, diagnostics, and tendencies are no longer attributes of components.
   In order to get these, you should use e.g. input_properties.keys()
@@ -74,13 +74,13 @@ Breaking changes
   have been removed. The functionality of these wrappers has been moved to the
   component base types as methods and initialization options.
 * 'time' now must be present in the model state dictionary. This is strictly required
-  for calls to DiagnosticComponent, PrognosticComponent, ImplicitPrognosticComponent, and Stepper components,
+  for calls to DiagnosticComponent, TendencyComponent, ImplicitTendencyComponent, and Stepper components,
   and may be strictly required in other ways in the future
 * Removed everything to do with directional wildcards. Currently '*' is the
   only wildcard dimension. 'x', 'y', and 'z' refer to their own names only.
 * Removed the combine_dimensions function, which wasn't used anywhere and no
   longer has much purpose without directional wildcards
-* RelaxationPrognosticComponent no longer allows caching of equilibrium values or
+* RelaxationTendencyComponent no longer allows caching of equilibrium values or
   timescale. They must be provided through the input state. This is to ensure
   proper conversion of dimensions and units.
 * Removed ComponentTestBase from package. All of its tests except for output
@@ -93,7 +93,7 @@ Breaking changes
   used instead. If present, `dims` from input properties will be used as
   default.
 * Components will now raise an exception when __call__ of the component base
-  class (e.g. Stepper, PrognosticComponent, etc.) if the __init__ method of the base
+  class (e.g. Stepper, TendencyComponent, etc.) if the __init__ method of the base
   class has not been called, telling the user that the component __init__
   method should make a call to the superclass init.
 
@@ -135,10 +135,10 @@ v0.3.0
   restore_data_arrays_with_properties
 * corrected heat capacity of snow and ice to be floats instead of ints
 * Added get_constant function as the way to retrieve constants
-* Added ImplicitPrognosticComponent as a new component type. It is like a PrognosticComponent,
+* Added ImplicitTendencyComponent as a new component type. It is like a TendencyComponent,
   but its call signature also requires that a timestep be given.
 * Added TimeDifferencingWrapper, which turns an Stepper into an
-  ImplicitPrognosticComponent by applying first-order time differencing.
+  ImplicitTendencyComponent by applying first-order time differencing.
 * Added set_condensible_name as a way of changing what condensible aliases
   (for example, density_of_solid_phase) refer to. Default is 'water'.
 * Moved wrappers to their own file (out from util.py).
