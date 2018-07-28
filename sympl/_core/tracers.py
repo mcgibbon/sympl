@@ -7,7 +7,7 @@ _tracer_names = []
 _packers = set()
 
 
-def clear_tracers():
+def reset_tracers():
     global _tracer_names
     while len(_tracer_unit_dict) > 0:
         _tracer_unit_dict.popitem()
@@ -15,7 +15,7 @@ def clear_tracers():
         _tracer_names.pop()
 
 
-def clear_packers():
+def reset_packers():
     while len(_packers) > 0:
         _packers.pop()
 

@@ -1,4 +1,4 @@
-from sympl._core.tracers import TracerPacker, clear_tracers, clear_packers
+from sympl._core.tracers import TracerPacker, reset_tracers, reset_packers
 from sympl import (
     TendencyComponent, Stepper, DiagnosticComponent, ImplicitTendencyComponent, register_tracer,
     get_tracer_unit_dict, units_are_compatible, DataArray
@@ -196,10 +196,10 @@ class MockTracerStepper(Stepper):
 class RegisterTracerTests(unittest.TestCase):
 
     def setUp(self):
-        clear_tracers()
+        reset_tracers()
 
     def tearDown(self):
-        clear_tracers()
+        reset_tracers()
 
     def test_initially_empty(self):
         assert len(get_tracer_unit_dict()) == 0
@@ -238,12 +238,12 @@ class RegisterTracerTests(unittest.TestCase):
 class TracerPackerBase(object):
 
     def setUp(self):
-        clear_tracers()
-        clear_packers()
+        reset_tracers()
+        reset_packers()
 
     def tearDown(self):
-        clear_tracers()
-        clear_packers()
+        reset_tracers()
+        reset_packers()
 
     def test_packs_no_tracers(self):
         dims = ['tracer', '*']
@@ -460,12 +460,12 @@ class DiagnosticTracerPackerTests(unittest.TestCase):
 class TracerComponentBase(object):
 
     def setUp(self):
-        clear_tracers()
-        clear_packers()
+        reset_tracers()
+        reset_packers()
 
     def tearDown(self):
-        clear_tracers()
-        clear_packers()
+        reset_tracers()
+        reset_packers()
 
     def call_component(self, input_state):
         pass

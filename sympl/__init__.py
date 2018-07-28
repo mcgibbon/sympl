@@ -3,7 +3,7 @@ from ._core.base_components import (
     TendencyComponent, DiagnosticComponent, Stepper, Monitor, ImplicitTendencyComponent
 )
 from ._core.composite import TendencyComponentComposite, DiagnosticComponentComposite, \
-    MonitorComposite
+    MonitorComposite, ImplicitTendencyComponentComposite
 from ._core.prognosticstepper import PrognosticStepper
 from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
 from ._core.exceptions import (
@@ -36,6 +36,7 @@ from ._core.time import datetime, timedelta
 __version__ = '0.3.2'
 __all__ = (
     TendencyComponent, DiagnosticComponent, Stepper, Monitor, TendencyComponentComposite,
+    ImplicitTendencyComponentComposite,
     DiagnosticComponentComposite, MonitorComposite, ImplicitTendencyComponent,
     PrognosticStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
