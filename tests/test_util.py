@@ -5,7 +5,9 @@ from sympl import (
     TendencyComponent, ensure_no_shared_keys, SharedKeyError, DataArray,
     Stepper, DiagnosticComponent,
     InvalidPropertyDictError)
-from sympl._core.util import update_dict_by_adding_another, combine_dims, get_component_aliases
+from sympl._core.util import update_dict_by_adding_another, \
+    get_component_aliases
+from sympl._core.combine_properties import combine_dims
 
 
 def same_list(list1, list2):
