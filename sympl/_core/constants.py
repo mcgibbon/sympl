@@ -1,4 +1,4 @@
-from .array import DataArray
+from .dataarray import DataArray
 from .units import is_valid_unit
 
 

@@ -2,7 +2,7 @@ from .._core.base_components import Monitor
 from .._core.exceptions import (
     DependencyError, InvalidStateError)
 from .._core.units import from_unit_to_another
-from .._core.array import DataArray
+from .._core.dataarray import DataArray
 from .._core.util import same_list, datetime64_to_datetime
 import xarray as xr
 import os

@@ -1,5 +1,5 @@
 from .._core.prognosticstepper import PrognosticStepper
-from .._core.array import DataArray
+from .._core.dataarray import DataArray
 from .._core.state import copy_untouched_quantities, add, multiply
 
 

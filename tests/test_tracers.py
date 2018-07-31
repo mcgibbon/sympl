@@ -1,7 +1,7 @@
 from sympl._core.tracers import TracerPacker, reset_tracers, reset_packers
 from sympl import (
     TendencyComponent, Stepper, DiagnosticComponent, ImplicitTendencyComponent, register_tracer,
-    get_tracer_unit_dict, units_are_compatible, DataArray
+    get_tracer_unit_dict, units_are_compatible, DataArray, InvalidPropertyDictError
 )
 import unittest
 import numpy as np
@@ -16,9 +16,9 @@ class MockTendencyComponent(TendencyComponent):
     tendency_properties = None
 
     def __init__(self, **kwargs):
-        self.input_properties = {}
-        self.diagnostic_properties = {}
-        self.tendency_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
+        self.tendency_properties = kwargs.pop('tendency_properties', {})
         self.diagnostic_output = {}
         self.tendency_output = {}
         self.times_called = 0
@@ -44,9 +44,9 @@ class MockTracerTendencyComponent(TendencyComponent):
         prepend_tracers = kwargs.pop('prepend_tracers', None)
         if prepend_tracers is not None:
             self.prepend_tracers = prepend_tracers
-        self.input_properties = {}
-        self.diagnostic_properties = {}
-        self.tendency_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
+        self.tendency_properties = kwargs.pop('tendency_properties', {})
         self.diagnostic_output = {}
         self.times_called = 0
         self.state_given = None
@@ -68,9 +68,9 @@ class MockImplicitTendencyComponent(ImplicitTendencyComponent):
     tendency_properties = None
 
     def __init__( self, **kwargs):
-        self.input_properties = {}
-        self.diagnostic_properties = {}
-        self.tendency_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
+        self.tendency_properties = kwargs.pop('tendency_properties', {})
         self.diagnostic_output = {}
         self.tendency_output = {}
         self.times_called = 0
@@ -98,9 +98,9 @@ class MockTracerImplicitTendencyComponent(ImplicitTendencyComponent):
         prepend_tracers = kwargs.pop('prepend_tracers', None)
         if prepend_tracers is not None:
             self.prepend_tracers = prepend_tracers
-        self.input_properties = {}
-        self.diagnostic_properties = {}
-        self.tendency_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
+        self.tendency_properties = kwargs.pop('tendency_properties', {})
         self.diagnostic_output = {}
         self.times_called = 0
         self.state_given = None
@@ -123,8 +123,8 @@ class MockDiagnosticComponent(DiagnosticComponent):
     diagnostic_properties = None
 
     def __init__(self, **kwargs):
-        self.input_properties = {}
-        self.diagnostic_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
         self.diagnostic_output = {}
         self.times_called = 0
         self.state_given = None
@@ -143,9 +143,9 @@ class MockStepper(Stepper):
     output_properties = None
 
     def __init__(self, **kwargs):
-        self.input_properties = {}
-        self.diagnostic_properties = {}
-        self.output_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
+        self.output_properties = kwargs.pop('output_properties', {})
         self.diagnostic_output = {}
         self.state_output = {}
         self.times_called = 0
@@ -173,9 +173,9 @@ class MockTracerStepper(Stepper):
         prepend_tracers = kwargs.pop('prepend_tracers', None)
         if prepend_tracers is not None:
             self.prepend_tracers = prepend_tracers
-        self.input_properties = {}
-        self.diagnostic_properties = {}
-        self.output_properties = {}
+        self.input_properties = kwargs.pop('input_properties', {})
+        self.diagnostic_properties = kwargs.pop('diagnostic_properties', {})
+        self.output_properties = kwargs.pop('output_properties', {})
         self.diagnostic_output = {}
         self.state_output = {}
         self.times_called = 0
@@ -255,14 +255,7 @@ class TracerPackerBase(object):
     def test_unpacks_no_tracers(self):
         dims = ['tracer', '*']
         packer = TracerPacker(self.component, dims)
-        unpacked = packer.unpack({})
-        assert isinstance(unpacked, dict)
-        assert len(unpacked) == 0
-
-    def test_unpacks_no_tracers_with_arrays_input(self):
-        dims = ['tracer', '*']
-        packer = TracerPacker(self.component, dims)
-        unpacked = packer.unpack({'air_temperature': np.zeros((5,))})
+        unpacked = packer.unpack({}, {})
         assert isinstance(unpacked, dict)
         assert len(unpacked) == 0
 
@@ -270,65 +263,78 @@ class TracerPackerBase(object):
         np.random.seed(0)
         dims = ['tracer', '*']
         register_tracer('tracer1', 'g/m^3')
-        raw_state = {'tracer1': np.random.randn(5)}
+        state = {'tracer1': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'g/m^3'})}
         packer = TracerPacker(self.component, dims)
-        packed = packer.pack(raw_state)
+        packed = packer.pack(state)
         assert isinstance(packed, np.ndarray)
         assert packed.shape == (1, 5)
-        assert np.all(packed[0, :] == raw_state['tracer1'])
+        assert np.all(packed[0, :] == state['tracer1'].values)
+
+    def test_packs_one_tracer_converts_units(self):
+        np.random.seed(0)
+        dims = ['tracer', '*']
+        register_tracer('tracer1', 'kg/m^3')
+        state = {'tracer1': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'g/m^3'})}
+        packer = TracerPacker(self.component, dims)
+        packed = packer.pack(state)
+        assert isinstance(packed, np.ndarray)
+        assert packed.shape == (1, 5)
+        assert np.all(packed[0, :] == state['tracer1'].values * 1e-3)
 
     def test_packs_one_3d_tracer(self):
         np.random.seed(0)
         dims = ['tracer', 'latitude', 'longitude', 'mid_levels']
         register_tracer('tracer1', 'g/m^3')
-        raw_state = {'tracer1': np.random.randn(2, 3, 4)}
+        state = {
+            'tracer1': DataArray(
+                np.random.randn(2, 3, 4),
+                dims=['latitude', 'longitude', 'mid_levels'],
+                attrs={'units': 'g/m^3'}
+            )
+        }
         packer = TracerPacker(self.component, dims)
-        packed = packer.pack(raw_state)
+        packed = packer.pack(state)
         assert isinstance(packed, np.ndarray)
         assert packed.shape == (1, 2, 3, 4)
-        assert np.all(packed[0, :, :, :] == raw_state['tracer1'])
+        assert np.all(packed[0, :, :, :] == state['tracer1'].values)
 
-    def test_packs_updates_input_properties(self):
+    def test_packer_does_not_change_input_properties(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         register_tracer('tracer1', 'g/m^3')
         packer = TracerPacker(self.component, dims)
-        assert 'tracer1' in self.component.input_properties
-        assert tuple(self.component.input_properties['tracer1']['dims']) == ('*',)
-        assert self.component.input_properties['tracer1']['units'] == 'g/m^3'
-        assert len(self.component.input_properties) == 1
+        assert len(self.component.input_properties) == 0
 
-    def test_packs_updates_input_properties_after_init(self):
+    def test_packer_does_not_change_input_properties_after_init(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         packer = TracerPacker(self.component, dims)
         assert len(self.component.input_properties) == 0
         register_tracer('tracer1', 'g/m^3')
-        assert 'tracer1' in self.component.input_properties
-        assert tuple(
-            self.component.input_properties['tracer1']['dims']) == ('*',)
-        assert self.component.input_properties['tracer1']['units'] == 'g/m^3'
-        assert len(self.component.input_properties) == 1
+        assert len(self.component.input_properties) == 0
 
     def test_packs_one_tracer_registered_after_init(self):
         np.random.seed(0)
         dims = ['tracer', '*']
-        raw_state = {'tracer1': np.random.randn(5)}
+        state = {'tracer1': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'g/m^3'})}
         packer = TracerPacker(self.component, dims)
         register_tracer('tracer1', 'g/m^3')
-        packed = packer.pack(raw_state)
+        packed = packer.pack(state)
         assert isinstance(packed, np.ndarray)
         assert packed.shape == (1, 5)
-        assert np.all(packed[0, :] == raw_state['tracer1'])
+        assert np.all(packed[0, :] == state['tracer1'].values)
 
     def test_packs_two_tracers(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         register_tracer('tracer1', 'g/m^3')
         register_tracer('tracer2', 'kg')
-        raw_state = {'tracer1': np.random.randn(5), 'tracer2': np.random.randn(5)}
+        state = {
+            'tracer1': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'g/m^3'}),
+            'tracer2': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'kg'})
+        }
         packer = TracerPacker(self.component, dims)
-        packed = packer.pack(raw_state)
+        packed = packer.pack(state)
         assert isinstance(packed, np.ndarray)
         assert packed.shape == (2, 5)
 
@@ -338,18 +344,18 @@ class TracerPackerBase(object):
         register_tracer('tracer1', 'g/m^3')
         register_tracer('tracer2', 'kg'),
         register_tracer('tracer3', 'kg/m^3')
-        raw_state = {
-            'tracer1': np.random.randn(5),
-            'tracer2': np.random.randn(5),
-            'tracer3': np.random.randn(5),
+        state = {
+            'tracer1': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'g/m^3'}),
+            'tracer2': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'kg'}),
+            'tracer3': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'kg/m^3'}),
         }
         packer = TracerPacker(self.component, dims)
-        packed = packer.pack(raw_state)
+        packed = packer.pack(state)
         assert isinstance(packed, np.ndarray)
         assert packed.shape == (3, 5)
-        assert np.all(packed[0, :] == raw_state['tracer1'])
-        assert np.all(packed[1, :] == raw_state['tracer2'])
-        assert np.all(packed[2, :] == raw_state['tracer3'])
+        assert np.all(packed[0, :] == state['tracer1'].values)
+        assert np.all(packed[1, :] == state['tracer2'].values)
+        assert np.all(packed[2, :] == state['tracer3'].values)
 
     def test_unpacks_three_tracers_in_order_registered(self):
         np.random.seed(0)
@@ -357,19 +363,43 @@ class TracerPackerBase(object):
         register_tracer('tracer1', 'g/m^3')
         register_tracer('tracer2', 'kg'),
         register_tracer('tracer3', 'kg/m^3')
-        raw_state = {
-            'tracer1': np.random.randn(5),
-            'tracer2': np.random.randn(5),
-            'tracer3': np.random.randn(5),
+        state = {
+            'tracer1': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'g/m^3'}),
+            'tracer2': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'kg'}),
+            'tracer3': DataArray(np.random.randn(5), dims=['dim1'], attrs={'units': 'kg/m^3'}),
         }
         packer = TracerPacker(self.component, dims)
-        packed = packer.pack(raw_state)
-        unpacked = packer.unpack(packed)
+        packed = packer.pack(state)
+        unpacked = packer.unpack(packed, state)
         assert isinstance(unpacked, dict)
         assert len(unpacked) == 3
-        assert np.all(unpacked['tracer1'] == raw_state['tracer1'])
-        assert np.all(unpacked['tracer2'] == raw_state['tracer2'])
-        assert np.all(unpacked['tracer3'] == raw_state['tracer3'])
+        assert np.all(unpacked['tracer1'] == state['tracer1'])
+        assert np.all(unpacked['tracer2'] == state['tracer2'])
+        assert np.all(unpacked['tracer3'] == state['tracer3'])
+
+    def test_packer_allows_overlap_input_registered_after_init(self):
+        self.component = self.component.__class__(
+            input_properties={
+                'name': {
+                    'units': 'm',
+                    'dims': ['*'],
+                }
+            }
+        )
+        packer = TracerPacker(self.component, ['tracer', '*'])
+        register_tracer('name', 'm')
+
+    def test_packer_allows_overlap_input_registered_before_init(self):
+        self.component = self.component.__class__(
+            input_properties={
+                'name': {
+                    'units': 'm',
+                    'dims': ['*'],
+                }
+            }
+        )
+        register_tracer('name', 'm')
+        packer = TracerPacker(self.component, ['tracer', '*'])
 
 
 class PrognosticTracerPackerTests(TracerPackerBase, unittest.TestCase):
@@ -382,27 +412,47 @@ class PrognosticTracerPackerTests(TracerPackerBase, unittest.TestCase):
         self.component = None
         super(PrognosticTracerPackerTests, self).tearDown()
 
-    def test_packs_updates_tendency_properties(self):
+    def test_packer_does_not_change_tendency_properties(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         register_tracer('tracer1', 'g/m^3')
         packer = TracerPacker(self.component, dims)
-        assert 'tracer1' in self.component.tendency_properties
-        assert tuple(self.component.tendency_properties['tracer1']['dims']) == ('*',)
-        assert units_are_compatible(self.component.tendency_properties['tracer1']['units'], 'g/m^3 s^-1')
-        assert len(self.component.tendency_properties) == 1
+        assert 'tracer1' not in self.component.tendency_properties
+        assert len(self.component.tendency_properties) == 0
 
-    def test_packs_updates_tendency_properties_after_init(self):
+    def test_packer_does_not_change_tendency_properties_after_init(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         packer = TracerPacker(self.component, dims)
         assert len(self.component.tendency_properties) == 0
         register_tracer('tracer1', 'g/m^3')
-        assert 'tracer1' in self.component.tendency_properties
-        assert tuple(
-            self.component.tendency_properties['tracer1']['dims']) == ('*',)
-        assert units_are_compatible(self.component.tendency_properties['tracer1']['units'], 'g/m^3 s^-1')
-        assert len(self.component.tendency_properties) == 1
+        assert len(self.component.tendency_properties) == 0
+
+    def test_packer_wont_overwrite_tendency_registered_after_init(self):
+        self.component = MockTendencyComponent(
+            tendency_properties={
+                'name': {
+                    'units': 'm',
+                    'dims': ['*'],
+                }
+            }
+        )
+        packer = TracerPacker(self.component, ['tracer', '*'])
+        with self.assertRaises(InvalidPropertyDictError):
+            register_tracer('name', 'm')
+
+    def test_packer_wont_overwrite_tendency_registered_before_init(self):
+        self.component = MockTendencyComponent(
+            tendency_properties={
+                'name': {
+                    'units': 'm',
+                    'dims': ['*'],
+                }
+            }
+        )
+        register_tracer('name', 'm')
+        with self.assertRaises(InvalidPropertyDictError):
+            packer = TracerPacker(self.component, ['tracer', '*'])
 
 
 class ImplicitPrognosticTracerPackerTests(PrognosticTracerPackerTests):
@@ -426,27 +476,46 @@ class ImplicitTracerPackerTests(TracerPackerBase, unittest.TestCase):
         self.component = None
         super(ImplicitTracerPackerTests, self).tearDown()
 
-    def test_packs_updates_output_properties(self):
+    def test_packer_does_not_change_output_properties(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         register_tracer('tracer1', 'g/m^3')
         packer = TracerPacker(self.component, dims)
-        assert 'tracer1' in self.component.output_properties
-        assert tuple(self.component.output_properties['tracer1']['dims']) == ('*',)
-        assert self.component.output_properties['tracer1']['units'] == 'g/m^3'
-        assert len(self.component.output_properties) == 1
+        assert len(self.component.output_properties) == 0
 
-    def test_packs_updates_output_properties_after_init(self):
+    def test_packer_does_not_change_output_properties_after_init(self):
         np.random.seed(0)
         dims = ['tracer', '*']
         packer = TracerPacker(self.component, dims)
         assert len(self.component.output_properties) == 0
         register_tracer('tracer1', 'g/m^3')
-        assert 'tracer1' in self.component.output_properties
-        assert tuple(
-            self.component.output_properties['tracer1']['dims']) == ('*',)
-        assert self.component.output_properties['tracer1']['units'] == 'g/m^3'
-        assert len(self.component.output_properties) == 1
+        assert len(self.component.output_properties) == 0
+
+    def test_packer_wont_overwrite_output_registered_after_init(self):
+        self.component = MockStepper(
+            output_properties={
+                'name': {
+                    'units': 'm',
+                    'dims': ['*'],
+                }
+            }
+        )
+        packer = TracerPacker(self.component, ['tracer', '*'])
+        with self.assertRaises(InvalidPropertyDictError):
+            register_tracer('name', 'm')
+
+    def test_packer_wont_overwrite_output_registered_before_init(self):
+        self.component = MockStepper(
+            output_properties={
+                'name': {
+                    'units': 'm',
+                    'dims': ['*'],
+                }
+            }
+        )
+        register_tracer('name', 'm')
+        with self.assertRaises(InvalidPropertyDictError):
+            packer = TracerPacker(self.component, ['tracer', '*'])
 
 
 class DiagnosticTracerPackerTests(unittest.TestCase):
@@ -639,13 +708,10 @@ class TracerComponentBase(object):
         assert unpacked['tracer1'].shape == input_state['tracer1'].shape
         assert np.all(unpacked['tracer1'].values == input_state['tracer1'].values)
 
-    def test_updates_input_properties(self):
+    def test_does_not_change_input_properties(self):
         np.random.seed(0)
         register_tracer('tracer1', 'g/m^3')
-        assert 'tracer1' in self.component.input_properties
-        assert tuple(self.component.input_properties['tracer1']['dims']) == ('*',)
-        assert self.component.input_properties['tracer1']['units'] == 'g/m^3'
-        assert len(self.component.input_properties) == 1
+        assert 'tracer1' not in self.component.input_properties
 
     def test_packs_two_tracers(self):
         np.random.seed(0)

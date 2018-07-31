@@ -1,7 +1,7 @@
 from datetime import datetime
 import numpy as np
 from .units import units_are_compatible
-from .array import DataArray
+from .dataarray import DataArray
 from .exceptions import (
     SharedKeyError, InvalidPropertyDictError)
 

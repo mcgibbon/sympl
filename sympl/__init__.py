@@ -10,7 +10,7 @@ from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError)
-from ._core.array import DataArray
+from ._core.dataarray import DataArray
 from ._core.constants import (
     get_constant, set_constant, set_condensible_name, reset_constants,
     get_constants_string)
@@ -22,10 +22,9 @@ from ._core.util import (
     get_component_aliases,
     combine_component_properties)
 from ._core.units import units_are_same, units_are_compatible, is_valid_unit
-from ._core.state import (
-    get_numpy_arrays_with_properties,
-    restore_data_arrays_with_properties,
-    initialize_numpy_arrays_with_properties)
+from sympl._core.get_np_arrays import get_numpy_arrays_with_properties
+from sympl._core.restore_dataarray import restore_data_arrays_with_properties
+from sympl._core.init_np_arrays import initialize_numpy_arrays_with_properties
 from ._components import (
     PlotFunctionMonitor, NetCDFMonitor, RestartMonitor,
     ConstantTendencyComponent, ConstantDiagnosticComponent, RelaxationTendencyComponent,

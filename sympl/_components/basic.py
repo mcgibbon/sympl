@@ -1,4 +1,4 @@
-from .._core.array import DataArray
+from .._core.dataarray import DataArray
 from .._core.base_components import ImplicitTendencyComponent, TendencyComponent, DiagnosticComponent
 from .._core.units import unit_registry as ureg
 

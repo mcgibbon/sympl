@@ -1,5 +1,6 @@
 import abc
-from .state import get_numpy_arrays_with_properties, restore_data_arrays_with_properties
+from .get_np_arrays import get_numpy_arrays_with_properties
+from .restore_dataarray import restore_data_arrays_with_properties
 from .time import timedelta
 from .exceptions import (
     InvalidPropertyDictError, ComponentExtraOutputError,
@@ -611,14 +612,14 @@ class Stepper(object):
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         if self.uses_tracers:
-            raw_state['tracers'] = self._tracer_packer.pack(raw_state)
-            for name in self._tracer_packer.tracer_names:
-                raw_state.pop(name)
+            raw_state['tracers'] = self._tracer_packer.pack(state)
         raw_state['time'] = state['time']
         raw_diagnostics, raw_new_state = self.array_call(raw_state, timestep)
         if self.uses_tracers:
-            raw_new_state.update(self._tracer_packer.unpack(raw_new_state['tracers']))
-            raw_new_state.pop('tracers')
+            new_state = self._tracer_packer.unpack(
+                raw_new_state.pop('tracers'), state)
+        else:
+            new_state = {}
         self._diagnostic_checker.check_diagnostics(raw_diagnostics)
         self._output_checker.check_outputs(raw_new_state)
         if self.tendencies_in_diagnostics:
@@ -627,9 +628,9 @@ class Stepper(object):
         diagnostics = restore_data_arrays_with_properties(
             raw_diagnostics, self.diagnostic_properties,
             state, self.input_properties)
-        new_state = restore_data_arrays_with_properties(
+        new_state.update(restore_data_arrays_with_properties(
             raw_new_state, self.output_properties,
-            state, self.input_properties)
+            state, self.input_properties))
         return diagnostics, new_state
 
     def _insert_tendencies_to_diagnostics(
@@ -707,7 +708,7 @@ class TendencyComponent(object):
 
     name = None
     uses_tracers = False
-    tracer_tendency_time_unit = 's'
+    tracer_tendency_time_unit = 's^-1'
 
     def __str__(self):
         return (
@@ -837,26 +838,27 @@ class TendencyComponent(object):
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         if self.uses_tracers:
-            raw_state['tracers'] = self._tracer_packer.pack(raw_state)
-            for name in self._tracer_packer.tracer_names:
-                raw_state.pop(name)
+            raw_state['tracers'] = self._tracer_packer.pack(state)
         raw_state['time'] = state['time']
         raw_tendencies, raw_diagnostics = self.array_call(raw_state)
         if self.uses_tracers:
-            raw_tendencies.update(self._tracer_packer.unpack(raw_tendencies['tracers']))
-            raw_tendencies.pop('tracers')
+            out_tendencies = self._tracer_packer.unpack(
+                raw_tendencies.pop('tracers'), state,
+                multiply_unit=self.tracer_tendency_time_unit)
+        else:
+            out_tendencies = {}
         self._tendency_checker.check_tendencies(raw_tendencies)
         self._diagnostic_checker.check_diagnostics(raw_diagnostics)
-        tendencies = restore_data_arrays_with_properties(
+        out_tendencies.update(restore_data_arrays_with_properties(
             raw_tendencies, self.tendency_properties,
-            state, self.input_properties)
+            state, self.input_properties))
         diagnostics = restore_data_arrays_with_properties(
             raw_diagnostics, self.diagnostic_properties,
             state, self.input_properties,
             ignore_names=self._added_diagnostic_names)
         if self.tendencies_in_diagnostics:
-            self._insert_tendencies_to_diagnostics(tendencies, diagnostics)
-        return tendencies, diagnostics
+            self._insert_tendencies_to_diagnostics(out_tendencies, diagnostics)
+        return out_tendencies, diagnostics
 
     def _insert_tendencies_to_diagnostics(self, tendencies, diagnostics):
         for name, value in tendencies.items():
@@ -931,7 +933,7 @@ class ImplicitTendencyComponent(object):
 
     name = None
     uses_tracers = False
-    tracer_tendency_time_unit = 's'
+    tracer_tendency_time_unit = 's^-1'
 
     def __str__(self):
         return (
@@ -1060,27 +1062,28 @@ class ImplicitTendencyComponent(object):
         self._input_checker.check_inputs(state)
         raw_state = get_numpy_arrays_with_properties(state, self.input_properties)
         if self.uses_tracers:
-            raw_state['tracers'] = self._tracer_packer.pack(raw_state)
-            for name in self._tracer_packer.tracer_names:
-                raw_state.pop(name)
+            raw_state['tracers'] = self._tracer_packer.pack(state)
         raw_state['time'] = state['time']
         raw_tendencies, raw_diagnostics = self.array_call(raw_state, timestep)
         if self.uses_tracers:
-            raw_tendencies.update(self._tracer_packer.unpack(raw_tendencies['tracers']))
-            raw_tendencies.pop('tracers')
+            out_tendencies = self._tracer_packer.unpack(
+                raw_tendencies.pop('tracers'), state,
+                multiply_unit=self.tracer_tendency_time_unit)
+        else:
+            out_tendencies = {}
         self._tendency_checker.check_tendencies(raw_tendencies)
         self._diagnostic_checker.check_diagnostics(raw_diagnostics)
-        tendencies = restore_data_arrays_with_properties(
+        out_tendencies.update(restore_data_arrays_with_properties(
             raw_tendencies, self.tendency_properties,
-            state, self.input_properties)
+            state, self.input_properties))
         diagnostics = restore_data_arrays_with_properties(
             raw_diagnostics, self.diagnostic_properties,
             state, self.input_properties,
             ignore_names=self._added_diagnostic_names)
         if self.tendencies_in_diagnostics:
-            self._insert_tendencies_to_diagnostics(tendencies, diagnostics)
+            self._insert_tendencies_to_diagnostics(out_tendencies, diagnostics)
         self._last_update_time = state['time']
-        return tendencies, diagnostics
+        return out_tendencies, diagnostics
 
     def _insert_tendencies_to_diagnostics(self, tendencies, diagnostics):
         for name, value in tendencies.items():
