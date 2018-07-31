@@ -1,9 +1,10 @@
 from datetime import datetime
+
 import numpy as np
-from .units import units_are_compatible
+
 from .dataarray import DataArray
 from .exceptions import (
-    SharedKeyError, InvalidPropertyDictError)
+    SharedKeyError)
 
 try:
     from numba import jit
@@ -191,57 +192,6 @@ def same_list(list1, list2):
         [item in list2 for item in list1] + [item in list1 for item in list2]))
 
 
-def combine_dims(dims1, dims2):
-    """
-    Takes in two dims specifications and returns a single specification that
-    satisfies both, if possible. Raises an InvalidPropertyDictError if not.
-
-    Parameters
-    ----------
-    dims1 : iterable of str
-    dims2 : iterable of str
-
-    Returns
-    -------
-    dims : iterable of str
-
-    Raises
-    ------
-    InvalidPropertyDictError
-        If the two dims specifications cannot be combined
-    """
-    if dims1 == dims2:
-        return dims1
-    dims_out = []
-    dims1 = set(dims1)
-    dims2 = set(dims2)
-    dims1_wildcard = '*' in dims1
-    dims1.discard('*')
-    dims2_wildcard = '*' in dims2
-    dims2.discard('*')
-    unmatched_dims = set(dims1).union(dims2).difference(dims_out)
-    shared_dims = set(dims2).intersection(dims2)
-    if dims1_wildcard and dims2_wildcard:
-        dims_out.insert(0, '*')  # either dim can match anything
-        dims_out.extend(unmatched_dims)
-    elif not dims1_wildcard and not dims2_wildcard:
-        if shared_dims != set(dims1) or shared_dims != set(dims2):
-            raise InvalidPropertyDictError(
-                'dims {} and {} are incompatible'.format(dims1, dims2))
-        dims_out.extend(unmatched_dims)
-    elif dims1_wildcard:
-        if shared_dims != set(dims2):
-            raise InvalidPropertyDictError(
-                'dims {} and {} are incompatible'.format(dims1, dims2))
-        dims_out.extend(unmatched_dims)
-    elif dims2_wildcard:
-        if shared_dims != set(dims1):
-            raise InvalidPropertyDictError(
-                'dims {} and {} are incompatible'.format(dims1, dims2))
-        dims_out.extend(unmatched_dims)
-    return dims_out
-
-
 def update_dict_by_adding_another(dict1, dict2):
     """
     Takes two dictionaries. Add values in dict2 to the values in dict1, if
@@ -371,51 +321,6 @@ def get_final_shape(data_array, out_dims, direction_to_names):
                 np.product([len(data_array.coords[name])
                             for name in direction_to_names[direction]]))
     return final_shape
-
-
-def combine_component_properties(component_list, property_name, input_properties=None):
-    property_list = []
-    for component in component_list:
-        property_list.append(getattr(component, property_name))
-    return combine_properties(property_list, input_properties)
-
-
-def combine_properties(property_list, input_properties=None):
-    if input_properties is None:
-        input_properties = {}
-    return_dict = {}
-    for property_dict in property_list:
-        for name, properties in property_dict.items():
-            if name not in return_dict:
-                return_dict[name] = {}
-                return_dict[name].update(properties)
-                if 'dims' not in properties.keys():
-                    if name in input_properties.keys() and 'dims' in input_properties[name].keys():
-                        return_dict[name]['dims'] = input_properties[name]['dims']
-                    else:
-                        raise InvalidPropertyDictError()
-            elif not units_are_compatible(
-                    properties['units'], return_dict[name]['units']):
-                raise InvalidPropertyDictError(
-                    'Cannot combine components with incompatible units '
-                    '{} and {} for quantity {}'.format(
-                        return_dict[name]['units'],
-                        properties['units'], name))
-            else:
-                if 'dims' in properties.keys():
-                    new_dims = properties['dims']
-                elif name in input_properties.keys() and 'dims' in input_properties[name].keys():
-                    new_dims = input_properties[name]['dims']
-                else:
-                    raise InvalidPropertyDictError()
-                try:
-                    dims = combine_dims(return_dict[name]['dims'], new_dims)
-                    return_dict[name]['dims'] = dims
-                except InvalidPropertyDictError as err:
-                    raise InvalidPropertyDictError(
-                        'Incompatibility between dims of quantity {}: {}'.format(
-                            name, err.args[0]))
-    return return_dict
 
 
 def get_component_aliases(*args):

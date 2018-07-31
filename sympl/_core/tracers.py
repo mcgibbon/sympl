@@ -67,13 +67,15 @@ def get_tracer_names():
     return tuple(_tracer_names)
 
 
-def get_tracer_properties(prepend_tracers, tracer_dims):
+def get_tracer_input_properties(prepend_tracers, tracer_dims):
     """
 
     Args:
         prepend_tracers (list of tuple): Pairs of (name, units) describing
             tracers that are to be included in addition to any registered
             tracers.
+        tracer_dims (list): Dimensions to use for each tracer
+            (e.g. ['dim1', 'dim2']).
 
     Returns:
         input_properties (dict): A properties dictionary for registered and
@@ -182,7 +184,7 @@ class TracerPacker(object):
                 dimensions as specified by tracer_dims on initializing this
                 object.
         """
-        tracer_properties = get_tracer_properties(
+        tracer_properties = get_tracer_input_properties(
             self._prepend_tracers, self._tracer_quantity_dims)
         raw_state = get_numpy_arrays_with_properties(state, tracer_properties)
         if len(self.tracer_names) == 0:
@@ -215,7 +217,7 @@ class TracerPacker(object):
                 values are DataArrays containing the values of each
                 tracer.
         """
-        tracer_properties = get_tracer_properties(
+        tracer_properties = get_tracer_input_properties(
             self._prepend_tracers, self._tracer_quantity_dims)
         raw_state = {}
         for i, name in enumerate(self.tracer_names):

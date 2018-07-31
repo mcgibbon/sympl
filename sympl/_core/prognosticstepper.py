@@ -1,7 +1,7 @@
 import abc
 from .composite import ImplicitTendencyComponentComposite
 from .time import timedelta
-from .util import combine_component_properties, combine_properties
+from .combine_properties import combine_properties, combine_component_properties
 from .units import clean_units
 from .state import copy_untouched_quantities
 from .base_components import ImplicitTendencyComponent, Stepper

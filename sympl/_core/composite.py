@@ -1,7 +1,7 @@
 from .base_components import TendencyComponent, DiagnosticComponent, Monitor, ImplicitTendencyComponent
 from .util import (
-    update_dict_by_adding_another, ensure_no_shared_keys,
-    combine_component_properties)
+    update_dict_by_adding_another, ensure_no_shared_keys)
+from .combine_properties import combine_component_properties
 from .exceptions import InvalidPropertyDictError
 
 
