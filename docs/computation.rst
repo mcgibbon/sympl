@@ -10,7 +10,7 @@ diagnostics at the current time. :py:class:`~sympl.DiagnosticComponent` objects
 return only diagnostics from the current time. :py:class:`~sympl.Stepper`
 objects will take in a timestep along with the state, and then return the
 next state as well as modifying the current state to include more diagnostics
-(it is similar to a :py:class:`~sympl.PrognosticStepper` in how it is called).
+(it is similar to a :py:class:`~sympl.TendencyStepper` in how it is called).
 
 In specific cases, it may be necessary to use a :py:class:`~sympl.ImplicitTendencyComponent`
 object, which is discussed at the end of this section.
@@ -32,7 +32,7 @@ TendencyComponent
 
 As stated above, :py:class:`~sympl.TendencyComponent` objects use the state to return
 tendencies and diagnostics at the current time. In a full model, the tendencies
-are used by a time stepping scheme (in Sympl, a :py:class:`~sympl.PrognosticStepper`)
+are used by a time stepping scheme (in Sympl, a :py:class:`~sympl.TendencyStepper`)
 to determine the values of quantities at the next time.
 
 You can call a :py:class:`~sympl.TendencyComponent` directly to get diagnostics and
@@ -49,7 +49,7 @@ does not compute any diagnostics, it will still return an empty
 diagnostics dictionary.
 
 Usually, you will call a TendencyComponent object through a
-:py:class:`~sympl.PrognosticStepper` that uses it to determine values at the next
+:py:class:`~sympl.TendencyStepper` that uses it to determine values at the next
 timestep.
 
 .. autoclass:: sympl.TendencyComponent
@@ -301,14 +301,14 @@ The reason to avoid using an :py:class:`~sympl.ImplicitTendencyComponent` is tha
 a component requires a timestep, it is making internal assumptions about how
 you are timestepping. For example, it may use the timestep to ensure that all
 supersaturated water is condensed by the end of the timestep using an assumption
-about the timestepping. However, if you use a :py:class:`~sympl.PrognosticStepper`
+about the timestepping. However, if you use a :py:class:`~sympl.TendencyStepper`
 which does not obey those assumptions, you may get unintended behavior, such as
 some supersaturated water remaining, or too much water being condensed.
 
-For this reason, the :py:class:`~sympl.PrognosticStepper` objects included in Sympl
+For this reason, the :py:class:`~sympl.TendencyStepper` objects included in Sympl
 do not wrap :py:class:`~sympl.ImplicitTendencyComponent` components. If you would like
 to use this type of component, and know what you are doing, it is pretty easy
-to write your own :py:class:`~sympl.PrognosticStepper` to do so (you can base the code
+to write your own :py:class:`~sympl.TendencyStepper` to do so (you can base the code
 off of the code in Sympl), or the model you are using might already have
 components to do this for you.
 

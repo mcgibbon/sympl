@@ -9,7 +9,7 @@ from .exceptions import InvalidPropertyDictError
 import warnings
 
 
-class PrognosticStepper(Stepper):
+class TendencyStepper(Stepper):
     """An object which integrates model state forward in time.
 
     It uses TendencyComponent and DiagnosticComponent objects to update the current model state
@@ -29,11 +29,11 @@ class PrognosticStepper(Stepper):
         'units'.
     prognostic : ImplicitTendencyComponentComposite
         A composite of the TendencyComponent and ImplicitPrognostic objects used by
-        the PrognosticStepper.
+        the TendencyStepper.
     prognostic_list: list of TendencyComponent and ImplicitPrognosticComponent
-        A list of TendencyComponent objects called by the PrognosticStepper. These should
+        A list of TendencyComponent objects called by the TendencyStepper. These should
         be referenced when determining what inputs are necessary for the
-        PrognosticStepper.
+        TendencyStepper.
     tendencies_in_diagnostics : bool
         A boolean indicating whether this object will put tendencies of
         quantities in its diagnostic output.
@@ -94,7 +94,7 @@ class PrognosticStepper(Stepper):
 
     def __str__(self):
         return (
-            'instance of {}(PrognosticStepper)\n'
+            'instance of {}(TendencyStepper)\n'
             '    TendencyComponent components: {}'.format(self.prognostic_list)
         )
 
@@ -112,11 +112,11 @@ class PrognosticStepper(Stepper):
             return return_value
 
     def array_call(self, state, timestep):
-        raise NotImplementedError('PrognosticStepper objects do not implement array_call')
+        raise NotImplementedError('TendencyStepper objects do not implement array_call')
 
     def __init__(self, *args, **kwargs):
         """
-        Initialize the PrognosticStepper.
+        Initialize the TendencyStepper.
 
         Parameters
         ----------
@@ -138,16 +138,16 @@ class PrognosticStepper(Stepper):
             args = args[0]
         if any(isinstance(a, ImplicitTendencyComponent) for a in args):
             warnings.warn(
-                'Using an ImplicitTendencyComponent in sympl PrognosticStepper objects may '
+                'Using an ImplicitTendencyComponent in sympl TendencyStepper objects may '
                 'lead to scientifically invalid results. Make sure the component '
-                'follows the same numerical assumptions as the PrognosticStepper used.')
+                'follows the same numerical assumptions as the TendencyStepper used.')
         self.prognostic = ImplicitTendencyComponentComposite(*args)
-        super(PrognosticStepper, self).__init__(**kwargs)
+        super(TendencyStepper, self).__init__(**kwargs)
         for name in self.prognostic.tendency_properties.keys():
             if name not in self.output_properties.keys():
                 raise InvalidPropertyDictError(
                     'Prognostic object has tendency output for {} but '
-                    'PrognosticStepper containing it does not have it in '
+                    'TendencyStepper containing it does not have it in '
                     'output_properties.'.format(name))
         self.__initialized = True
 
@@ -183,7 +183,7 @@ class PrognosticStepper(Stepper):
         """
         if not self.__initialized:
             raise AssertionError(
-                'PrognosticStepper component has not had its base class '
+                'TendencyStepper component has not had its base class '
                 '__init__ called, likely due to a missing call to '
                 'super(ClassName, self).__init__(*args, **kwargs) in its '
                 '__init__ method.'
@@ -205,8 +205,8 @@ class PrognosticStepper(Stepper):
                 raise RuntimeError(
                     'A TendencyComponent has output tendencies as a diagnostic and has'
                     ' caused a name clash when trying to do so from this '
-                    'PrognosticStepper ({}). You must disable '
-                    'tendencies_in_diagnostics for this PrognosticStepper.'.format(
+                    'TendencyStepper ({}). You must disable '
+                    'tendencies_in_diagnostics for this TendencyStepper.'.format(
                         tendency_name))
             base_units = input_properties[name]['units']
             diagnostics[tendency_name] = (

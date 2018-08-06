@@ -73,17 +73,17 @@ set to initial values. Code to do this may be present in other packages, or you
 can write this code yourself. The state and its initialization is discussed
 further in :ref:`Model State`.
 
-The state dictionary is evolved by :py:class:`~sympl.PrognosticStepper` and
+The state dictionary is evolved by :py:class:`~sympl.TendencyStepper` and
 :py:class:`~sympl.Stepper` objects. These types of objects take in the state
 and a timedelta object that indicates the time step, and return the next
-model state. :py:class:`~sympl.PrognosticStepper` objects do this by wrapping
+model state. :py:class:`~sympl.TendencyStepper` objects do this by wrapping
 :py:class:`~sympl.TendencyComponent` objects, which calculate tendencies using the
 state dictionary. We should note that the meaning of "Stepper" in Sympl is
 slightly different than its traditional definition. Here an "Stepper" object is
 one that calculates the new state directly from the current state, or any
 object that requires the timestep to calculate the new state, while
 "TendencyComponent" objects are ones that calculate tendencies without using the
-timestep. If a :py:class:`~sympl.PrognosticStepper` or :py:class:`~sympl.Stepper`
+timestep. If a :py:class:`~sympl.TendencyStepper` or :py:class:`~sympl.Stepper`
 object needs to use multiple time steps in its calculation, it does so by
 storing states it was previously given until they are no longer needed.
 

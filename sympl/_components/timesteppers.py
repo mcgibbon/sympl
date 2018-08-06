@@ -1,11 +1,11 @@
-from .._core.prognosticstepper import PrognosticStepper
+from .._core.tendencystepper import TendencyStepper
 from .._core.dataarray import DataArray
 from .._core.state import copy_untouched_quantities, add, multiply
 
 
-class SSPRungeKutta(PrognosticStepper):
+class SSPRungeKutta(TendencyStepper):
     """
-    A PrognosticStepper using the Strong Stability Preserving Runge-Kutta scheme,
+    A TendencyStepper using the Strong Stability Preserving Runge-Kutta scheme,
     as in Numerical Methods for Fluid Dynamics by Dale Durran (2nd ed) and
     as proposed by Shu and Osher (1988).
     """
@@ -71,8 +71,8 @@ class SSPRungeKutta(PrognosticStepper):
         return diagnostics, out_state
 
 
-class AdamsBashforth(PrognosticStepper):
-    """A PrognosticStepper using the Adams-Bashforth scheme."""
+class AdamsBashforth(TendencyStepper):
+    """A TendencyStepper using the Adams-Bashforth scheme."""
 
     def __init__(self, *args, **kwargs):
         """
@@ -173,8 +173,8 @@ def convert_tendencies_units_for_state(tendencies, state):
             tendencies[quantity_name] = tendencies[quantity_name].to_units(desired_units)
 
 
-class Leapfrog(PrognosticStepper):
-    """A PrognosticStepper using the Leapfrog scheme.
+class Leapfrog(TendencyStepper):
+    """A TendencyStepper using the Leapfrog scheme.
 
     This scheme calculates the
     values at time $t_{n+1}$ using the derivatives at $t_{n}$ and values at

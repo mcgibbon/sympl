@@ -4,7 +4,7 @@ from ._core.base_components import (
 )
 from ._core.composite import TendencyComponentComposite, DiagnosticComponentComposite, \
     MonitorComposite, ImplicitTendencyComponentComposite
-from ._core.prognosticstepper import PrognosticStepper
+from ._core.tendencystepper import TendencyStepper
 from ._components.timesteppers import AdamsBashforth, Leapfrog, SSPRungeKutta
 from ._core.exceptions import (
     InvalidStateError, SharedKeyError, DependencyError,
@@ -38,7 +38,7 @@ __all__ = (
     TendencyComponent, DiagnosticComponent, Stepper, Monitor, TendencyComponentComposite,
     ImplicitTendencyComponentComposite,
     DiagnosticComponentComposite, MonitorComposite, ImplicitTendencyComponent,
-    PrognosticStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
+    TendencyStepper, Leapfrog, AdamsBashforth, SSPRungeKutta,
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError,

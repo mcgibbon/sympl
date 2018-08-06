@@ -8,7 +8,7 @@ Latest
 * Stepper, DiagnosticComponent, ImplicitTendencyComponent, and TendencyComponent base classes were
   modified to include functionality that was previously in ScalingWrapper,
   UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper. The functionality of
-  TendencyInDiagnosticsWrapper is now to be used in Stepper and PrognosticStepper objects.
+  TendencyInDiagnosticsWrapper is now to be used in Stepper and TendencyStepper objects.
 * Composites now have a component_list attribute which contains the components being
   composited.
 * TimeSteppers now have a prognostic_list attribute which contains the
@@ -30,7 +30,7 @@ Latest
   respectively if outputs do not match.
 * Added a priority order of property types for determining which aliases are
   returned by get_component_aliases.
-* Fixed a bug where PrognosticStepper objects would modify the arrays passed to them by
+* Fixed a bug where TendencyStepper objects would modify the arrays passed to them by
   TendencyComponent objects, leading to unexpected value changes.
 * Fixed a bug where constants were missing from the string returned by
   get_constants_string, particularly any new constants (issue #27)
@@ -55,7 +55,7 @@ Breaking changes
 ~~~~~~~~~~~~~~~~
 
 * Implicit, Timestepper, Prognostic, ImplicitPrognostic, and Diagnostic objects have been renamed to
-  PrognosticStepper, Stepper, TendencyComponent, ImplicitTendencyComponent,
+  TendencyStepper, Stepper, TendencyComponent, ImplicitTendencyComponent,
   and DiagnosticComponent. These changes are also reflected in subclass names.
 * inputs, outputs, diagnostics, and tendencies are no longer attributes of components.
   In order to get these, you should use e.g. input_properties.keys()
