@@ -38,6 +38,66 @@ class DiagnosticPropertiesContainer(object):
         self.diagnostic_properties = diagnostic_properties
 
 
+def test_update_dict_by_adding_another_works_on_different_dim_orders():
+    dict1 = {
+        'quantity': DataArray(
+            np.ones([2, 3, 4]),
+            dims=['dim1', 'dim2', 'dim3'],
+            attrs={'units': 'm'},
+        )
+    }
+    dict2 = {
+        'quantity': DataArray(
+            np.ones([3, 2, 4]),
+            dims=['dim2', 'dim1', 'dim3'],
+            attrs={'units': 'm'},
+        )
+    }
+    update_dict_by_adding_another(dict1, dict2)
+    assert dict1['quantity'].shape == (2, 3, 4)
+    assert np.all(dict1['quantity'].values == 2.)
+
+
+def test_update_dict_by_adding_another_broadcasts_added_dim():
+    dict1 = {
+        'quantity': DataArray(
+            np.ones([2, 3, 4]),
+            dims=['dim1', 'dim2', 'dim3'],
+            attrs={'units': 'm'},
+        )
+    }
+    dict2 = {
+        'quantity': DataArray(
+            np.ones([3, 2]),
+            dims=['dim2', 'dim1'],
+            attrs={'units': 'm'},
+        )
+    }
+    update_dict_by_adding_another(dict1, dict2)
+    assert dict1['quantity'].shape == (2, 3, 4)
+    assert np.all(dict1['quantity'].values == 2.)
+
+
+def test_update_dict_by_adding_another_broadcasts_initial_dim():
+    dict1 = {
+        'quantity': DataArray(
+            np.ones([2, 3]),
+            dims=['dim1', 'dim2'],
+            attrs={'units': 'm'},
+        )
+    }
+    dict2 = {
+        'quantity': DataArray(
+            np.ones([3, 2, 4]),
+            dims=['dim2', 'dim1', 'dim3'],
+            attrs={'units': 'm'},
+        )
+    }
+    update_dict_by_adding_another(dict1, dict2)
+    assert dict1['quantity'].shape == (2, 3, 4)
+    assert np.all(dict1['quantity'].values == 2.)
+
+
 def test_update_dict_by_adding_another_adds_shared_arrays():
     old_a = np.array([1., 1.])
     dict1 = {'a': old_a}

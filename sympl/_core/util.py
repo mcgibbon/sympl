@@ -4,7 +4,7 @@ import numpy as np
 
 from .dataarray import DataArray
 from .exceptions import (
-    SharedKeyError)
+    SharedKeyError, InvalidStateError)
 
 try:
     from numba import jit
@@ -207,9 +207,14 @@ def update_dict_by_adding_another(dict1, dict2):
             else:
                 dict1[key] = dict2[key]
         else:
-            if (isinstance(dict1[key], DataArray) and isinstance(dict2[key], DataArray) and
-                    ('units' in dict1[key].attrs) and ('units' in dict2[key].attrs)):
-                dict1[key] += dict2[key].to_units(dict1[key].attrs['units'])
+            if (isinstance(dict1[key], DataArray) and isinstance(dict2[key], DataArray)):
+                if 'units' not in dict1[key].attrs or 'units' not in dict2[key].attrs:
+                    raise InvalidStateError(
+                        'DataArray objects must have units property defined')
+                try:
+                    dict1[key] += dict2[key].to_units(dict1[key].attrs['units'])
+                except ValueError:  # dict1[key] is missing a dimension present in dict2[key]
+                    dict1[key] = dict1[key] + dict2[key].to_units(dict1[key].attrs['units'])
             else:
                 dict1[key] += dict2[key]  # += is in-place addition operator
     return  # not returning anything emphasizes that this is in-place
