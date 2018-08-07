@@ -378,13 +378,15 @@ class TimeDifferencingWrapper(ImplicitTendencyComponent):
 
     @property
     def tendency_properties(self):
-        return_dict = self._implicit.output_properties.copy()
-        return_dict.update(self._tendency_diagnostic_properties)
+        return_dict = {}
+        for name, properties in self._implicit.output_properties.items():
+            return_dict[name] = properties.copy()
+            return_dict[name]['units'] += ' s^-1'
         return return_dict
 
     @property
     def diagnostic_properties(self):
-        return self._implicit.diagnostic_propertes
+        return self._implicit.diagnostic_properties
 
     def __init__(self, implicit, **kwargs):
         """
