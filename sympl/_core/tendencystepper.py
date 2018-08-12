@@ -59,15 +59,18 @@ class TendencyStepper(Stepper):
         return combine_properties([input_properties, self.output_properties])
 
     @property
+    def _tendencycomponent_input_properties(self):
+        return combine_component_properties(
+            self.prognostic_list, 'input_properties')
+
+    @property
     def diagnostic_properties(self):
         return_value = {}
         for prognostic in self.prognostic_list:
             return_value.update(prognostic.diagnostic_properties)
         if self.tendencies_in_diagnostics:
-            tendency_properties = combine_component_properties(
-                self.prognostic_list, 'tendency_properties')
             self._insert_tendencies_to_diagnostic_properties(
-                return_value, tendency_properties)
+                return_value, self._tendency_properties)
         return return_value
 
     def _insert_tendencies_to_diagnostic_properties(
@@ -81,8 +84,7 @@ class TendencyStepper(Stepper):
 
     @property
     def output_properties(self):
-        output_properties = combine_component_properties(
-            self.prognostic_list, 'tendency_properties')
+        output_properties = self._tendency_properties
         for name, properties in output_properties.items():
             properties['units'] += ' {}'.format(self.time_unit_name)
             properties['units'] = clean_units(properties['units'])
@@ -90,7 +92,12 @@ class TendencyStepper(Stepper):
 
     @property
     def _tendency_properties(self):
-        return combine_component_properties(self.prognostic_list, 'tendency_properties')
+        return_dict = {}
+        return_dict.update(combine_component_properties(
+            self.prognostic_list, 'tendency_properties',
+            input_properties=self._tendencycomponent_input_properties
+        ))
+        return return_dict
 
     def __str__(self):
         return (
