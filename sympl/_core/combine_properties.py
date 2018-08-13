@@ -59,7 +59,14 @@ def combine_component_properties(component_list, property_name, input_properties
     for component in component_list:
         property_list.append(getattr(component, property_name))
         if property_name == 'input_properties' and getattr(component, 'uses_tracers', False):
-            property_list.append(get_tracer_input_properties(getattr(component, 'prepend_tracers', ()), component.tracer_dims))
+            tracer_dims = list(component.tracer_dims)
+            if 'tracer' not in tracer_dims:
+                raise InvalidPropertyDictError(
+                    "tracer_dims must include a 'tracer' dimension indicating "
+                    "tracer number"
+                )
+            tracer_dims.remove('tracer')
+            property_list.append(get_tracer_input_properties(getattr(component, 'prepend_tracers', ()), tracer_dims))
     return combine_properties(property_list, input_properties)
 
 

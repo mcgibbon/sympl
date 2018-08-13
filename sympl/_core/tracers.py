@@ -81,6 +81,9 @@ def get_tracer_input_properties(prepend_tracers, tracer_dims):
         input_properties (dict): A properties dictionary for registered and
             additional tracers.
     """
+    tracer_dims = list(tracer_dims)
+    if 'tracer' in tracer_dims:
+        tracer_dims.remove('tracer')
     tracer_units = {}
     tracer_units.update(get_tracer_unit_dict())
     tracer_units.update(dict(prepend_tracers))
