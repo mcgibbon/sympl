@@ -9,6 +9,7 @@ import os
 import numpy as np
 from datetime import timedelta
 from six import string_types
+
 try:
     import netCDF4 as nc4
 except ImportError:
@@ -19,7 +20,7 @@ if nc4 is None:
     # user they need to install the dependency if they try to use it
     class NetCDFMonitor(Monitor):
 
-        def __init__(self, filename):
+        def __init__(self, *args, **kwargs):
             raise DependencyError(
                 'netCDF4-python must be installed to use NetCDFMonitor')
 
