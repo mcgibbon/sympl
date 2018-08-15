@@ -243,7 +243,10 @@ class UpdateFrequencyWrapper(object):
                 (state['time'] >= self._last_update_time +
                  self._update_timedelta)):
             if timestep is not None:
-                self._cached_output = self.component(state, timestep, **kwargs)
+                try:
+                    self._cached_output = self.component(state, timestep, **kwargs)
+                except TypeError:
+                    self._cached_output = self.component(state, **kwargs)
             else:
                 self._cached_output = self.component(state, **kwargs)
             self._last_update_time = state['time']
