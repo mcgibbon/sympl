@@ -433,5 +433,7 @@ class TimeDifferencingWrapper(ImplicitTendencyComponent):
         raise NotImplementedError()
 
     def __getattr__(self, item):
-        if item not in ('outputs', 'output_properties'):
+        if item in ('outputs', 'output_properties'):
+            raise AttributeError()
+        else:
             return getattr(self._implicit, item)
