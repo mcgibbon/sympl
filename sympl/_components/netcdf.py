@@ -15,6 +15,7 @@ try:
 except ImportError:
     nc4 = None
 
+
 class NetCDFMonitor(Monitor):
     """A Monitor which caches stored states and then writes them to a
     NetCDF file when requested."""
