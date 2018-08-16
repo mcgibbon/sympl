@@ -2,7 +2,7 @@
 What's New
 ==========
 
-Latest
+v0.4.0
 ------
 
 * Stepper, DiagnosticComponent, ImplicitTendencyComponent, and TendencyComponent base classes were
