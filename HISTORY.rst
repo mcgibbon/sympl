@@ -5,6 +5,98 @@ What's New
 Latest
 ------
 
+* Stepper, DiagnosticComponent, ImplicitTendencyComponent, and TendencyComponent base classes were
+  modified to include functionality that was previously in ScalingWrapper,
+  UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper. The functionality of
+  TendencyInDiagnosticsWrapper is now to be used in Stepper and TendencyStepper objects.
+* Composites now have a component_list attribute which contains the components being
+  composited.
+* TimeSteppers now have a prognostic_list attribute which contains the
+  prognostics used to calculate tendencies.
+* TimeSteppers from sympl can now handle ImplicitTendencyComponent components.
+* Added a check for netcdftime having the required objects, to fall back on not
+  using netcdftime when those are missing. This is because most objects are missing in
+  older versions of netcdftime (that come packaged with netCDF4) (closes #23).
+* TimeSteppers should now be called with individual Prognostics as args, rather
+  than a list of components, and will emit a warning when lists are given.
+* TimeSteppers now have input, output, and diagnostic properties as attributes.
+  These are handled entirely by the base class.
+* TimeSteppers now allow you to put tendencies in their diagnostic output. This
+  is done using first-order time differencing.
+* Composites now have properties dictionaries.
+* Updated basic components to use new component API.
+* Components enforce consistency of output from array_call with properties
+  dictionaries, raising ComponentMissingOutputError or ComponentExtraOutputError
+  respectively if outputs do not match.
+* Added a priority order of property types for determining which aliases are
+  returned by get_component_aliases.
+* Fixed a bug where TendencyStepper objects would modify the arrays passed to them by
+  TendencyComponent objects, leading to unexpected value changes.
+* Fixed a bug where constants were missing from the string returned by
+  get_constants_string, particularly any new constants (issue #27)
+* Fixed a bug in NetCDFMonitor which led to some aliases being skipped.
+* Modified class checking on components so that components which satisfy the
+  component's API will be recognized as instances using isinstance(obj, Class).
+  Right now this only checks for the presence and lack of presence of
+  component attributes, and correct signature of __call__. Later it may also
+  check properties dictionaries for consistency, or perform other checks.
+* Fixed a bug where ABCMeta was not being used in Python 3.
+* Added initialize_numpy_arrays_with_properties which creates zero arrays for an output
+  properties dictionary.
+* Added reference_air_temperature constant.
+* Fixed bug where degrees Celcius or Fahrenheit could not be used as units on inputs
+  because it would lead to an error.
+* Added combine_component_properties as a public function.
+* Added some unit helper functions (units_are_same, units_are_compatible,
+  is_valid_unit) to public API.
+* Added tracer-handling funcitonality to component base classes.
+
+Breaking changes
+~~~~~~~~~~~~~~~~
+
+* Implicit, Timestepper, Prognostic, ImplicitPrognostic, and Diagnostic objects have been renamed to
+  TendencyStepper, Stepper, TendencyComponent, ImplicitTendencyComponent,
+  and DiagnosticComponent. These changes are also reflected in subclass names.
+* inputs, outputs, diagnostics, and tendencies are no longer attributes of components.
+  In order to get these, you should use e.g. input_properties.keys()
+* properties dictionaries are now abstract methods, so subclasses must define them.
+  Previously they defaulted to empty dictionaries.
+* Base classes now raise InvalidPropertyDictError when output property units conflict with input
+  property units (which probably indicates that they're wrong).
+* Components should now be written using a new array_call method rather than __call__.
+  __call__ will automatically unwrap DataArrays to numpy arrays to be passed into
+  array_call based on the component's properties dictionaries, and re-wrap to
+  DataArrays when done.
+* TimeSteppers should now be written using a _call method rather than __call__.
+  __call__ wraps _call to provide some base class functionality, like putting
+  tendencies in diagnostics.
+* ScalingWrapper, UpdateFrequencyWrapper, and TendencyInDiagnosticsWrapper
+  have been removed. The functionality of these wrappers has been moved to the
+  component base types as methods and initialization options.
+* 'time' now must be present in the model state dictionary. This is strictly required
+  for calls to DiagnosticComponent, TendencyComponent, ImplicitTendencyComponent, and Stepper components,
+  and may be strictly required in other ways in the future
+* Removed everything to do with directional wildcards. Currently '*' is the
+  only wildcard dimension. 'x', 'y', and 'z' refer to their own names only.
+* Removed the combine_dimensions function, which wasn't used anywhere and no
+  longer has much purpose without directional wildcards
+* RelaxationTendencyComponent no longer allows caching of equilibrium values or
+  timescale. They must be provided through the input state. This is to ensure
+  proper conversion of dimensions and units.
+* Removed ComponentTestBase from package. All of its tests except for output
+  caching are now performed on object initialization or call time.
+* "*" matches are now enforced to be the same across all quantities of a
+  component, such that the length of the "*" axis will be the same for all
+  quantities. Any missing dimensions that are present on other quantities
+  will be created and broadcast to achieve this.
+* dims_like is obsolete as a result, and is no longer used. `dims` should be
+  used instead. If present, `dims` from input properties will be used as
+  default.
+* Components will now raise an exception when __call__ of the component base
+  class (e.g. Stepper, TendencyComponent, etc.) if the __init__ method of the base
+  class has not been called, telling the user that the component __init__
+  method should make a call to the superclass init.
+
 v0.3.2
 ------
 
@@ -18,7 +110,6 @@ v0.3.2
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-
 * tendencies in diagnostics are now named as X_tendency_from_Y, instead of
   tendency_of_X_due_to_Y. The idea is that it's shorter, and can easily be
   shortened more by aliasing "tendency" to "tend"
@@ -44,15 +135,15 @@ v0.3.0
   restore_data_arrays_with_properties
 * corrected heat capacity of snow and ice to be floats instead of ints
 * Added get_constant function as the way to retrieve constants
-* Added ImplicitPrognostic as a new component type. It is like a Prognostic,
+* Added ImplicitTendencyComponent as a new component type. It is like a TendencyComponent,
   but its call signature also requires that a timestep be given.
-* Added TimeDifferencingWrapper, which turns an Implicit into an
-  ImplicitPrognostic by applying first-order time differencing.
+* Added TimeDifferencingWrapper, which turns an Stepper into an
+  ImplicitTendencyComponent by applying first-order time differencing.
 * Added set_condensible_name as a way of changing what condensible aliases
   (for example, density_of_solid_phase) refer to. Default is 'water'.
 * Moved wrappers to their own file (out from util.py).
-* Corrected str representation of Diagnostic to say Diagnostic instead of
-  Implicit.
+* Corrected str representation of DiagnosticComponent to say DiagnosticComponent instead of
+  Stepper.
 * Added a function reset_constants to reset the constants library to its
   initial state.
 * Added a function datetime which accepts calendar as a keyword argument, and

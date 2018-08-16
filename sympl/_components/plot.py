@@ -1,6 +1,6 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import DependencyError
-from .._core.array import DataArray
+from .._core.dataarray import DataArray
 
 
 def copy_state(state):

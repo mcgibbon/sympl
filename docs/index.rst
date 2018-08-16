@@ -28,6 +28,8 @@ Documentation
    computation
    monitors
    composites
+   tracers
+   units
    writing_components
    memory_management
    contributing
