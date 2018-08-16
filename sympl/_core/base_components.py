@@ -941,7 +941,8 @@ class ImplicitTendencyComponent(object):
             '    inputs: {}\n'
             '    tendencies: {}\n'
             '    diagnostics: {}'.format(
-                self.__class__, self.inputs, self.tendencies, self.diagnostics)
+                self.__class__, self.input_properties.keys(),
+                self.tendency_properties.keys(), self.diagnostic_properties.keys())
         )
 
     def __repr__(self):
@@ -1147,7 +1148,8 @@ class DiagnosticComponent(object):
             'instance of {}(DiagnosticComponent)\n'
             '    inputs: {}\n'
             '    diagnostics: {}'.format(
-                self.__class__, self.inputs, self.diagnostics)
+                self.__class__, self.input_properties.keys(),
+                self.diagnostic_properties.keys())
         )
 
     def __repr__(self):
