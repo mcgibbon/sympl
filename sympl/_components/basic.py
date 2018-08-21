@@ -1,6 +1,6 @@
 from .._core.dataarray import DataArray
 from .._core.base_components import ImplicitTendencyComponent, TendencyComponent, DiagnosticComponent
-from .._core.units import clean_units
+from .._core.units import unit_registry as ureg
 
 
 class ConstantTendencyComponent(TendencyComponent):
@@ -281,7 +281,7 @@ class RelaxationTendencyComponent(TendencyComponent):
         return {
             self._quantity_name: {
                 'dims': ['*'],
-                'units': clean_units('{} / s'.format(self._units)),
+                'units': str(ureg(self._units) / ureg('s')),
             }
         }
 

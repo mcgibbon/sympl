@@ -1,6 +1,6 @@
 import xarray as xr
 from pint.errors import DimensionalityError
-from .units import data_array_to_array_with_units
+from .units import data_array_to_units as to_units_function
 
 
 class DataArray(xr.DataArray):
@@ -47,12 +47,6 @@ class DataArray(xr.DataArray):
         if 'units' not in self.attrs:
             raise KeyError('"units" not present in attrs')
         try:
-            out_array = data_array_to_array_with_units(self, units)
-            out_attrs = {}
-            out_attrs.update(self.attrs)
-            out_attrs['units'] = units
-            return DataArray(
-                out_array, dims=self.dims, coords=self.coords, attrs=out_attrs
-            )
+            return to_units_function(self, units)
         except DimensionalityError as err:
             raise ValueError(str(err))
