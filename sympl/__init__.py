@@ -23,6 +23,7 @@ from ._core.util import (
     get_component_aliases)
 from sympl._core.combine_properties import combine_component_properties
 from ._core.units import units_are_same, units_are_compatible, is_valid_unit
+from ._core.units import set_backend as set_units_backend
 from sympl._core.get_np_arrays import get_numpy_arrays_with_properties
 from sympl._core.restore_dataarray import restore_data_arrays_with_properties
 from sympl._core.init_np_arrays import initialize_numpy_arrays_with_properties
@@ -42,7 +43,7 @@ __all__ = (
     InvalidStateError, SharedKeyError, DependencyError,
     InvalidPropertyDictError, ComponentExtraOutputError,
     ComponentMissingOutputError,
-    units_are_same, units_are_compatible, is_valid_unit,
+    units_are_same, units_are_compatible, is_valid_unit, set_units_backend,
     DataArray,
     get_constant, set_constant, set_condensible_name, reset_constants,
     get_constants_string, TimeDifferencingWrapper,

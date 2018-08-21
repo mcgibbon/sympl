@@ -1,7 +1,7 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import (
     DependencyError, InvalidStateError)
-from .._core.units import from_unit_to_another
+from .._core.units import array_from_units_to_another
 from .._core.dataarray import DataArray
 from .._core.util import same_list, datetime64_to_datetime
 import xarray as xr
@@ -263,7 +263,7 @@ def append_times_to_dataset(times, dataset, time_units):
         times_list = []
         for time in times:
             times_list.append(time.total_seconds())
-        time_array = from_unit_to_another(
+        time_array = array_from_units_to_another(
             np.array(times_list), 'seconds', time_units)
         dataset.variables['time'][it_start:it_end] = time_array[:]
     else:  # assume datetime

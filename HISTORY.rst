@@ -2,6 +2,14 @@
 What's New
 ==========
 
+
+Latest
+------
+
+* Added set_units_backend function with new cfunits backend which is used by default
+  when cf_units is available.
+
+
 v0.4.0
 ------
 
