@@ -24,8 +24,17 @@ Sympl
      :alt: Updates
 
 
-Sympl is a Toolkit for building Earth system models in Python. For more
-information, read the documentation at https://sympl.readthedocs.io.
+Sympl is a framework for building Earth system models in Python. For more
+information, read the documentation at https://sympl.readthedocs.io, particularly
+the quickstart_. This framework is meant to be used along with model toolkits
+like CliMT_ to write models. See the paper_ on Sympl and CliMT for a good
+overview and some examples! You may also want to check out the
+`CliMT documentation`_.
 
 * Free software: BSD license
 * Documentation: https://sympl.readthedocs.io.
+
+.. _quickstart: https://sympl.readthedocs.io/en/latest/quickstart.html
+.. _paper: https://www.geosci-model-dev.net/11/3781/2018/
+.. _CliMT: https://github.com/climt/climt
+.. _CliMT documentation: https://climt.readthedocs.io/en/latest/

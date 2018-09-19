@@ -4,7 +4,7 @@ Quickstart
 
 Here we have an example of how Sympl might be used to construct a model run
 script, with explanations of what's going on. Here is the full model script we
-will be looking at:
+will be looking at (*we break it into smaller pieces below*):
 
 .. code-block:: python
 

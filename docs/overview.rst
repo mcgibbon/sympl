@@ -2,12 +2,19 @@
 Overview: Why Sympl?
 ====================
 
-Traditional atmospheric and Earth system models can be difficult to understand
-and modify for a number of reasons. Sympl aims to learn from the past
-experience of these models to accelerate research and improve accessibility.
+Traditional atmospheric and Earth system models can be hard to read and change
+for many reasons. Sympl tries to learn from the past experience of these models
+to speed up research and improve accessibility.
 
-Sympl defines a framework of Python object APIs that can be combined to create a
-model. This has a number of benefits:
+At its core, Sympl defines a model in terms of a `state` that gets changed in
+sequence by components of a model (like the radiation scheme, or dynamical
+core). Each of those components as well-defined and documented inputs and
+outputs, and code in Sympl will automatically handle unit and dimensionality
+conversions (such as dimension orderings) to give components the inputs they
+need.
+
+Sympl defines a framework of Python object interfaces (APIs) that can be
+combined to create a model. This has many benefits:
 
 * Objects can use code written in any language that can be called from Python,
   including Fortran, C, C++, Julia, Matlab, and others.
@@ -16,7 +23,8 @@ model. This has a number of benefits:
   model's code. Certain interfaces have been designed to force model code to
   self-document, such as having inputs and outputs as properties of a scheme.
 * Objects can be swapped out with other compatible objects. For example, Sympl
-  makes it trivial to change the type of time stepping used.
+  makes it trivial to change the type of time stepping used on a prognostic
+  scheme.
 * Code can be re-used between different types of models. For instance, an
   atmospheric general circulation model, numerical weather prediction model,
   and large-eddy simulation could all use the same RRTM radiation object.
@@ -45,19 +53,31 @@ and packages to be used alongside one another.
 Then where's the model?
 -----------------------
 
-Check out `CliMT <https://github.com/climt/climt>`_ as an example.
+Check out `CliMT <https://github.com/climt/climt>`_ as an example. We highly
+recommend reading the `paper on Sympl and CliMT`_.
 
-Models created with Sympl can work differently from traditional Fortran models.
-A model developer makes the components of their model available. Using these
-components, you can write a script which acts as the model executable, but also
-configures the model, and calls any online analysis you want to run. Model
-developers may make example model scripts available which you can modify.
+In Sympl, the "model" in the traditional sense of Fortran models is essentially
+your run script. You use a Python run script instead of a Fortran module like
+`main.f90`. This may sound scary, but the idea is that the python run script
+is as easy (or easier) to understand than a configuration file. Sympl makes
+choices that force those run scripts to be easier to understand.
+You can see examples in the above paper.
+
+A "model developer" in the traditional sense would write a toolkit package
+containing model components that are used by those run scripts. See CliMT for
+an example of this. That toolkit should also come with example run scripts
+using its components.
 
 In a way, when you configure the model you are writing the model itself. This
 is reasonable in Sympl because the model run script should be accessible and
 readable by users with basic knowledge of programming (even users who don't
 know Python). By being readable, the model run script tells others clearly and
 precisely how you configured and ran your model.
+
+If someone wants to write a model in the traditional way, where their Python
+run script is never changed and instead you configure the model by changing
+a configuration file, they can do that, too! Read about the particular model
+you're using for details.
 
 The API
 -------
@@ -96,3 +116,4 @@ The state can be stored or viewed using :py:class:`~sympl.Monitor` objects.
 These take in the model state and do something with it, such as storing it in
 a NetCDF file, or updating an interactive plot that is being shown to the user.
 
+.. _paper on Sympl and CliMT:  https://www.geosci-model-dev.net/11/3781/2018/
