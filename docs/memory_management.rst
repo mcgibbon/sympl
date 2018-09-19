@@ -18,20 +18,20 @@ with an example. Say you create a ConstantTendencyComponent object like so::
             np.ones((5, 5, 10)),
             dims=('lon', 'lat', 'lev'), attrs={'units': 'K/s'})
     >>> tendencies = {'air_temperature': array}
-    >>> prognostic = ConstantTendencyComponent(tendencies)
+    >>> tendency_component = ConstantTendencyComponent(tendencies)
 
 This is all fine so far. But it's important to know that now ``array`` is the
-same array stored inside ``prognostic``::
+same array stored inside ``tendency_component``::
 
-    >>> out_tendencies, out_diagnostics = prognostic({})
+    >>> out_tendencies, out_diagnostics = tendency_component({})
     >>> out_tendencies['air_temperature'] is array  # same place in memory
     True
 
 So if you were to modify ``array``, it would *change the output given by
-prognostic*::
+tendency_component*::
 
     >>> array[:] = array * 5.
-    >>> out_tendencies, out_diagnostics = prognostic({})
+    >>> out_tendencies, out_diagnostics = tendency_component({})
     >>> out_tendencies['air_temperature'] is array
     True
     >>> np.all(out_tendencies['air_temperature'].values == array.values)
@@ -41,10 +41,10 @@ When in doubt, assume that any array you put into a component when it is
 initialized should not be modified any more, unless changing the values in the
 component is intentional.
 
-However, this code would not modify the array in ``prognostic``::
+However, this code would not modify the array in ``tendency_component``::
 
     >>> array = array * 5.
-    >>> out_tendencies, out_diagnostics = prognostic({})
+    >>> out_tendencies, out_diagnostics = tendency_component({})
     >>> out_tendencies['air_temperature'] is array
     False
     >>> np.all(out_tendencies['air_temperature'].values == array.values)
