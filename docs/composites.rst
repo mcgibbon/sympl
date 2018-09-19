@@ -11,15 +11,15 @@ call a single component. For example, *instead* of writing:
 
 .. code-block:: python
 
-    prognostic_list = [
-        MyPrognostic(),
-        MyOtherPrognostic(),
-        YetAnotherPrognostic(),
+    tendency_component_list = [
+        MyTendencyComponent(),
+        MyOtherTendencyComponent(),
+        YetAnotherTendencyComponent(),
     ]
     all_diagnostics = {}
     total_tendencies = {}
-    for prognostic_component in prognostic_list:
-        tendencies, diagnostics = prognostic_component(state)
+    for tendency_component in tendency_component_list:
+        tendencies, diagnostics = tendency_component(state)
         # this should actually check to make sure nothing is overwritten,
         # but this code does not
         total_tendencies.update(tendencies)
@@ -35,12 +35,12 @@ You could write:
 
 .. code-block:: python
 
-    prognostic_composite = TendencyComponentComposite([
-        MyPrognostic(),
-        MyOtherPrognostic(),
-        YetAnotherPrognostic(),
+    tendency_component_composite = TendencyComponentComposite([
+        MyTendencyComponent(),
+        MyOtherTendencyComponent(),
+        YetAnotherTendencyComponent(),
     ])
-    tendencies, diagnostics = prognostic_composite(state)
+    tendencies, diagnostics = tendency_component_composite(state)
 
 This second call is much cleaner. It will also automatically detect whether
 multiple components are trying to write out the same diagnostic, and raise
@@ -48,7 +48,7 @@ an exception if that is the case (so no results are being silently
 overwritten). You can get similar simplifications for
 :py:class:`~sympl.DiagnosticComponent` and :py:class:`~sympl.Monitor`.
 
-.. note:: PrognosticComposites are mainly useful inside of TimeSteppers, so
+.. note:: TendencyComponentComposites are mainly useful inside of TimeSteppers, so
           if you're only writing a model script it's unlikely you'll need them.
 
 API Reference
