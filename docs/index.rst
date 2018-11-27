@@ -8,12 +8,15 @@ models in Python. It is meant to be used in combination with other packages
 that provide model components in order to write model scripts. Its source
 code can be found on GitHub_.
 
-New users should read the quickstart_. This framework is meant to be used along
+New users should read the :ref:`quickstart`. This framework is meant to be used along
 with model toolkits like CliMT_ to write models. See the paper_ on Sympl and
 CliMT for a good overview and some examples! You may also want to check out the
 `CliMT documentation`_.
 
 .. _GitHub: https://github.com/mcgibbon/sympl
+.. _paper: https://www.geosci-model-dev.net/11/3781/2018/gmd-11-3781-2018.html
+.. _`CliMT documentation`: https://climt.readthedocs.io/en/latest/
+.. _CliMT: https://github.com/climt/climt
 
 Documentation
 -------------
