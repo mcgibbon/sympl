@@ -25,6 +25,18 @@ imported by calling :py:func:`~sympl.reset_constants`.
 
 .. autofunction:: sympl.reset_constants
 
+Debugging and Logging Constants
+-------------------------------
+
+You can get a string describing current constants by calling :py:func:`~sympl.get_constants_string`:
+
+.. code-block:: python
+
+    import sympl
+    print(sympl.get_constants_string())
+
+.. autofunction:: sympl.get_constants_string
+
 Condensible Quantities
 ----------------------
 

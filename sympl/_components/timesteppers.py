@@ -1,65 +1,44 @@
-from .base_components import PrognosticComposite
-import abc
-from .array import DataArray
+from .._core.tendencystepper import TendencyStepper
+from .._core.dataarray import DataArray
+from .._core.state import copy_untouched_quantities, add, multiply
 
 
-class TimeStepper(object):
-    """An object which integrates model state forward in time.
-
-    It uses Prognostic and Diagnostic objects to update the current model state
-    with diagnostics, and to return the model state at the next timestep.
-
-    Attributes
-    ----------
-    inputs : tuple of str
-        The quantities required in the state when the object is called.
-    diagnostics: tuple of str
-        The quantities for which values for the old state are returned
-        when the object is called.
-    outputs: tuple of str
-        The quantities for which values for the new state are returned
-        when the object is called.
+class SSPRungeKutta(TendencyStepper):
+    """
+    A TendencyStepper using the Strong Stability Preserving Runge-Kutta scheme,
+    as in Numerical Methods for Fluid Dynamics by Dale Durran (2nd ed) and
+    as proposed by Shu and Osher (1988).
     """
 
-    __metaclass__ = abc.ABCMeta
-
-    def __str__(self):
-        return (
-            'instance of {}(TimeStepper)\n'
-            '    inputs: {}\n'
-            '    outputs: {}\n'
-            '    diagnostics: {}\n'
-            '    Prognostic components: {}'.format(
-                self.__class__, self.inputs, self.outputs, self.diagnostics,
-                str(self._prognostic))
-        )
-
-    def __repr__(self):
-        if hasattr(self, '_making_repr') and self._making_repr:
-            return '{}(recursive reference)'.format(self.__class__)
-        else:
-            self._making_repr = True
-            return_value = '{}({})'.format(
-                self.__class__,
-                '\n'.join('{}: {}'.format(repr(key), repr(value))
-                          for key, value in self.__dict__.items()
-                          if key != '_making_repr'))
-            self._making_repr = False
-            return return_value
-
-    def __init__(self, prognostic_list, **kwargs):
-        self._prognostic = PrognosticComposite(*prognostic_list)
-
-    @abc.abstractmethod
-    def __call__(self, state, timestep):
+    def __init__(self, *args, **kwargs):
         """
-        Retrieves any diagnostics and returns a new state corresponding
+        Initialize a strong stability preserving Runge-Kutta time stepper.
+
+        Args
+        ----
+        *args : TendencyComponent or ImplicitTendencyComponent
+            Objects to call for tendencies when doing time stepping.
+        stages: int, optional
+            Number of stages to use. Should be 2 or 3. Default is 3.
+        """
+        stages = kwargs.pop('stages', 3)
+        if stages not in (2, 3):
+            raise ValueError(
+                'stages must be one of 2 or 3, received {}'.format(stages))
+        self._stages = stages
+        self._euler_stepper = AdamsBashforth(*args, order=1)
+        super(SSPRungeKutta, self).__init__(*args, **kwargs)
+
+    def _call(self, state, timestep):
+        """
+        Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
 
         Args
         ----
         state : dict
-            The current model state.
+            The current model state. Will be updated in-place by
+            the call with any diagnostics from the current timestep.
         timestep : timedelta
             The amount of time to step forward.
 
@@ -70,40 +49,44 @@ class TimeStepper(object):
         new_state : dict
             The model state at the next timestep.
         """
+        if self._stages == 2:
+            return self._step_2_stages(state, timestep)
+        elif self._stages == 3:
+            return self._step_3_stages(state, timestep)
 
-    def _copy_untouched_quantities(self, old_state, new_state):
-        for key in old_state.keys():
-            if key not in new_state:
-                new_state[key] = old_state[key]
+    def _step_3_stages(self, state, timestep):
+        diagnostics, state_1 = self._euler_stepper(state, timestep)
+        _, state_1_5 = self._euler_stepper(state_1, timestep)
+        state_2 = add(multiply(0.75, state), multiply(0.25, state_1_5))
+        _, state_2_5 = self._euler_stepper(state_2, timestep)
+        out_state = add(multiply(1./3, state), multiply(2./3, state_2_5))
+        return diagnostics, out_state
 
-    @property
-    def inputs(self):
-        return self._prognostic.inputs
-
-    @property
-    def outputs(self):
-        return self._prognostic.tendencies
-
-    @property
-    def diagnostics(self):
-        return self._prognostic.diagnostics
+    def _step_2_stages(self, state, timestep):
+        assert state is not None
+        diagnostics, state_1 = self._euler_stepper(state, timestep)
+        assert state_1 is not None
+        _, state_2 = self._euler_stepper(state_1, timestep)
+        out_state = multiply(0.5, add(state, state_2))
+        return diagnostics, out_state
 
 
-class AdamsBashforth(TimeStepper):
-    """A TimeStepper using the Adams-Bashforth scheme."""
+class AdamsBashforth(TendencyStepper):
+    """A TendencyStepper using the Adams-Bashforth scheme."""
 
-    def __init__(self, prognostic_list, order=3):
+    def __init__(self, *args, **kwargs):
         """
         Initialize an Adams-Bashforth time stepper.
 
         Args
         ----
-        prognostic_list : iterable of Prognostic
-            Objects used to get tendencies for time stepping.
+        *args : TendencyComponent or ImplicitTendencyComponent
+            Objects to call for tendencies when doing time stepping.
         order : int, optional
             The order of accuracy to use. Must be between
             1 and 4. 1 is the same as the Euler method. Default is 3.
         """
+        order = kwargs.pop('order', 3)
         if isinstance(order, float) and order.is_integer():
             order = int(order)
         if not isinstance(order, int):
@@ -113,9 +96,9 @@ class AdamsBashforth(TimeStepper):
         self._order = order
         self._timestep = None
         self._tendencies_list = []
-        super(AdamsBashforth, self).__init__(prognostic_list)
+        super(AdamsBashforth, self).__init__(*args, **kwargs)
 
-    def __call__(self, state, timestep):
+    def _call(self, state, timestep):
         """
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
@@ -143,11 +126,11 @@ class AdamsBashforth(TimeStepper):
         """
         self._ensure_constant_timestep(timestep)
         state = state.copy()
-        tendencies, diagnostics = self._prognostic(state)
+        tendencies, diagnostics = self.prognostic(state, timestep)
         convert_tendencies_units_for_state(tendencies, state)
         self._tendencies_list.append(tendencies)
         new_state = self._perform_step(state, timestep)
-        self._copy_untouched_quantities(state, new_state)
+        copy_untouched_quantities(state, new_state)
         if len(self._tendencies_list) == self._order:
             self._tendencies_list.pop(0)  # remove the oldest entry
         return diagnostics, new_state
@@ -190,8 +173,8 @@ def convert_tendencies_units_for_state(tendencies, state):
             tendencies[quantity_name] = tendencies[quantity_name].to_units(desired_units)
 
 
-class Leapfrog(TimeStepper):
-    """A TimeStepper using the Leapfrog scheme.
+class Leapfrog(TendencyStepper):
+    """A TendencyStepper using the Leapfrog scheme.
 
     This scheme calculates the
     values at time $t_{n+1}$ using the derivatives at $t_{n}$ and values at
@@ -201,16 +184,14 @@ class Leapfrog(TimeStepper):
     $t_{n+1}$, according to Williams (2009)) closer to the mean of the values
     at $t_{n-1}$ and $t_{n+1}$."""
 
-    def __init__(
-            self, prognostic_list, asselin_strength=0.05,
-            alpha=0.5):
+    def __init__(self, *args, **kwargs):
         """
         Initialize a Leapfrog time stepper.
 
         Args
         ----
-        prognostic_list : iterable of Prognostic
-            Objects used to get tendencies for time stepping.
+        *args : TendencyComponent or ImplicitTendencyComponent
+            Objects to call for tendencies when doing time stepping.
         asselin_strength : float, optional
             The filter parameter used to determine the strength
             of the Asselin filter. Default is 0.05.
@@ -229,12 +210,12 @@ class Leapfrog(TimeStepper):
         doi: 10.1175/2009MWR2724.1.
         """
         self._old_state = None
-        self._asselin_strength = asselin_strength
+        self._asselin_strength = kwargs.pop('asselin_strength', 0.05)
         self._timestep = None
-        self._alpha = alpha
-        super(Leapfrog, self).__init__(prognostic_list)
+        self._alpha = kwargs.pop('alpha', 0.5)
+        super(Leapfrog, self).__init__(*args, **kwargs)
 
-    def __call__(self, state, timestep):
+    def _call(self, state, timestep):
         """
         Updates the input state dictionary and returns a new state corresponding
         to the next timestep.
@@ -257,7 +238,7 @@ class Leapfrog(TimeStepper):
         Raises
         ------
         SharedKeyError
-            If a Diagnostic object has an output that is
+            If a DiagnosticComponent object has an output that is
             already in the state at the start of the timestep.
         ValueError
             If the timestep is not the same as the last time
@@ -266,7 +247,7 @@ class Leapfrog(TimeStepper):
         original_state = state
         state = state.copy()
         self._ensure_constant_timestep(timestep)
-        tendencies, diagnostics = self._prognostic(state)
+        tendencies, diagnostics = self.prognostic(state, timestep)
         convert_tendencies_units_for_state(tendencies, state)
         if self._old_state is None:
             new_state = step_forward_euler(state, tendencies, timestep)
@@ -274,7 +255,7 @@ class Leapfrog(TimeStepper):
             state, new_state = step_leapfrog(
                 self._old_state, state, tendencies, timestep,
                 asselin_strength=self._asselin_strength, alpha=self._alpha)
-        self._copy_untouched_quantities(state, new_state)
+        copy_untouched_quantities(state, new_state)
         self._old_state = state
         for key in original_state.keys():
             original_state[key] = state[key]  # allow filtering to be applied

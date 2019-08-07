@@ -1,59 +1,12 @@
 import pytest
 from sympl import (
-    DataArray, set_direction_names, get_numpy_array,
+    DataArray, get_numpy_array,
     restore_dimensions, get_numpy_arrays_with_properties,
     restore_data_arrays_with_properties, InvalidStateError,
     InvalidPropertyDictError)
 import numpy as np
 import unittest
 
-"""
-get_numpy_arrays_with_properties:
-    - returns numpy arrays in the dict
-    - those numpy arrays should have same dtype as original data
-        * even when unit conversion happens
-    - properly collects dimensions along a direction
-    - they should actually be the same numpy arrays (with memory) as original data if no conversion happens
-        * even when units are specified (so long as they match)
-    - should be the same quantities as requested by the properties
-        * contain all
-        * not contain extra
-        * raise exception if some are missing
-    - units
-        * converts if requested and present
-        * does nothing if not requested whether or not present
-        * raises exception if not requested or not present
-        * unit conversion should not modify the input array
-    - requires "dims" to be specified, raises exception if they aren't
-    - match_dims_like
-        * should work if matched dimensions are identical
-        * should raise exception if matched dimensions are not identical
-        * should require value to be a quantity in property_dictionary
-        * should require all A matches to look like B and all B matches to look like A
-    - should raise ValueError when explicitly specified dimension is not present
-    - should return a scalar array when called on a scalar DataArray
-
-Test case for when wildcard dimension doesn't match anything - the error message needs to be much more descriptive
-    e.g. dims=['x', 'y', 'z'] and state=['foo', 'y', 'z']
-
-restore_data_arrays_with_properties:
-    - should return a dictionary of DataArrays
-    - DataArray values should be the same arrays as original data if no conversion happens
-    - properly restores collected dimensions
-    - if conversion does happen, dtype should be the same as the input
-    - should return same quantities as requested by the properties
-        * contain all
-        * not contain extra
-        * raise exception if some are missing
-    - units
-        * should be the same value as specified in output_properties dict
-    - requires dims_like to be specified, raises exception if it's not
-        * returned DataArray should have same dimensions as dims_like object
-        * exception should be raised if dims_like is wrong (shape is incompatible)
-        * should return coords like the dims_like quantity
-
-Should add any created exceptions to the docstrings for these functions
-"""
 
 def test_get_numpy_array_3d_no_change():
     array = DataArray(
@@ -204,26 +157,6 @@ def test_get_numpy_array_no_dimensions_listed_raises_value_error():
         raise err
     else:
         raise AssertionError('Expected ValueError but no error was raised')
-
-
-def test_get_numpy_array_multiple_dims_on_same_direction():
-    try:
-        set_direction_names(x=['lon'])
-        array = DataArray(
-            np.random.randn(2, 3),
-            dims=['x', 'lon'],
-            attrs={'units': ''},
-        )
-        try:
-            numpy_array = get_numpy_array(array, ['x', 'y'])
-        except ValueError:
-            pass
-        except Exception as err:
-            raise err
-        else:
-            raise AssertionError('Expected ValueError but no error was raised')
-    finally:
-        set_direction_names(x=[], y=[], z=[])
 
 
 def test_get_numpy_array_not_enough_out_dims():
@@ -481,12 +414,6 @@ def test_restore_dimensions_removes_dummy_axes():
 
 class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        set_direction_names(x=(), y=(), z=())
-
     def test_returns_numpy_array(self):
         T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
         property_dictionary = {
@@ -551,12 +478,12 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             ),
         }
         try:
-            return_value = get_numpy_arrays_with_properties(
+            get_numpy_arrays_with_properties(
                 state, property_dictionary)
-        except InvalidStateError:
+        except KeyError:
             pass
         else:
-            raise AssertionError('should have raised InvalidStateError')
+            raise AssertionError('should have raised KeyError')
 
     def test_returns_scalar_array(self):
         T_array = np.array(0.)
@@ -604,59 +531,11 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             T_array)
         assert return_value['air_temperature'].base is T_array
 
-    def test_collects_wildcard_dimension(self):
-        set_direction_names(z=['mid_levels'])
-        T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
-        property_dictionary = {
-            'air_temperature': {
-                'units': 'degK',
-                'dims': ['x', 'y', 'z'],
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                T_array,
-                dims=['x', 'y', 'mid_levels'],
-                attrs={'units': 'degK'},
-            ),
-        }
-        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        assert isinstance(return_value, dict)
-        assert len(return_value.keys()) == 1
-        assert isinstance(return_value['air_temperature'], np.ndarray)
-        assert np.byte_bounds(return_value['air_temperature']) == np.byte_bounds(
-            T_array)
-        assert return_value['air_temperature'].base is T_array
-        assert return_value['air_temperature'].shape == (2, 3, 4)
-
-    def test_raises_on_missing_explicit_dimension(self):
-        set_direction_names(z=['mid_levels'])
-        T_array = np.zeros([2, 3, 4], dtype=np.float64) + 280.
-        property_dictionary = {
-            'air_temperature': {
-                'units': 'degK',
-                'dims': ['x', 'y', 'mid_levels'],
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                T_array,
-                dims=['x', 'y', 'z'],
-                attrs={'units': 'degK'},
-            ),
-        }
-        try:
-            return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidStateError:
-            pass
-        else:
-            raise AssertionError('should have raised InvalidStateError')
-
     def test_creates_length_1_dimensions(self):
         T_array = np.zeros([4], dtype=np.float64) + 280.
         property_dictionary = {
             'air_temperature': {
-                'dims': ['x', 'y', 'z'],
+                'dims': ['*', 'z'],
                 'units': 'degK',
             },
         }
@@ -675,7 +554,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             return_value['air_temperature']) == np.byte_bounds(
             T_array)
         assert return_value['air_temperature'].base is T_array
-        assert return_value['air_temperature'].shape == (1, 1, 4)
+        assert return_value['air_temperature'].shape == (1, 4)
 
     def test_only_requested_properties_are_returned(self):
         property_dictionary = {
@@ -735,35 +614,6 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert 'air_pressure' in return_value.keys()
         assert np.all(return_value['air_temperature'] == 0.)
         assert np.all(return_value['air_pressure'] == 0.)
-
-    def test_raises_exception_on_missing_quantity(self):
-        property_dictionary = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'z'],
-                'units': 'degK',
-            },
-            'air_pressure': {
-                'dims': ['x', 'y', 'z'],
-                'units': 'Pa',
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                np.zeros([4], dtype=np.float64),
-                dims=['z'],
-                attrs={'units': 'degK'},
-            ),
-            'eastward_wind': DataArray(
-                np.zeros([2,2,4], dtype=np.float64),
-                attrs={'units': 'm/s'}
-            ),
-        }
-        try:
-            get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidStateError:
-            pass
-        else:
-            raise AssertionError('should have raised InvalidStateError')
 
     def test_converts_units(self):
         property_dictionary = {
@@ -904,100 +754,6 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         else:
             raise AssertionError('should have raised ValueError')
 
-    def test_dims_like_accepts_valid_case(self):
-        set_direction_names(x=['x_cell_center', 'x_cell_interface'],
-                            z=['mid_levels', 'interface_levels'])
-        property_dictionary = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'mid_levels'],
-                'units': 'degK',
-            },
-            'air_pressure': {
-                'dims': ['x', 'y', 'interface_levels'],
-                'units': 'Pa',
-                'match_dims_like': 'air_temperature'
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                np.zeros([2, 2, 4], dtype=np.float64),
-                dims=['x_cell_center', 'y', 'mid_levels'],
-                attrs={'units': 'degK'},
-            ),
-            'air_pressure': DataArray(
-                np.zeros([2, 2, 4], dtype=np.float64),
-                dims=['x_cell_center', 'y', 'interface_levels'],
-                attrs={'units': 'Pa'}
-            ),
-        }
-        return_value = get_numpy_arrays_with_properties(state, property_dictionary)
-        assert isinstance(return_value, dict)
-        assert len(return_value.keys()) == 2
-        assert 'air_temperature' in return_value.keys()
-        assert 'air_pressure' in return_value.keys()
-
-    def test_dims_like_rejects_mismatched_dimensions(self):
-        set_direction_names(x=['x_cell_center', 'x_cell_interface'],
-                            z=['mid_levels', 'interface_levels'])
-        property_dictionary = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'mid_levels'],
-                'units': 'degK',
-            },
-            'air_pressure': {
-                'dims': ['x', 'y', 'interface_levels'],
-                'units': 'Pa',
-                'match_dims_like': 'air_temperature'
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                np.zeros([2, 2, 4], dtype=np.float64),
-                dims=['x_cell_center', 'y', 'mid_levels'],
-                attrs={'units': 'degK'},
-            ),
-            'air_pressure': DataArray(
-                np.zeros([2, 2, 4], dtype=np.float64),
-                dims=['x_cell_interface', 'y', 'interface_levels'],
-                attrs={'units': 'Pa'}
-            ),
-        }
-        try:
-            get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidStateError:
-            pass
-        else:
-            raise AssertionError('should have raised InvalidStateError')
-
-    def test_dims_like_raises_if_quantity_not_in_property_dict(self):
-        set_direction_names(x=['x_cell_center', 'x_cell_interface'],
-                            z=['mid_levels', 'interface_levels'])
-        property_dictionary = {
-            'air_pressure': {
-                'dims': ['x', 'y', 'interface_levels'],
-                'units': 'Pa',
-                'match_dims_like': 'air_temperature'
-            },
-        }
-        state = {
-            'air_temperature': DataArray(
-                np.zeros([2, 2, 4], dtype=np.float64),
-                dims=['x_cell_center', 'y', 'mid_levels'],
-                attrs={'units': 'degK'},
-            ),
-            'air_pressure': DataArray(
-                np.zeros([2, 2, 4], dtype=np.float64),
-                dims=['x_cell_interface', 'y', 'interface_levels'],
-                attrs={'units': 'Pa'}
-            ),
-        }
-        try:
-            get_numpy_arrays_with_properties(state, property_dictionary)
-        except InvalidPropertyDictError:
-            pass
-        else:
-            raise AssertionError('should have raised InvalidPropertyDictError')
-
     def test_collects_horizontal_dimensions(self):
         random = np.random.RandomState(0)
         T_array = random.randn(3, 2, 4)
@@ -1015,10 +771,6 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
             }
         }
         return_value = get_numpy_arrays_with_properties(input_state, input_properties)
-        assert np.byte_bounds(
-            return_value['air_temperature']) == np.byte_bounds(
-            T_array)
-        assert return_value['air_temperature'].base is T_array
         assert return_value['air_temperature'].shape == (4, 6)
         for i in range(3):
             for j in range(2):
@@ -1067,14 +819,86 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         else:
             raise AssertionError('should have raised InvalidStateError')
 
+    def test_expands_named_dimension(self):
+        random = np.random.RandomState(0)
+        T_array = random.randn(3)
+        input_state = {
+            'air_pressure': DataArray(
+                np.zeros([3, 4]),
+                dims=['dim1', 'dim2'],
+                attrs={'units': 'Pa'},
+            ),
+            'air_temperature': DataArray(
+                T_array,
+                dims=['dim1'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_pressure': {
+                'dims': ['dim1', 'dim2'],
+                'units': 'Pa',
+            },
+            'air_temperature': {
+                'dims': ['dim1', 'dim2'],
+                'units': 'degK',
+            },
+        }
+        return_value = get_numpy_arrays_with_properties(input_state, input_properties)
+        assert return_value['air_temperature'].shape == (3, 4)
+        assert np.all(return_value['air_temperature'] == T_array[:, None])
+
+    def test_expands_named_dimension_with_wildcard_present(self):
+        random = np.random.RandomState(0)
+        T_array = random.randn(3)
+        input_state = {
+            'air_pressure': DataArray(
+                np.zeros([3, 4]),
+                dims=['dim1', 'dim2'],
+                attrs={'units': 'Pa'},
+            ),
+            'air_temperature': DataArray(
+                T_array,
+                dims=['dim1'],
+                attrs={'units': 'degK'},
+            )
+        }
+        input_properties = {
+            'air_pressure': {
+                'dims': ['*', 'dim2'],
+                'units': 'Pa',
+            },
+            'air_temperature': {
+                'dims': ['*', 'dim2'],
+                'units': 'degK',
+            },
+        }
+        return_value = get_numpy_arrays_with_properties(input_state, input_properties)
+        assert return_value['air_temperature'].shape == (3, 4)
+        assert np.all(return_value['air_temperature'] == T_array[:, None])
+
 
 class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        set_direction_names(x=(), y=(), z=())
+    def test_restores_with_dims(self):
+        raw_arrays = {
+            'output1': np.ones([10]),
+        }
+        output_properties =  {
+            'output1': {
+                'dims': ['dim1'],
+                'units': 'm'
+            }
+        }
+        output = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, {}, {})
+        assert len(output) == 1
+        assert 'output1' in output.keys()
+        assert isinstance(output['output1'], DataArray)
+        assert len(output['output1'].dims) == 1
+        assert 'dim1' in output['output1'].dims
+        assert 'units' in output['output1'].attrs.keys()
+        assert output['output1'].attrs['units'] == 'm'
 
     def test_returns_simple_value(self):
         input_state = {
@@ -1094,7 +918,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
         output_properties = {
             'air_temperature_tendency': {
-                'dims_like': 'air_temperature',
+                'dims': ['x', 'y', 'z'],
                 'units': 'degK/s',
             }
         }
@@ -1167,7 +991,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
         output_properties = {
             'air_temperature_tendency': {
-                'dims_like': 'air_temperature',
+                'dims': ['z', '*'],
                 'units': 'degK/s',
             }
         }
@@ -1183,96 +1007,10 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
             input_state['air_temperature'].values)
         assert (return_value['air_temperature_tendency'].values.base is
                 input_state['air_temperature'].values)
-        assert return_value['air_temperature_tendency'].shape == (3, 2, 4)
-        assert np.all(return_value['air_temperature_tendency'] == T_array)
-        assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
-
-    def test_restores_coords(self):
-        x = np.array([0., 10.])
-        y = np.array([0., 10.])
-        z = np.array([0., 5., 10., 15.])
-        input_state = {
-            'air_temperature': DataArray(
-                np.zeros([2, 2, 4]),
-                dims=['x', 'y', 'z'],
-                attrs={'units': 'degK'},
-                coords=[
-                    ('x', x, {'units': 'm'}),
-                    ('y', y, {'units': 'km'}),
-                    ('z', z, {'units': 'cm'})]
-            )
-        }
-        input_properties = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'z'],
-                'units': 'degK',
-            }
-        }
-        raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
-        raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
-        output_properties = {
-            'air_temperature_tendency': {
-                'dims_like': 'air_temperature',
-                'units': 'degK/s',
-            }
-        }
-        return_value = restore_data_arrays_with_properties(
-            raw_arrays, output_properties, input_state, input_properties
-        )
-        assert np.all(return_value['air_temperature_tendency'].coords['x'] ==
-                      input_state['air_temperature'].coords['x'])
-        assert return_value['air_temperature_tendency'].coords['x'].attrs['units'] == 'm'
-        assert np.all(return_value['air_temperature_tendency'].coords['y'] ==
-                      input_state['air_temperature'].coords['y'])
-        assert return_value['air_temperature_tendency'].coords['y'].attrs['units'] == 'km'
-        assert np.all(return_value['air_temperature_tendency'].coords['z'] ==
-                      input_state['air_temperature'].coords['z'])
-        assert return_value['air_temperature_tendency'].coords['z'].attrs['units'] == 'cm'
-        assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
-
-    def test_restores_matched_coords(self):
-        set_direction_names(x=['lon'], y=['lat'], z=['height'])
-        x = np.array([0., 10.])
-        y = np.array([0., 10.])
-        z = np.array([0., 5., 10., 15.])
-        input_state = {
-            'air_temperature': DataArray(
-                np.zeros([2, 2, 4]),
-                dims=['lon', 'lat', 'height'],
-                attrs={'units': 'degK'},
-                coords=[
-                    ('lon', x, {'units': 'degrees_E'}),
-                    ('lat', y, {'units': 'degrees_N'}),
-                    ('height', z, {'units': 'km'})]
-            )
-        }
-        input_properties = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'z'],
-                'units': 'degK',
-            }
-        }
-        raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
-        raw_arrays = {key + '_tendency': value for key, value in raw_arrays.items()}
-        output_properties = {
-            'air_temperature_tendency': {
-                'dims_like': 'air_temperature',
-                'units': 'degK/s',
-            }
-        }
-        return_value = restore_data_arrays_with_properties(
-            raw_arrays, output_properties, input_state, input_properties
-        )
-        assert np.all(return_value['air_temperature_tendency'].coords['lon'] ==
-                      input_state['air_temperature'].coords['lon'])
-        assert return_value['air_temperature_tendency'].coords['lon'].attrs['units'] == 'degrees_E'
-        assert np.all(return_value['air_temperature_tendency'].coords['lat'] ==
-                      input_state['air_temperature'].coords['lat'])
-        assert return_value['air_temperature_tendency'].coords['lat'].attrs['units'] == 'degrees_N'
-        assert np.all(return_value['air_temperature_tendency'].coords['height'] ==
-                      input_state['air_temperature'].coords['height'])
-        assert return_value['air_temperature_tendency'].coords['height'].attrs['units'] == 'km'
-        assert return_value['air_temperature_tendency'].dims == input_state['air_temperature'].dims
+        assert return_value['air_temperature_tendency'].dims == ('z', 'x', 'y')
+        assert return_value['air_temperature_tendency'].shape == (4, 3, 2)
+        for i in range(4):
+            assert np.all(return_value['air_temperature_tendency'][i, :, :] == T_array[:, :, i])
 
     def test_restores_scalar_array(self):
         T_array = np.array(0.)
@@ -1322,7 +1060,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         }
         output_properties = {
             'foo': {
-                'dims_like': 'air_temperature',
+                'dims': ['x', 'y', 'z'],
                 'units': 'm',
             }
         }
@@ -1354,22 +1092,22 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         }
         output_properties = {
             'foo': {
-                'dims_like': 'air_temperature',
+                'dims': ['x', 'y', 'z'],
                 'units': 'm',
             },
             'bar': {
-                'dims_like': 'air_temperature',
+                'dims': ['x', 'y', 'z'],
                 'units': 'm',
-            }
+            },
         }
         try:
             restore_data_arrays_with_properties(
                 raw_arrays, output_properties, input_state, input_properties
             )
-        except ValueError:
+        except KeyError:
             pass
         else:
-            raise AssertionError('should have raised ValueError')
+            raise AssertionError('should have raised KeyError')
 
     def test_restores_aliased_name(self):
         input_state = {
@@ -1390,7 +1128,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         }
         output_properties = {
             'air_pressure': {
-                'dims_like': 'air_temperature',
+                'dims': ['x', 'y', 'z'],
                 'units': 'm',
                 'alias': 'p',
             },
@@ -1402,40 +1140,6 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert 'air_pressure' in data_arrays.keys()
         assert np.all(data_arrays['air_pressure'].values == raw_arrays['p'])
         assert np.byte_bounds(data_arrays['air_pressure'].values) == np.byte_bounds(raw_arrays['p'])
-
-    def test_restores_when_name_has_alias(self):
-        input_state = {
-            'air_temperature': DataArray(
-                np.zeros([2, 2, 4]),
-                dims=['x', 'y', 'z'],
-                attrs={'units': 'degK'},
-            )
-        }
-        input_properties = {
-            'air_temperature': {
-                'dims': ['x', 'y', 'z'],
-                'units': 'degK',
-            }
-        }
-        raw_arrays = {
-            'air_pressure': np.zeros([2, 2, 4])
-        }
-        output_properties = {
-            'air_pressure': {
-                'dims_like': 'air_temperature',
-                'units': 'm',
-                'alias': 'p',
-            },
-        }
-        data_arrays = restore_data_arrays_with_properties(
-            raw_arrays, output_properties, input_state, input_properties
-        )
-        assert len(data_arrays.keys()) == 1
-        assert 'air_pressure' in data_arrays.keys()
-        assert np.all(data_arrays['air_pressure'].values == raw_arrays['air_pressure'])
-        assert np.byte_bounds(
-            data_arrays['air_pressure'].values) == np.byte_bounds(
-            raw_arrays['air_pressure'])
 
     def test_restores_using_alias_from_input(self):
         input_state = {
@@ -1466,7 +1170,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         }
         output_properties = {
             'air_pressure': {
-                'dims_like': 'air_temperature',
+                'dims': ['x', 'y', 'z'],
                 'units': 'm',
             },
         }
@@ -1479,6 +1183,64 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert np.byte_bounds(
             data_arrays['air_pressure'].values) == np.byte_bounds(
             raw_arrays['p'])
+
+    def test_restores_new_dims(self):
+        input_state = {}
+        input_properties = {}
+        raw_arrays = {
+            'air_pressure': np.zeros([2, 2, 4])
+        }
+        output_properties = {
+            'air_pressure': {
+                'dims': ['x', 'y', 'z'],
+                'units': 'm',
+            },
+        }
+        data_arrays = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert len(data_arrays.keys()) == 1
+        assert 'air_pressure' in data_arrays.keys()
+        assert np.all(data_arrays['air_pressure'].values == raw_arrays['air_pressure'])
+        assert np.byte_bounds(
+            data_arrays['air_pressure'].values) == np.byte_bounds(
+            raw_arrays['air_pressure'])
+
+    def test_restores_new_dims_with_wildcard(self):
+        input_state = {
+            'air_pressure': DataArray(
+                np.zeros([2, 2, 4]),
+                dims=['x', 'y', 'z'],
+                attrs={'units': 'degK'},
+            ),
+        }
+        input_properties = {
+            'air_pressure': {
+                'dims': ['*'],
+                'units': 'degK',
+                'alias': 'p'
+            },
+        }
+        raw_arrays = {
+            'q': np.zeros([16, 2])
+        }
+        output_properties = {
+            'q': {
+                'dims': ['*', 'new_dim'],
+                'units': 'm',
+            },
+        }
+        data_arrays = restore_data_arrays_with_properties(
+            raw_arrays, output_properties, input_state, input_properties
+        )
+        assert len(data_arrays.keys()) == 1
+        assert 'q' in data_arrays.keys()
+        assert np.all(data_arrays['q'].values.flatten() == raw_arrays['q'].flatten())
+        assert np.byte_bounds(
+            data_arrays['q'].values) == np.byte_bounds(
+            raw_arrays['q'])
+        assert data_arrays['q'].dims == ('x', 'y', 'z', 'new_dim')
+        assert data_arrays['q'].shape == (2, 2, 4, 2)
 
 
 if __name__ == '__main__':

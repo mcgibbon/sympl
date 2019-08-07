@@ -12,3 +12,11 @@ class SharedKeyError(Exception):
 
 class DependencyError(Exception):
     pass
+
+
+class ComponentMissingOutputError(Exception):
+    pass
+
+
+class ComponentExtraOutputError(Exception):
+    pass

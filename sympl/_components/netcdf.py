@@ -2,212 +2,204 @@ from .._core.base_components import Monitor
 from .._core.exceptions import (
     DependencyError, InvalidStateError)
 from .._core.units import from_unit_to_another
-from .._core.array import DataArray
+from .._core.dataarray import DataArray
 from .._core.util import same_list, datetime64_to_datetime
 import xarray as xr
 import os
 import numpy as np
 from datetime import timedelta
 from six import string_types
+
 try:
     import netCDF4 as nc4
 except ImportError:
     nc4 = None
 
-if nc4 is None:
-    # If dependency is not installed, use a dummy object that will alert the
-    # user they need to install the dependency if they try to use it
-    class NetCDFMonitor(Monitor):
 
-        def __init__(self, filename):
+class NetCDFMonitor(Monitor):
+    """A Monitor which caches stored states and then writes them to a
+    NetCDF file when requested."""
+
+    def __init__(
+            self, filename, time_units='seconds', store_names=None,
+            write_on_store=False, aliases=None):
+        """
+        Args
+        ----
+        filename : str
+            The file to which the NetCDF file will be written.
+        time_units : str, optional
+            The units in which time will be
+            stored in the NetCDF file. Time is stored as an integer
+            number of these units. Default is seconds.
+        store_names : iterable of str, optional
+            Names of quantities to store. If not given,
+            all quantities are stored.
+        write_on_store : bool, optional
+            If True, stored changes are immediately written to file.
+            This can result in many file open/close operations.
+            Default is to write only when the write() method is
+            called directly.
+        aliases : dict
+            A dictionary of string replacements to apply to state variable
+            names before saving them in netCDF files.
+        """
+        if nc4 is None:
             raise DependencyError(
                 'netCDF4-python must be installed to use NetCDFMonitor')
+        self._cached_state_dict = {}
+        self._filename = filename
+        self._time_units = time_units
+        self._write_on_store = write_on_store
+        if aliases is None:
+            self._aliases = {}
+        else:
+            self._aliases = aliases
+        for key, val in self._aliases.items():
+            if not isinstance(key, string_types):
+                raise TypeError("Bad alias key type: {}. Expected string.".format(type(key)))
+            elif not isinstance(val, string_types):
+                raise TypeError("Bad alias value type: {}. Expected string.".format(type(val)))
+        if store_names is None:
+            self._store_names = None
+        else:
+            self._store_names = ['time'] + list(store_names)
 
-        def store(self, state):
-            pass
+    def store(self, state):
+        """
+        Caches the given state. If write_on_store=True was passed on
+        initialization, also writes to file. Normally a call to the
+        write() method is required to write to file.
 
-else:
-    class NetCDFMonitor(Monitor):
-        """A Monitor which caches stored states and then writes them to a
-        NetCDF file when requested."""
+        Args
+        ----
+        state : dict
+            A model state dictionary.
 
-        def __init__(
-                self, filename, time_units='seconds', store_names=None,
-                write_on_store=False, aliases=None):
-            """
-            Args
-            ----
-            filename : str
-                The file to which the NetCDF file will be written.
-            time_units : str, optional
-                The units in which time will be
-                stored in the NetCDF file. Time is stored as an integer
-                number of these units. Default is seconds.
-            store_names : iterable of str, optional
-                Names of quantities to store. If not given,
-                all quantities are stored.
-            write_on_store : bool, optional
-                If True, stored changes are immediately written to file.
-                This can result in many file open/close operations.
-                Default is to write only when the write() method is
-                called directly.
-            aliases : dict
-                A dictionary of string replacements to apply to state variable
-                names before saving them in netCDF files.
-            """
-            self._cached_state_dict = {}
-            self._filename = filename
-            self._time_units = time_units
-            self._write_on_store = write_on_store
-            if aliases is None:
-                self._aliases = {}
-            else:
-                self._aliases = aliases
-            for key, val in self._aliases.items():
-                if not isinstance(key, string_types):
-                    raise TypeError("Bad alias key type: {}. Expected string.".format(type(key)))
-                elif not isinstance(val, string_types):
-                    raise TypeError("Bad alias value type: {}. Expected string.".format(type(val)))
-            if store_names is None:
-                self._store_names = None
-            else:
-                self._store_names = ['time'] + list(store_names)
+        Raises
+        ------
+        InvalidStateError
+            If state is not a valid input for the DiagnosticComponent instance.
+        """
+        if self._store_names is not None:
+            name_list = set(state.keys()).intersection(self._store_names)
+            cache_state = {name: state[name] for name in name_list}
+        else:
+            cache_state = state.copy()
 
-        def store(self, state):
-            """
-            Caches the given state. If write_on_store=True was passed on
-            initialization, also writes to file. Normally a call to the
-            write() method is required to write to file.
+        # raise an exception if the state has any empty string variables
+        for full_var_name in cache_state.keys():
+            if len(full_var_name) == 0:
+                raise ValueError('The given state has an empty string as a variable name.')
 
-            Args
-            ----
-            state : dict
-                A model state dictionary.
+        # replace cached variable names with their aliases
+        for longname, shortname in self._aliases.items():
+            for full_var_name in tuple(cache_state.keys()):
+                # replace any string in the full variable name that matches longname
+                # example: if longname is "temperature", shortname is "T", and
+                #    full_var_name is "temperature_tendency_from_radiation", the
+                #    alias_name for the variable would be: "T_tendency_from_radiation"
+                if longname in full_var_name:
+                    alias_name = full_var_name.replace(longname, shortname)
+                    if len(alias_name) == 0:  # raise exception if the alias is an empty str
+                        errstr = 'Tried to alias variable "{}" to an empty string.\n' + \
+                                 'xarray will not allow empty strings as variable names.'
+                        raise ValueError(errstr.format(full_var_name))
+                    cache_state[alias_name] = cache_state.pop(full_var_name)
 
-            Raises
-            ------
-            InvalidStateError
-                If state is not a valid input for the Diagnostic instance.
-            """
-            if self._store_names is not None:
-                name_list = set(state.keys()).intersection(self._store_names)
-                cache_state = {name: state[name] for name in name_list}
-            else:
-                cache_state = state.copy()
+        cache_state.pop('time')  # stored as key, not needed in state dict
+        if state['time'] in self._cached_state_dict.keys():
+            self._cached_state_dict[state['time']].update(cache_state)
+        else:
+            self._cached_state_dict[state['time']] = cache_state
+        if self._write_on_store:
+            self.write()
 
-            # raise an exception if the state has any empty string variables
-            for full_var_name in cache_state.keys():
-                if len(full_var_name) == 0:
-                    raise ValueError('The given state has an empty string as a variable name.')
+    @property
+    def _write_mode(self):
+        if not os.path.isfile(self._filename):
+            return 'w'
+        else:
+            return 'a'
 
-            # replace cached variable names with their aliases
-            for longname, shortname in self._aliases.items():
-                for full_var_name in cache_state.keys():
-                    # replace any string in the full variable name that matches longname
-                    # example: if longname is "temperature", shortname is "T", and
-                    #    full_var_name is "temperature_tendency_from_radiation", the
-                    #    alias_name for the variable would be: "T_tendency_from_radiation"
-                    if longname in full_var_name:
-                        alias_name = full_var_name.replace(longname, shortname)
-                        if len(alias_name) == 0:  # raise exception if the alias is an empty str
-                            errstr = 'Tried to alias variable "{}" to an empty string.\n' + \
-                                     'xarray will not allow empty strings as variable names.'
-                            raise ValueError(errstr.format(full_var_name))
-                        cache_state[alias_name] = cache_state.pop(full_var_name)
+    def _ensure_cached_state_keys_compatible_with_dataset(self, dataset):
+        file_keys = list(dataset.variables.keys())
+        if 'time' in file_keys:
+            file_keys.remove('time')
+        if len(file_keys) > 0:
+            self._ensure_cached_states_have_same_keys(file_keys)
+        else:
+            self._ensure_cached_states_have_same_keys()
 
-            cache_state.pop('time')  # stored as key, not needed in state dict
-            if state['time'] in self._cached_state_dict.keys():
-                self._cached_state_dict[state['time']].update(cache_state)
-            else:
-                self._cached_state_dict[state['time']] = cache_state
-            if self._write_on_store:
-                self.write()
+    def _ensure_cached_states_have_same_keys(self, desired_keys=None):
+        """
+        Ensures all states in self._cached_state_dict have the same keys.
+        If desired_keys is given, also ensure the keys are the same as
+        the ones in desired_keys.
 
-        @property
-        def _write_mode(self):
-            if not os.path.isfile(self._filename):
-                return 'w'
-            else:
-                return 'a'
+        Raises
+        ------
+        InvalidStateError
+            If the cached states do not meet the requirements.
+        """
+        if len(self._cached_state_dict) == 0:
+            return  # trivially true
+        if desired_keys is not None:
+            reference_keys = desired_keys
+        else:
+            reference_state = tuple(self._cached_state_dict.values())[0]
+            reference_keys = reference_state.keys()
+        for state in self._cached_state_dict.values():
+            if not same_list(list(state.keys()), list(reference_keys)):
+                raise InvalidStateError(
+                    'NetCDFMonitor was passed a different set of '
+                    'quantities for different times: {} vs. {}'.format(
+                        list(reference_keys), list(state.keys())))
 
-        def _ensure_cached_state_keys_compatible_with_dataset(self, dataset):
-            file_keys = list(dataset.variables.keys())
-            if 'time' in file_keys:
-                file_keys.remove('time')
-            if len(file_keys) > 0:
-                self._ensure_cached_states_have_same_keys(file_keys)
-            else:
-                self._ensure_cached_states_have_same_keys()
+    def _get_ordered_times_and_states(self):
+        """Returns the items in self._cached_state_dict, sorted by time."""
+        return zip(*sorted(self._cached_state_dict.items(), key=lambda x: x[0]))
 
-        def _ensure_cached_states_have_same_keys(self, desired_keys=None):
-            """
-            Ensures all states in self._cached_state_dict have the same keys.
-            If desired_keys is given, also ensure the keys are the same as
-            the ones in desired_keys.
+    def write(self):
+        """
+        Write all cached states to the NetCDF file, and clear the cache.
+        This will append to any existing NetCDF file.
 
-            Raises
-            ------
-            InvalidStateError
-                If the cached states do not meet the requirements.
-            """
-            if len(self._cached_state_dict) == 0:
-                return  # trivially true
-            if desired_keys is not None:
-                reference_keys = desired_keys
-            else:
-                reference_state = tuple(self._cached_state_dict.values())[0]
-                reference_keys = reference_state.keys()
-            for state in self._cached_state_dict.values():
-                if not same_list(list(state.keys()), list(reference_keys)):
-                    raise InvalidStateError(
-                        'NetCDFMonitor was passed a different set of '
-                        'quantities for different times: {} vs. {}'.format(
-                            list(reference_keys), list(state.keys())))
+        Raises
+        ------
+        InvalidStateError
+            If cached states do not all have the same quantities
+            as every other cached and written state.
+        """
+        with nc4.Dataset(self._filename, self._write_mode) as dataset:
+            self._ensure_cached_state_keys_compatible_with_dataset(dataset)
+            time_list, state_list = self._get_ordered_times_and_states()
+            self._ensure_time_exists(dataset, time_list[0])
+            it_start = dataset.dimensions['time'].size
+            it_end = it_start + len(time_list)
+            append_times_to_dataset(time_list, dataset, self._time_units)
+            all_states = combine_states(state_list)
+            for name, value in all_states.items():
+                ensure_variable_exists(dataset, name, value)
+                dataset.variables[name][
+                    it_start:it_end, :] = value.values[:, :]
+        self._cached_state_dict = {}
 
-        def _get_ordered_times_and_states(self):
-            """Returns the items in self._cached_state_dict, sorted by time."""
-            return zip(*sorted(self._cached_state_dict.items(), key=lambda x: x[0]))
-
-        def write(self):
-            """
-            Write all cached states to the NetCDF file, and clear the cache.
-            This will append to any existing NetCDF file.
-
-            Raises
-            ------
-            InvalidStateError
-                If cached states do not all have the same quantities
-                as every other cached and written state.
-            """
-            with nc4.Dataset(self._filename, self._write_mode) as dataset:
-                self._ensure_cached_state_keys_compatible_with_dataset(dataset)
-                time_list, state_list = self._get_ordered_times_and_states()
-                self._ensure_time_exists(dataset, time_list[0])
-                it_start = dataset.dimensions['time'].size
-                it_end = it_start + len(time_list)
-                append_times_to_dataset(time_list, dataset, self._time_units)
-                all_states = combine_states(state_list)
-                for name, value in all_states.items():
-                    ensure_variable_exists(dataset, name, value)
-                    dataset.variables[name][
-                        it_start:it_end, :] = value.values[:, :]
-            self._cached_state_dict = {}
-
-        def _ensure_time_exists(self, dataset, possible_reference_time):
-            """Ensure an unlimited time dimension relevant to this monitor
-            exists in the NetCDF4 dataset, and create it if it does not."""
-            ensure_dimension_exists(dataset, 'time', None)
-            if 'time' not in dataset.variables:
-                dataset.createVariable('time', np.int64, ('time',))
-                if isinstance(possible_reference_time, timedelta):
-                    dataset.variables['time'].setncattr(
-                        'units', self._time_units)
-                else:  # assume datetime
-                    dataset.variables['time'].setncattr(
-                        'units', '{} since {}'.format(
-                            self._time_units, possible_reference_time))
-                    dataset.variables['time'].setncattr(
-                        'calendar', 'proleptic_gregorian')
+    def _ensure_time_exists(self, dataset, possible_reference_time):
+        """Ensure an unlimited time dimension relevant to this monitor
+        exists in the NetCDF4 dataset, and create it if it does not."""
+        ensure_dimension_exists(dataset, 'time', None)
+        if 'time' not in dataset.variables:
+            dataset.createVariable('time', np.int64, ('time',))
+            if isinstance(possible_reference_time, timedelta):
+                dataset.variables['time'].setncattr(
+                    'units', self._time_units)
+            else:  # assume datetime
+                dataset.variables['time'].setncattr(
+                    'units', '{} since {}'.format(
+                        self._time_units, possible_reference_time))
+                dataset.variables['time'].setncattr(
+                    'calendar', 'proleptic_gregorian')
 
 
 class RestartMonitor(Monitor):
@@ -217,6 +209,9 @@ class RestartMonitor(Monitor):
     """
 
     def __init__(self, filename):
+        if nc4 is None:
+            raise DependencyError(
+                'netCDF4-python must be installed to use RestartMonitor')
         self._filename = filename
 
     def store(self, state):

@@ -63,3 +63,6 @@ target/
 
 # pyenv python configuration file
 .python-version
+
+# Spyder
+.spyderproject

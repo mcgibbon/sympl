@@ -11,7 +11,7 @@ subtraction, and contains a helpful method for converting units. Any
 information about the grid the data is using that components need should be
 put as attributes in the ``attrs`` of the ``DataArray`` objects. Deciding on
 these attributes (if any) is mostly up to the component developers. However,
-in order to use the TimeStepper objects and several helper functions from Sympl,
+in order to use the TendencyStepper objects and several helper functions from Sympl,
 it is required that a "units" attribute is present.
 
 .. _xarray: http://xarray.pydata.org/en/stable/

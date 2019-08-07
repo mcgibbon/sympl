@@ -9,9 +9,9 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'numpy>=1.10',
+    'numpy>=1.12',
     'pint>=0.7.0',
-    'xarray>=0.8.0',
+    'xarray>=0.9.3',
     'six',
 ]
 
@@ -22,7 +22,7 @@ test_requirements = [
 
 setup(
     name='sympl',
-    version='0.3.1',
+    version='0.4.0',
     description='Sympl is a Toolkit for building Earth system models in Python.',
     long_description=readme + '\n\n' + history,
     author="Jeremy McGibbon",

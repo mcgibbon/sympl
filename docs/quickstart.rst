@@ -1,10 +1,12 @@
+.. _quickstart:
+
 ==========
 Quickstart
 ==========
 
 Here we have an example of how Sympl might be used to construct a model run
 script, with explanations of what's going on. Here is the full model script we
-will be looking at:
+will be looking at (*we break it into smaller pieces below*):
 
 .. code-block:: python
 
@@ -109,17 +111,17 @@ for us:
     state = get_initial_state(nx=256, ny=128, nz=64)
     state['time'] = datetime(2000, 1, 1)
 
-An initialized `state` is a dictionary whose keys are strings (like
+An initialized ``state`` is a dictionary whose keys are strings (like
 'air_temperature') and values are :py:class:`~sympl.DataArray` objects, which
 store not only the data but also metadata like units. The one exception
-is the "time" quantity which is either a `datetime`-like or `timedelta`-like
+is the "time" quantity which is either a ``datetime``-like or ``timedelta``-like
 object. Here we are calling :py:func:`sympl.datetime` to initialize time,
 rather than directly creating a Python datetime. This is because
 :py:func:`sympl.datetime` can support a number of calendars using the
-`netcdftime` package, if installed, unlike the built-in `datetime` which only
+`netcdftime` package, if installed, unlike the built-in ``datetime`` which only
 supports the Proleptic Gregorian calendar.
 
-You can read more about the `state`, including :py:func:`sympl.datetime` in
+You can read more about the ``state``, including :py:func:`sympl.datetime` in
 :ref:`Model State`.
 
 Initialize Components
@@ -137,26 +139,26 @@ Those are the "components":
     ])
     implicit_dynamics = ImplicitDynamics()
 
-:py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.TimeStepper`, which is
-created with a set of :py:class:`~sympl.Prognostic` components.
-The :py:class:`~sympl.Prognostic` components we have here are `Radiation`,
-`BoundaryLayer`, and `DeepConvection`. Each of these carries information about
+:py:class:`~sympl.AdamsBashforth` is a :py:class:`~sympl.TendencyStepper`, which is
+created with a set of :py:class:`~sympl.TendencyComponent` components.
+The :py:class:`~sympl.TendencyComponent` components we have here are ``Radiation``,
+``BoundaryLayer``, and ``DeepConvection``. Each of these carries information about
 what it takes as inputs and provides as outputs, and can be called with a model
 state to return tendencies for a set of quantities. The
-:py:class:`~sympl.TimeStepper` uses this information to step the model state
+:py:class:`~sympl.TendencyStepper` uses this information to step the model state
 forward in time.
 
-The :py:class:`~sympl.UpdateFrequencyWrapper` applied to the `Radiation` object
-is an object that acts like a :py:class:`~sympl.Prognostic` but only computes
+The :py:class:`~sympl.UpdateFrequencyWrapper` applied to the ``Radiation`` object
+is an object that acts like a :py:class:`~sympl.TendencyComponent` but only computes
 its output if at least a certain amount of model time has passed since the last
 time the output was computed. Otherwise, it returns the last computed output.
 This is commonly used in atmospheric models to avoid doing radiation
 calculations (which are very expensive) every timestep, but it can be applied
-to any Prognostic.
+to any TendencyComponent.
 
-The :py:class:`ImplicitDynamics` class is a :py:class:`~sympl.Implicit` object, which
-steps the model state forward in time in the same way that a :py:class:`~sympl.TimeStepper`
-would, but doesn't use :py:class:`~sympl.Prognostic` objects in doing so.
+The :py:class:`ImplicitDynamics` class is a :py:class:`~sympl.Stepper` object, which
+steps the model state forward in time in the same way that a :py:class:`~sympl.TendencyStepper`
+would, but doesn't use :py:class:`~sympl.TendencyComponent` objects in doing so.
 
 The Main Loop
 -------------
@@ -180,6 +182,6 @@ In the main loop, a series of component calls update the state, and the figure
 presented by ``plot_monitor`` is updated. The code is meant to be as
 self-explanatory as possible. It is necessary to manually set the time of the
 next state at the end of the loop. This is not done automatically by
-:py:class:`~sympl.TimeStepper` and :py:class:`~sympl.Implicit` objects, because
+:py:class:`~sympl.TendencyStepper` and :py:class:`~sympl.Stepper` objects, because
 in many models you may want to update the state with multiple such objects
 in a sequence over the course of a single time step.
