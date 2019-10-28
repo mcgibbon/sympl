@@ -49,7 +49,10 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
         missing_dims = [dim for dim in out_dims if dim not in data_array.dims]
         for dim in missing_dims:
             data_array = data_array.expand_dims(dim)
-        numpy_array = data_array.transpose(*out_dims).values
+        if not all(dim1 == dim2 for dim1, dim2 in zip(data_array.dims, out_dims)):
+            numpy_array = data_array.transpose(*out_dims).values
+        else:
+            numpy_array = data_array.values
         if len(missing_dims) == 0:
             out_array = numpy_array
         else:  # expand out missing dims which are currently length 1.
