@@ -43,16 +43,16 @@ def get_numpy_array(data_array, out_dims, dim_lengths):
     dict of dim_lengths that will give the length of any missing dims in the
     data_array.
     """
-    if len(data_array.values.shape) == 0 and len(out_dims) == 0:
-        return data_array.values  # special case, 0-dimensional scalar array
+    if len(data_array.data.shape) == 0 and len(out_dims) == 0:
+        return data_array.data  # special case, 0-dimensional scalar array
     else:
         missing_dims = [dim for dim in out_dims if dim not in data_array.dims]
         for dim in missing_dims:
             data_array = data_array.expand_dims(dim)
         if not all(dim1 == dim2 for dim1, dim2 in zip(data_array.dims, out_dims)):
-            numpy_array = data_array.transpose(*out_dims).values
+            numpy_array = data_array.transpose(*out_dims).data
         else:
-            numpy_array = data_array.values
+            numpy_array = data_array.data
         if len(missing_dims) == 0:
             out_array = numpy_array
         else:  # expand out missing dims which are currently length 1.
