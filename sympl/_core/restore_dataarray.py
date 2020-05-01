@@ -8,9 +8,10 @@ from .wildcard import (
 
 
 def ensure_values_are_arrays(array_dict):
-    for name, value in array_dict.items():
-        if not isinstance(value, np.ndarray):
-            array_dict[name] = np.asarray(value)
+    pass
+    # for name, value in array_dict.items():
+        # if not isinstance(value, np.ndarray):
+            # array_dict[name] = np.asarray(value)
 
 
 def get_alias_or_name(name, output_properties, input_properties):
