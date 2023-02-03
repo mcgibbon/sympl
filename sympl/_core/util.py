@@ -106,7 +106,7 @@ def get_numpy_array(
             data_array, out_dims, direction_to_names)
         final_shape = get_final_shape(data_array, out_dims, direction_to_names)
         return_array = np.reshape(data_array.transpose(
-            *target_dimension_order).values[slices_or_none], final_shape)
+            *target_dimension_order).values[tuple(slices_or_none)], final_shape)
     if return_wildcard_matches:
         wildcard_matches = {
             key: value for key, value in direction_to_names.items()
@@ -307,7 +307,7 @@ def get_slices_and_placeholder_nones(data_array, out_dims, direction_to_names):
         else:
             for name in direction_to_names[direction]:
                 slices_or_none.append(slice(0, len(data_array.coords[name])))
-    return slices_or_none
+    return tuple(slices_or_none)
 
 
 def get_final_shape(data_array, out_dims, direction_to_names):
@@ -325,7 +325,7 @@ def get_final_shape(data_array, out_dims, direction_to_names):
             final_shape.append(
                 np.product([len(data_array.coords[name])
                             for name in direction_to_names[direction]]))
-    return final_shape
+    return tuple(final_shape)
 
 
 def get_component_aliases(*args):
