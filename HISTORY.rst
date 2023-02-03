@@ -2,6 +2,11 @@
 What's New
 ==========
 
+v0.4.1
+------
+
+* use tuple instead of list to index numpy arrays
+
 v0.4.0
 ------
 

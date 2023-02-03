@@ -199,7 +199,8 @@ class TracerPacker(object):
         for i, name in enumerate(self.tracer_names):
             tracer_slice = [slice(0, d) for d in shape]
             tracer_slice[self._tracer_index] = i
-            array[tracer_slice] = raw_state[name]
+            print(tracer_slice, shape)
+            array[tuple(tracer_slice)] = raw_state[name]
         return array
 
     def unpack(self, tracer_array, input_state, multiply_unit=''):
@@ -226,7 +227,7 @@ class TracerPacker(object):
         for i, name in enumerate(self.tracer_names):
             tracer_slice = [slice(0, d) for d in tracer_array.shape]
             tracer_slice[self._tracer_index] = i
-            raw_state[name] = tracer_array[tracer_slice]
+            raw_state[name] = tracer_array[tuple(tracer_slice)]
         out_properties = {}
         for name, properties in tracer_properties.items():
             out_properties[name] = properties.copy()
