@@ -250,7 +250,7 @@ class RestartMonitor(Monitor):
         state = {}
         for name, value in dataset.data_vars.items():
             state[name] = DataArray(value[0, :])  # remove time axis
-        state['time'] = datetime64_to_datetime(dataset['time'][0])
+        state['time'] = datetime64_to_datetime(dataset['time'][0].values)
         return state
 
 
