@@ -199,7 +199,6 @@ class TracerPacker(object):
         for i, name in enumerate(self.tracer_names):
             tracer_slice = [slice(0, d) for d in shape]
             tracer_slice[self._tracer_index] = i
-            print(tracer_slice, shape)
             array[tuple(tracer_slice)] = raw_state[name]
         return array
 

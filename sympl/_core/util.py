@@ -301,7 +301,7 @@ def get_slices_and_placeholder_nones(data_array, out_dims, direction_to_names):
     for direction in out_dims:
         if len(direction_to_names[direction]) == 0:
             slices_or_none.append(None)
-        elif (direction is not '*') and (len(direction_to_names[direction]) > 1):
+        elif (direction != '*') and (len(direction_to_names[direction]) > 1):
             raise ValueError(
                 'DataArray has multiple dimensions for a single direction')
         else:
