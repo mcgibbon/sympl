@@ -230,7 +230,7 @@ class TracerPacker(object):
         out_properties = {}
         for name, properties in tracer_properties.items():
             out_properties[name] = properties.copy()
-            if multiply_unit is not '':
+            if multiply_unit != '':
                 out_properties[name]['units'] = '{} {}'.format(
                     out_properties[name]['units'], multiply_unit)
         return_state = restore_data_arrays_with_properties(
