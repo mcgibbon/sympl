@@ -33,7 +33,7 @@ from ._components import (
 from ._core.wrappers import UpdateFrequencyWrapper, ScalingWrapper
 from ._core.time import datetime, timedelta
 
-__version__ = '0.4.0'
+__version__ = '0.4.1'
 __all__ = (
     TendencyComponent, DiagnosticComponent, Stepper, Monitor, TendencyComponentComposite,
     ImplicitTendencyComponentComposite,
