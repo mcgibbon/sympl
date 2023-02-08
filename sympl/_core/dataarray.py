@@ -4,6 +4,8 @@ from .units import data_array_to_units as to_units_function
 
 
 class DataArray(xr.DataArray):
+    
+    __slots__ = ()
 
     def __add__(self, other):
         """If this DataArray is on the left side of the addition, keep its
