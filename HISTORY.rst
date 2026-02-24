@@ -2,6 +2,13 @@
 What's New
 ==========
 
+v0.5.1
+------
+
+* This version brings multiple changes, the most signficant of which is  the ability to change the
+  array container to any compliant implementation. sympl still defaults to DataArray for backwards
+  compatibility.
+
 v0.4.1
 ------
 
