@@ -33,6 +33,7 @@ Documentation
    constants
    timestepping
    computation
+   backend
    monitors
    composites
    tracers

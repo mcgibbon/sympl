@@ -7,6 +7,11 @@ from sympl import (
 import numpy as np
 import unittest
 
+try:
+    from numpy.lib.array_utils import byte_bounds
+except ImportError:
+    from numpy import byte_bounds
+
 def arrays_share_same_memory_space(source, target):
     
     if target.base is None:
@@ -22,7 +27,7 @@ def test_get_numpy_array_3d_no_change():
         attrs={'units': ''},
     )
     numpy_array = get_numpy_array(array, ['x', 'y', 'z'])
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert np.all(numpy_array == array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
@@ -36,7 +41,7 @@ def test_get_numpy_array_3d_reverse():
     numpy_array = get_numpy_array(array, ['z', 'y', 'x'])
     assert numpy_array.shape == (4, 3, 2)
     assert np.all(np.transpose(numpy_array, (2, 1, 0)) == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -49,7 +54,7 @@ def test_get_numpy_array_2d_reverse():
     numpy_array = get_numpy_array(array, ['z', 'y'])
     assert numpy_array.shape == (3, 2)
     assert np.all(np.transpose(numpy_array, (1, 0)) == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -62,7 +67,7 @@ def test_get_numpy_array_1d():
     numpy_array = get_numpy_array(array, ['y'])
     assert numpy_array.shape == (2,)
     assert np.all(numpy_array == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -75,7 +80,7 @@ def test_get_numpy_array_creates_new_dim():
     numpy_array = get_numpy_array(array, ['x', 'y'])
     assert numpy_array.shape == (2, 1)
     assert np.all(numpy_array[:, 0] == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -88,7 +93,7 @@ def test_get_numpy_array_creates_new_dim_in_front():
     numpy_array = get_numpy_array(array, ['y', 'x'])
     assert numpy_array.shape == (1, 2)
     assert np.all(numpy_array[0, :] == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -101,7 +106,7 @@ def test_get_numpy_array_retrieves_explicit_dimensions():
     numpy_array = get_numpy_array(array, ['zeta', 'alpha'])
     assert numpy_array.shape == (3, 2)
     assert np.all(np.transpose(numpy_array, (1, 0)) == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -130,7 +135,7 @@ def test_get_numpy_array_invalid_dimension_collected_by_asterisk():
     numpy_array = get_numpy_array(array, ['*'])
     assert numpy_array.shape == (2,)
     assert np.all(numpy_array == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -191,7 +196,7 @@ def test_get_numpy_array_asterisk_creates_new_dim():
     numpy_array = get_numpy_array(array, ['x', '*'])
     assert numpy_array.shape == (2, 1)
     assert np.all(numpy_array[:, 0] == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -204,7 +209,7 @@ def test_get_numpy_array_asterisk_creates_new_dim_reversed():
     numpy_array = get_numpy_array(array, ['*', 'x'])
     assert numpy_array.shape == (1, 2)
     assert np.all(numpy_array[0, :] == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -217,7 +222,7 @@ def test_get_numpy_array_asterisk_flattens():
     numpy_array = get_numpy_array(array, ['*'])
     assert numpy_array.shape == (6,)
     assert np.all(numpy_array.reshape((2, 3)) == array.values)
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -245,7 +250,7 @@ def test_get_numpy_array_zyx_to_starz_doesnt_copy():
     for i in range(2):
         assert np.all(numpy_array[:, i] == array.values[i, :, :].flatten())
     assert original_array is array.values
-    assert np.byte_bounds(numpy_array) == np.byte_bounds(array.values)
+    assert byte_bounds(numpy_array) == byte_bounds(array.values)
     assert arrays_share_same_memory_space(array.values, numpy_array)
 
 
@@ -335,7 +340,7 @@ def test_restore_dimensions_starz_to_zyx_doesnt_copy():
     numpy_array = get_numpy_array(array, ['*', 'z'])
     restored_array = restore_dimensions(
         numpy_array, from_dims=['*', 'z'], result_like=array)
-    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+    assert byte_bounds(restored_array.values) == byte_bounds(
         array.values)
     assert arrays_share_same_memory_space(
         array.values, restored_array.values)
@@ -367,7 +372,7 @@ def test_restore_dimensions_3d_reverse():
         numpy_array, from_dims=['x', 'y', 'z'], result_like=array)
     assert np.all(restored_array.values == array.values)
     assert len(restored_array.attrs) == 0
-    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+    assert byte_bounds(restored_array.values) == byte_bounds(
         array.values)
     assert arrays_share_same_memory_space(
         array.values, restored_array.values)
@@ -384,7 +389,7 @@ def test_restore_dimensions_1d_flatten():
         numpy_array, from_dims=['*'], result_like=array)
     assert np.all(restored_array.values == array.values)
     assert len(restored_array.attrs) == 0
-    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+    assert byte_bounds(restored_array.values) == byte_bounds(
         array.values)
     assert arrays_share_same_memory_space(
         array.values, restored_array.values)
@@ -401,7 +406,7 @@ def test_restore_dimensions_2d_flatten():
         numpy_array, from_dims=['*'], result_like=array)
     assert np.all(restored_array.values == array.values)
     assert len(restored_array.attrs) == 0
-    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+    assert byte_bounds(restored_array.values) == byte_bounds(
         array.values)
     assert arrays_share_same_memory_space(
         array.values, restored_array.values)
@@ -418,7 +423,7 @@ def test_restore_dimensions_removes_dummy_axes():
         numpy_array, from_dims=['x', 'y', 'z'], result_like=array)
     assert np.all(restored_array.values == array.values)
     assert len(restored_array.attrs) == 0
-    assert np.byte_bounds(restored_array.values) == np.byte_bounds(
+    assert byte_bounds(restored_array.values) == byte_bounds(
         array.values)
     assert arrays_share_same_memory_space(
         array.values, restored_array.values)
@@ -444,7 +449,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
-        assert np.byte_bounds(return_value['air_temperature']) == np.byte_bounds(
+        assert byte_bounds(return_value['air_temperature']) == byte_bounds(
             T_array)
         assert arrays_share_same_memory_space(
             return_value['air_temperature'], T_array)
@@ -469,7 +474,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['T'], np.ndarray)
-        assert np.byte_bounds(return_value['T']) == np.byte_bounds(
+        assert byte_bounds(return_value['T']) == byte_bounds(
             T_array)
         assert arrays_share_same_memory_space(
             return_value['T'], T_array)
@@ -517,7 +522,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
-        assert np.byte_bounds(return_value['air_temperature']) == np.byte_bounds(
+        assert byte_bounds(return_value['air_temperature']) == byte_bounds(
             T_array)
 
     def test_scalar_becomes_multidimensional_array(self):
@@ -540,7 +545,7 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
         assert len(return_value['air_temperature'].shape) == 1
-        assert np.byte_bounds(return_value['air_temperature']) == np.byte_bounds(
+        assert byte_bounds(return_value['air_temperature']) == byte_bounds(
             T_array)
         assert arrays_share_same_memory_space(
             T_array, return_value['air_temperature'])
@@ -564,8 +569,8 @@ class GetNumpyArraysWithPropertiesTests(unittest.TestCase):
         assert isinstance(return_value, dict)
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], np.ndarray)
-        assert np.byte_bounds(
-            return_value['air_temperature']) == np.byte_bounds(
+        assert byte_bounds(
+            return_value['air_temperature']) == byte_bounds(
             T_array)
         assert arrays_share_same_memory_space(
             T_array, return_value['air_temperature'])
@@ -944,8 +949,8 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature_tendency'], DataArray)
         assert return_value['air_temperature_tendency'].attrs['units'] is 'degK/s'
-        assert np.byte_bounds(
-            return_value['air_temperature_tendency'].values) == np.byte_bounds(
+        assert byte_bounds(
+            return_value['air_temperature_tendency'].values) == byte_bounds(
             input_state['air_temperature'].values)
         assert (arrays_share_same_memory_space(
             return_value['air_temperature_tendency'].values, 
@@ -980,8 +985,8 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature'], DataArray)
         assert return_value['air_temperature'].attrs['units'] is 'degK/s'
-        assert np.byte_bounds(
-            return_value['air_temperature'].values) == np.byte_bounds(
+        assert byte_bounds(
+            return_value['air_temperature'].values) == byte_bounds(
             input_state['air_temperature'].values)
         assert (arrays_share_same_memory_space(
             return_value['air_temperature'].values, 
@@ -1019,8 +1024,8 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(return_value.keys()) == 1
         assert isinstance(return_value['air_temperature_tendency'], DataArray)
         assert return_value['air_temperature_tendency'].attrs['units'] is 'degK/s'
-        assert np.byte_bounds(
-            return_value['air_temperature_tendency'].values) == np.byte_bounds(
+        assert byte_bounds(
+            return_value['air_temperature_tendency'].values) == byte_bounds(
             input_state['air_temperature'].values)
         assert (arrays_share_same_memory_space(
             input_state['air_temperature'].values,
@@ -1157,7 +1162,7 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(data_arrays.keys()) == 1
         assert 'air_pressure' in data_arrays.keys()
         assert np.all(data_arrays['air_pressure'].values == raw_arrays['p'])
-        assert np.byte_bounds(data_arrays['air_pressure'].values) == np.byte_bounds(raw_arrays['p'])
+        assert byte_bounds(data_arrays['air_pressure'].values) == byte_bounds(raw_arrays['p'])
 
     def test_restores_using_alias_from_input(self):
         input_state = {
@@ -1198,8 +1203,8 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(data_arrays.keys()) == 1
         assert 'air_pressure' in data_arrays.keys()
         assert np.all(data_arrays['air_pressure'].values == raw_arrays['p'])
-        assert np.byte_bounds(
-            data_arrays['air_pressure'].values) == np.byte_bounds(
+        assert byte_bounds(
+            data_arrays['air_pressure'].values) == byte_bounds(
             raw_arrays['p'])
 
     def test_restores_new_dims(self):
@@ -1220,8 +1225,8 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(data_arrays.keys()) == 1
         assert 'air_pressure' in data_arrays.keys()
         assert np.all(data_arrays['air_pressure'].values == raw_arrays['air_pressure'])
-        assert np.byte_bounds(
-            data_arrays['air_pressure'].values) == np.byte_bounds(
+        assert byte_bounds(
+            data_arrays['air_pressure'].values) == byte_bounds(
             raw_arrays['air_pressure'])
 
     def test_restores_new_dims_with_wildcard(self):
@@ -1254,8 +1259,8 @@ class RestoreDataArraysWithPropertiesTests(unittest.TestCase):
         assert len(data_arrays.keys()) == 1
         assert 'q' in data_arrays.keys()
         assert np.all(data_arrays['q'].values.flatten() == raw_arrays['q'].flatten())
-        assert np.byte_bounds(
-            data_arrays['q'].values) == np.byte_bounds(
+        assert byte_bounds(
+            data_arrays['q'].values) == byte_bounds(
             raw_arrays['q'])
         assert data_arrays['q'].dims == ('x', 'y', 'z', 'new_dim')
         assert data_arrays['q'].shape == (2, 2, 4, 2)

@@ -168,7 +168,7 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
                 original_shape.append(len(result_like.coords[name]))
                 original_dims.append(name)
                 original_coords.append(result_like.coords[name])
-    if np.product(array.shape) != np.product(original_shape):
+    if np.prod(array.shape) != np.prod(original_shape):
         raise ShapeMismatchError
     data_array = DataArray(
         np.reshape(array, original_shape),
@@ -323,8 +323,8 @@ def get_final_shape(data_array, out_dims, direction_to_names):
         else:
             # determine shape once dimensions for direction (usually '*') are combined
             final_shape.append(
-                np.product([len(data_array.coords[name])
-                            for name in direction_to_names[direction]]))
+                np.prod([len(data_array.coords[name])
+                         for name in direction_to_names[direction]]))
     return tuple(final_shape)
 
 

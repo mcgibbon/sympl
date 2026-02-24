@@ -4,6 +4,12 @@ from sympl import (
 import numpy as np
 
 
+try:
+    from numpy.lib.array_utils import byte_bounds
+except ImportError:
+    from numpy import byte_bounds
+
+
 def test_match_dims_like_hardcoded_dimensions_matching_lengths():
     input_state = {
         'air_temperature': DataArray(
@@ -56,8 +62,8 @@ def test_match_dims_like_partly_hardcoded_dimensions_matching_lengths():
         },
     }
     raw_arrays = get_numpy_arrays_with_properties(input_state, input_properties)
-    assert np.byte_bounds(input_state['air_temperature'].values) == np.byte_bounds(raw_arrays['air_temperature'])
-    assert np.byte_bounds(input_state['air_pressure'].values) == np.byte_bounds(raw_arrays['air_pressure'])
+    assert byte_bounds(input_state['air_temperature'].values) == byte_bounds(raw_arrays['air_temperature'])
+    assert byte_bounds(input_state['air_pressure'].values) == byte_bounds(raw_arrays['air_pressure'])
 
 
 def test_match_dims_like_hardcoded_dimensions_non_matching_lengths():

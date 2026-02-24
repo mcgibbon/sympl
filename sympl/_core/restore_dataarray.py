@@ -1,9 +1,12 @@
 import numpy as np
-from .exceptions import InvalidPropertyDictError
+
+from .backend import get_backend
 from .dataarray import DataArray
+from .exceptions import InvalidPropertyDictError
 from .wildcard import (
-    get_wildcard_matches_and_dim_lengths, fill_dims_wildcard,
-    expand_array_wildcard_dims
+    expand_array_wildcard_dims,
+    fill_dims_wildcard,
+    get_wildcard_matches_and_dim_lengths,
 )
 
 
@@ -14,10 +17,10 @@ def ensure_values_are_arrays(array_dict):
 
 
 def get_alias_or_name(name, output_properties, input_properties):
-    if 'alias' in output_properties[name].keys():
-        raw_name = output_properties[name]['alias']
-    elif name in input_properties.keys() and 'alias' in input_properties[name].keys():
-        raw_name = input_properties[name]['alias']
+    if "alias" in output_properties[name].keys():
+        raw_name = output_properties[name]["alias"]
+    elif name in input_properties.keys() and "alias" in input_properties[name].keys():
+        raw_name = input_properties[name]["alias"]
     else:
         raw_name = name
     return raw_name
@@ -26,21 +29,29 @@ def get_alias_or_name(name, output_properties, input_properties):
 def check_array_shape(out_dims, raw_array, name, dim_lengths):
     if len(out_dims) != len(raw_array.shape):
         raise InvalidPropertyDictError(
-            'Returned array for {} has shape {} '
-            'which is incompatible with dims {} in properties'.format(
-                name, raw_array.shape, out_dims))
+            "Returned array for {} has shape {} "
+            "which is incompatible with dims {} in properties".format(
+                name, raw_array.shape, out_dims
+            )
+        )
     for dim, length in zip(out_dims, raw_array.shape):
         if dim in dim_lengths.keys() and dim_lengths[dim] != length:
             raise InvalidPropertyDictError(
-                'Dimension {} of quantity {} has length {}, but '
-                'another quantity has length {}'.format(
-                    dim, name, length, dim_lengths[dim])
+                "Dimension {} of quantity {} has length {}, but "
+                "another quantity has length {}".format(
+                    dim, name, length, dim_lengths[dim]
+                )
             )
 
 
 def restore_data_arrays_with_properties(
-        raw_arrays, output_properties, input_state, input_properties,
-        ignore_names=None, ignore_missing=False):
+    raw_arrays,
+    output_properties,
+    input_state,
+    input_properties,
+    ignore_names=None,
+    ignore_missing=False,
+):
     """
     Parameters
     ----------
@@ -86,33 +97,43 @@ def restore_data_arrays_with_properties(
     if ignore_names is None:
         ignore_names = []
     if ignore_missing:
-        ignore_names = set(output_properties.keys()).difference(raw_arrays.keys()).union(ignore_names)
+        ignore_names = (
+            set(output_properties.keys())
+            .difference(raw_arrays.keys())
+            .union(ignore_names)
+        )
     wildcard_names, dim_lengths = get_wildcard_matches_and_dim_lengths(
-        input_state, input_properties)
+        input_state, input_properties
+    )
     ensure_values_are_arrays(raw_arrays)
     dims_from_out_properties = extract_output_dims_properties(
-        output_properties, input_properties, ignore_names)
+        output_properties, input_properties, ignore_names
+    )
     out_dict = {}
     for name, out_dims in dims_from_out_properties.items():
         if name in ignore_names:
             continue
         raw_name = get_alias_or_name(name, output_properties, input_properties)
-        if '*' in out_dims:
+        if "*" in out_dims:
             for dim_name, length in zip(out_dims, raw_arrays[raw_name].shape):
-                if dim_name not in dim_lengths and dim_name != '*':
+                if dim_name not in dim_lengths and dim_name != "*":
                     dim_lengths[dim_name] = length
             out_dims_without_wildcard, target_shape = fill_dims_wildcard(
-                out_dims, dim_lengths, wildcard_names)
+                out_dims, dim_lengths, wildcard_names
+            )
             out_array = expand_array_wildcard_dims(
-                raw_arrays[raw_name], target_shape, name, out_dims)
+                raw_arrays[raw_name], target_shape, name, out_dims
+            )
         else:
             check_array_shape(out_dims, raw_arrays[raw_name], name, dim_lengths)
             out_dims_without_wildcard = out_dims
             out_array = raw_arrays[raw_name]
-        out_dict[name] = DataArray(
+        out_dict[name] = get_backend().create_quantity(
             out_array,
+            name=name,
             dims=out_dims_without_wildcard,
-            attrs={'units': output_properties[name]['units']}
+            units=output_properties[name]["units"],
+            reference_state=input_state,
         )
     return out_dict
 
@@ -122,14 +143,16 @@ def extract_output_dims_properties(output_properties, input_properties, ignore_n
     for name, properties in output_properties.items():
         if name in ignore_names:
             continue
-        elif 'dims' in properties.keys():
-            return_array[name] = properties['dims']
+        elif "dims" in properties.keys():
+            return_array[name] = properties["dims"]
         elif name not in input_properties.keys():
             raise InvalidPropertyDictError(
-                'Output dims must be specified for {} in properties'.format(name))
-        elif 'dims' not in input_properties[name].keys():
+                "Output dims must be specified for {} in properties".format(name)
+            )
+        elif "dims" not in input_properties[name].keys():
             raise InvalidPropertyDictError(
-                'Input dims must be specified for {} in properties'.format(name))
+                "Input dims must be specified for {} in properties".format(name)
+            )
         else:
-            return_array[name] = input_properties[name]['dims']
+            return_array[name] = input_properties[name]["dims"]
     return return_array

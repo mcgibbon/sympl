@@ -203,7 +203,8 @@ and returns dictionaries with numpy array outputs.
 
 Sympl will automatically handle taking in the input state of ``DataArray``
 objects and converting it to the form defined by the ``input_properties`` of your
-component. It will convert units to ensure the numbers are in the specified
+component. This is handled by the active :ref:`Array Backend <Array Backends>`.
+It will convert units to ensure the numbers are in the specified
 units, and it will reshape the data to give it the shape specified in ``dims``.
 For example, if dims is ``['*', 'mid_levels']`` then it will give you a
 2-dimensional array whose second axis is the vertical on mid levels, and first
