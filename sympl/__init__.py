@@ -62,7 +62,7 @@ from ._core.util import (
 )
 from ._core.wrappers import ScalingWrapper, UpdateFrequencyWrapper
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __all__ = (
     TendencyComponent,
     DiagnosticComponent,
