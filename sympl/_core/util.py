@@ -2,7 +2,7 @@ from datetime import datetime
 
 import numpy as np
 
-from .dataarray import DataArray
+from .backend import get_backend
 from .exceptions import (
     SharedKeyError, InvalidStateError)
 
@@ -170,7 +170,7 @@ def restore_dimensions(array, from_dims, result_like, result_attrs=None):
                 original_coords.append(result_like.coords[name])
     if np.prod(array.shape) != np.prod(original_shape):
         raise ShapeMismatchError
-    data_array = DataArray(
+    data_array = get_backend().get_container_type()(
         np.reshape(array, original_shape),
         dims=original_dims,
         coords=original_coords).transpose(
@@ -207,10 +207,10 @@ def update_dict_by_adding_another(dict1, dict2):
             else:
                 dict1[key] = dict2[key]
         else:
-            if (isinstance(dict1[key], DataArray) and isinstance(dict2[key], DataArray)):
+            if (isinstance(dict1[key], get_backend().get_container_type()) and isinstance(dict2[key], get_backend().get_container_type())):
                 if 'units' not in dict1[key].attrs or 'units' not in dict2[key].attrs:
                     raise InvalidStateError(
-                        'DataArray objects must have units property defined')
+                        'quantity objects must have units property defined')
                 try:
                     dict1[key] += dict2[key].to_units(dict1[key].attrs['units'])
                 except ValueError:  # dict1[key] is missing a dimension present in dict2[key]
@@ -303,7 +303,7 @@ def get_slices_and_placeholder_nones(data_array, out_dims, direction_to_names):
             slices_or_none.append(None)
         elif (direction != '*') and (len(direction_to_names[direction]) > 1):
             raise ValueError(
-                'DataArray has multiple dimensions for a single direction')
+                'quantity has multiple dimensions for a single direction')
         else:
             for name in direction_to_names[direction]:
                 slices_or_none.append(slice(0, len(data_array.coords[name])))

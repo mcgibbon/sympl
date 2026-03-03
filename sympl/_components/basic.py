@@ -1,5 +1,9 @@
-from .._core.dataarray import DataArray
-from .._core.base_components import ImplicitTendencyComponent, TendencyComponent, DiagnosticComponent
+from .._core.backend import get_backend
+from .._core.base_components import (
+    DiagnosticComponent,
+    ImplicitTendencyComponent,
+    TendencyComponent,
+)
 from .._core.units import unit_registry as ureg
 
 
@@ -61,8 +65,8 @@ class ConstantTendencyComponent(TendencyComponent):
         return_dict = {}
         for name, data_array in self.__tendencies.items():
             return_dict[name] = {
-                'dims': data_array.dims,
-                'units': data_array.attrs['units'],
+                "dims": data_array.dims,
+                "units": data_array.attrs["units"],
             }
         return return_dict
 
@@ -71,8 +75,8 @@ class ConstantTendencyComponent(TendencyComponent):
         return_dict = {}
         for name, data_array in self.__diagnostics.items():
             return_dict[name] = {
-                'dims': data_array.dims,
-                'units': data_array.attrs['units'],
+                "dims": data_array.dims,
+                "units": data_array.attrs["units"],
             }
         return return_dict
 
@@ -173,8 +177,8 @@ class ConstantDiagnosticComponent(DiagnosticComponent):
         return_dict = {}
         for name, data_array in self.__diagnostics.items():
             return_dict[name] = {
-                'dims': data_array.dims,
-                'units': data_array.attrs['units'],
+                "dims": data_array.dims,
+                "units": data_array.attrs["units"],
             }
         return return_dict
 
@@ -262,17 +266,17 @@ class RelaxationTendencyComponent(TendencyComponent):
     def input_properties(self):
         return_dict = {
             self._quantity_name: {
-                'dims': ['*'],
-                'units': self._units,
+                "dims": ["*"],
+                "units": self._units,
             },
-            'equilibrium_{}'.format(self._quantity_name): {
-                'dims': ['*'],
-                'units': self._units,
+            "equilibrium_{}".format(self._quantity_name): {
+                "dims": ["*"],
+                "units": self._units,
             },
-            '{}_relaxation_timescale'.format(self._quantity_name): {
-                'dims': ['*'],
-                'units': 's',
-            }
+            "{}_relaxation_timescale".format(self._quantity_name): {
+                "dims": ["*"],
+                "units": "s",
+            },
         }
         return return_dict
 
@@ -280,8 +284,8 @@ class RelaxationTendencyComponent(TendencyComponent):
     def tendency_properties(self):
         return {
             self._quantity_name: {
-                'dims': ['*'],
-                'units': str(ureg(self._units) / ureg('s')),
+                "dims": ["*"],
+                "units": str(ureg(self._units) / ureg("s")),
             }
         }
 
@@ -351,11 +355,9 @@ class RelaxationTendencyComponent(TendencyComponent):
             at the time of the input state, as numpy arrays.
         """
         value = state[self._quantity_name]
-        equilibrium = state['equilibrium_' + self._quantity_name]
-        tau = state[self._quantity_name + '_relaxation_timescale']
-        tendencies = {
-            self._quantity_name: (equilibrium - value)/tau
-        }
+        equilibrium = state["equilibrium_" + self._quantity_name]
+        tau = state[self._quantity_name + "_relaxation_timescale"]
+        tendencies = {self._quantity_name: (equilibrium - value) / tau}
         return tendencies, {}
 
 
@@ -381,7 +383,7 @@ class TimeDifferencingWrapper(ImplicitTendencyComponent):
         return_dict = {}
         for name, properties in self._implicit.output_properties.items():
             return_dict[name] = properties.copy()
-            return_dict[name]['units'] += ' s^-1'
+            return_dict[name]["units"] += " s^-1"
         return return_dict
 
     @property
@@ -400,8 +402,9 @@ class TimeDifferencingWrapper(ImplicitTendencyComponent):
             An Stepper component to wrap.
         """
         if len(kwargs) > 0:
-            raise TypeError('Received unexpected keyword argument {}'.format(
-                kwargs.popitem()[0]))
+            raise TypeError(
+                "Received unexpected keyword argument {}".format(kwargs.popitem()[0])
+            )
         self._implicit = implicit
 
     def __call__(self, state, timestep):
@@ -409,31 +412,37 @@ class TimeDifferencingWrapper(ImplicitTendencyComponent):
         tendencies = {}
         timestep_seconds = timestep.total_seconds()
         for varname, data_array in new_state.items():
-            if isinstance(data_array, DataArray):
+            if isinstance(data_array, get_backend().get_container_type()):
                 if varname in self._implicit.output_properties.keys():
                     if varname not in state.keys():
                         raise RuntimeError(
-                            'Cannot calculate tendency for {} because it is not'
-                            ' present in the input state.'.format(varname))
-                    tendency = (data_array - state[varname].to_units(data_array.attrs['units'])) / timestep_seconds
-                    if data_array.attrs['units'] == '':
-                        tendency.attrs['units'] = 's^-1'
+                            "Cannot calculate tendency for {} because it is not"
+                            " present in the input state.".format(varname)
+                        )
+                    tendency = (
+                        data_array - state[varname].to_units(data_array.attrs["units"])
+                    ) / timestep_seconds
+                    if data_array.attrs["units"] == "":
+                        tendency.attrs["units"] = "s^-1"
                     else:
-                        tendency.attrs['units'] = data_array.attrs['units'] + ' s^-1'
+                        tendency.attrs["units"] = data_array.attrs["units"] + " s^-1"
                     tendencies[varname] = tendency.to_units(
-                        self._implicit.output_properties[varname]['units'] + ' s^-1')
-            elif varname != 'time':
+                        self._implicit.output_properties[varname]["units"] + " s^-1"
+                    )
+            elif varname != "time":
                 raise ValueError(
-                    'Wrapped implicit gave an output {} of type {}, but should'
-                    'only give sympl.DataArray objects.'.format(
-                        varname, type(data_array)))
+                    "Wrapped implicit gave an output {} of type {}, but should "
+                    "only give objects of type {}.".format(
+                        varname, type(data_array), get_backend().get_container_type()
+                    )
+                )
         return tendencies, diagnostics
 
     def array_call(self, state, timestep):
         raise NotImplementedError()
 
     def __getattr__(self, item):
-        if item in ('outputs', 'output_properties'):
+        if item in ("outputs", "output_properties"):
             raise AttributeError()
         else:
             return getattr(self._implicit, item)

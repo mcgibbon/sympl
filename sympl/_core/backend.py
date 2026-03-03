@@ -59,6 +59,13 @@ class StateBackend(object):
         """
         pass
 
+    @abc.abstractmethod
+    def get_container_type(self):
+        """
+        Returns the type of the container used by this backend.
+        """
+        pass
+
 
 class DataArrayBackend(StateBackend):
     """
@@ -86,6 +93,9 @@ class DataArrayBackend(StateBackend):
 
     def get_shape(self, state_value):
         return state_value.shape
+
+    def get_container_type(self):
+        return DataArray
 
     def _ensure_quantity_has_units(self, quantity, quantity_name):
         if "units" not in quantity.attrs:

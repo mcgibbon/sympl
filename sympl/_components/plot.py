@@ -1,15 +1,13 @@
 from .._core.base_components import Monitor
 from .._core.exceptions import DependencyError
-from .._core.dataarray import DataArray
+from .._core.backend import get_backend
 
 
 def copy_state(state):
     return_state = {}
     for name, quantity in state.items():
-        if isinstance(quantity, DataArray):
-            return_state[name] = DataArray(
-                quantity.values.copy(), quantity.coords, quantity.dims,
-                quantity.name, quantity.attrs)
+        if isinstance(quantity, get_backend().get_container_type()):
+            return_state[name] = quantity.copy(deep=True)
         else:
             return_state[name] = quantity
     return return_state

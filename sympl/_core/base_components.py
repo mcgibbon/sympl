@@ -519,7 +519,7 @@ class Stepper(object):
         added_names = []
         for name, properties in self.output_properties.items():
             tendency_name = self._get_tendency_name(name)
-            if properties['units'] is '':
+            if properties['units'] == '':
                 units = 's^-1'
             else:
                 units = '{} s^-1'.format(properties['units'])

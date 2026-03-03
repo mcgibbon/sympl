@@ -1,7 +1,6 @@
 import numpy as np
 
 from .backend import get_backend
-from .dataarray import DataArray
 from .exceptions import InvalidPropertyDictError
 from .wildcard import (
     expand_array_wildcard_dims,

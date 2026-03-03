@@ -1,5 +1,5 @@
 from .._core.tendencystepper import TendencyStepper
-from .._core.dataarray import DataArray
+from .._core.backend import get_backend
 from .._core.state import copy_untouched_quantities, add, multiply
 
 
@@ -162,13 +162,13 @@ class AdamsBashforth(TendencyStepper):
 
 def convert_tendencies_units_for_state(tendencies, state):
     """
-    Converts the units of any DataArrays with unit informaton in the
+    Converts the units of any quantities with unit informaton in the
     tendencies dictionary to have units of {value_units}/second where
     {value_units} is the units of the value in the state dictionary.
     This is done in-place.
     """
     for quantity_name in tendencies.keys():
-        if isinstance(tendencies[quantity_name], DataArray) and ('units' in tendencies[quantity_name].attrs):
+        if isinstance(tendencies[quantity_name], get_backend().get_container_type()) and ('units' in tendencies[quantity_name].attrs):
             desired_units = '{} s^-1'.format(state[quantity_name].attrs['units'])
             tendencies[quantity_name] = tendencies[quantity_name].to_units(desired_units)
 
